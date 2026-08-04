@@ -2,7 +2,7 @@
  * `package.json` 与 TypeScript 单一来源的一致性断言。
  *
  * 这些测试是方案第 10.3 节"命令与配置一致性"的落地:
- * 一旦有人手改 package.json 或忘记跑 `pnpm gen:contributes`, 这里会失败。
+ * 一旦有人手改 package.json 或忘记跑 `npm run gen:contributes`, 这里会失败。
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';

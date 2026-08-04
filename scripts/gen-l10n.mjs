@@ -80,7 +80,7 @@ if (CHECK_ONLY) {
     }
   }
   if (drifted) {
-    console.error('run `pnpm gen:l10n` to regenerate');
+    console.error('run `npm run gen:l10n` to regenerate');
     process.exit(1);
   }
   console.log('l10n bundles are up to date');

@@ -8,9 +8,6 @@ node_modules/**
 artifacts/**
 docs/**
 .github/**
-out-test/**
-.vscode-test/**
-.vscode-test-web/**
 **/*.ts
 **/*.map
 tsconfig.json
@@ -18,8 +15,7 @@ eslint.config.mjs
 vitest.config.ts
 vitest.perf.config.ts
 esbuild.mjs
-pnpm-lock.yaml
-pnpm-workspace.yaml
+package-lock.json
 .gitignore
 .eslintcache
 .named-colors.gen.txt

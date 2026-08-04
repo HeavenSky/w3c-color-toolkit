@@ -12,6 +12,6 @@ out-test/
 .eslintcache
 
 # 覆盖全局 ~/.gitignore 的排除 (它忽略 `.*/` 与 lockfile), 本仓库需要提交这些
-!pnpm-lock.yaml
+!package-lock.json
 !.github/
 !.github/**

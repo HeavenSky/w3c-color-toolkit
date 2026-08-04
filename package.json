@@ -30,7 +30,6 @@
     "vscode": "^1.101.0",
     "node": ">=20.19.0"
   },
-  "packageManager": "pnpm@11.9.0",
   "main": "./dist/extension-node.js",
   "browser": "./dist/extension-web.js",
   "l10n": "./l10n",
@@ -805,7 +804,7 @@
     "build": "node esbuild.mjs --production",
     "watch": "node esbuild.mjs --watch",
     "package": "node scripts/package.mjs",
-    "vscode:prepublish": "pnpm run build"
+    "vscode:prepublish": "npm run build"
   },
   "dependencies": {
     "@csstools/css-color-parser": "4.1.10",

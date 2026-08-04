@@ -24,16 +24,13 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # pnpm 必须先装, setup-node 的 cache: pnpm 才能找到 store.
-      - uses: pnpm/action-setup@v4
-
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-          cache: pnpm
+          cache: npm
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: npm ci
 
       # 标签与 package.json 版本必须一致, 否则产物名与 Release 名会错位.
       - name: Resolve and verify version
@@ -54,16 +51,16 @@ jobs:
 
       # 贡献点与本地化都是生成物, 漂移会让设置界面与实现不一致, 必须先卡住.
       - name: Check contributes drift
-        run: pnpm check:contributes
+        run: npm run check:contributes
 
       - name: Check l10n drift
-        run: pnpm check:l10n
+        run: npm run check:l10n
 
       - name: Typecheck
-        run: pnpm typecheck
+        run: npm run typecheck
 
       - name: Test
-        run: pnpm test
+        run: npm test
 
       # 不依赖 VS Code 运行时的端到端冒烟: 扫描 -> 解析 -> 求值 -> 色域映射 -> 序列化.
       - name: Smoke check
@@ -71,7 +68,7 @@ jobs:
 
       # package 脚本内部做生产构建并按允许清单断言 VSIX 内容.
       - name: Package extension
-        run: pnpm package
+        run: npm run package
 
       # 取 CHANGELOG 中与本版本对应的小节作为 Release 说明; 缺失时只告警, 不阻断发布.
       - name: Extract release notes
@@ -116,17 +113,15 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: pnpm/action-setup@v4
-
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-          cache: pnpm
+          cache: npm
 
-      - run: pnpm install --frozen-lockfile
+      - run: npm ci
 
-      # --no-dependencies: 产物由 esbuild 打成单文件, 不需要 vsce 解析 pnpm 的依赖树.
+      # --no-dependencies: 产物由 esbuild 打成单文件, 不需要 vsce 解析依赖树.
       - name: Publish to VS Code Marketplace
-        run: pnpm exec vsce publish --no-dependencies
+        run: npx --no-install vsce publish --no-dependencies
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}

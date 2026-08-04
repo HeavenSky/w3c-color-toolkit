@@ -361,7 +361,7 @@ async function main() {
       }
     }
     if (drifted) {
-      console.error('run `pnpm gen:contributes` to regenerate');
+      console.error('run `npm run gen:contributes` to regenerate');
       process.exit(1);
     }
     console.log('contributes and nls files are up to date');
