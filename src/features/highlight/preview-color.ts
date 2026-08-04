@@ -36,22 +36,55 @@ export function previewSource(match: ColorMatch): ResolvedColor | undefined {
   return undefined;
 }
 
+/** 可用于预览的 sRGB 数值 (0-1), 供装饰、SVG 与 VS Code 的 `Color` 共用。 */
+export interface PreviewSrgb {
+  readonly coords: readonly [number, number, number];
+  /** `none` alpha 统一按 1 处理, 便于直接送给渲染层。 */
+  readonly alpha: number;
+  readonly gamutMapped: boolean;
+  readonly hdrToneMapped: boolean;
+}
+
+/** HDR 源空间先做色调映射; 其余原样返回。 */
+function toneMapIfHdr(resolved: ResolvedColor, hdrToneMapping: HdrToneMapping): ResolvedColor {
+  return isHdrSourceSpace(resolved.originalSpace)
+    ? toneMapForPreview(resolved, hdrToneMapping)
+    : resolved;
+}
+
+function srgbOf(toneMapped: ResolvedColor, gamutMapping: GamutMapping): PreviewSrgb {
+  const mapped = toPreviewSrgb(toneMapped, gamutMapping);
+  const alpha = Number.isNaN(toneMapped.alpha) ? 1 : Math.max(0, Math.min(1, toneMapped.alpha));
+  return {
+    coords: mapped.coords,
+    alpha,
+    gamutMapped: mapped.mapped,
+    hdrToneMapped: toneMapped.hdrToneMapped,
+  };
+}
+
+export function previewSrgb(
+  resolved: ResolvedColor,
+  gamutMapping: GamutMapping,
+  hdrToneMapping: HdrToneMapping,
+): PreviewSrgb {
+  return srgbOf(toneMapIfHdr(resolved, hdrToneMapping), gamutMapping);
+}
+
 export function computePreviewColor(
   resolved: ResolvedColor,
   gamutMapping: GamutMapping,
   hdrToneMapping: HdrToneMapping,
 ): PreviewColor {
-  const toneMapped = isHdrSourceSpace(resolved.originalSpace)
-    ? toneMapForPreview(resolved, hdrToneMapping)
-    : resolved;
-  const mapped = toPreviewSrgb(toneMapped, gamutMapping);
+  const toneMapped = toneMapIfHdr(resolved, hdrToneMapping);
+  const preview = srgbOf(toneMapped, gamutMapping);
   const foreground = foregroundFor(toneMapped);
   const foregroundCoords = toPreviewSrgb(foreground, 'clip');
   return {
-    css: rgbaString(mapped.coords, toneMapped.alpha),
+    css: rgbaString(preview.coords, preview.alpha),
     foregroundCss: rgbaString(foregroundCoords.coords, 1),
-    gamutMapped: mapped.mapped,
-    hdrToneMapped: toneMapped.hdrToneMapped,
+    gamutMapped: preview.gamutMapped,
+    hdrToneMapped: preview.hdrToneMapped,
   };
 }
 

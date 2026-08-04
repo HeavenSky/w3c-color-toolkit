@@ -17,11 +17,12 @@ export const EN = {
   'config.enabled': 'Enable W3C Color Toolkit.',
   'config.languages':
     'Languages to process. Use a language id, "*" for all, or "!id" to exclude. Exclusions win over inclusions.',
-  'config.highlight': 'Color highlight style. "off" disables highlighting.',
+  'config.highlight':
+    'Color highlight style. "square-before" / "square-after" draw a filled swatch, "dot-before" / "dot-after" a bullet. "off" disables highlighting.',
   'config.info': 'Show color information on hover.',
   'config.convertSyntax': 'Output style for rgb() and hsl().',
   'config.precision': 'Number of significant digits in generated color values.',
-  'config.experimental': 'Draft specifications to enable. Both are off by default.',
+  'config.experimental': 'Draft specifications to enable. Both are on by default.',
   'config.advanced':
     'Incremental overrides for built-in options. Keys are dotted paths, for example {"output.hexCase": "upper"}. Top-level settings must not appear here.',
 
@@ -36,8 +37,12 @@ export const EN = {
   'advanced.highlight.hslWithoutFunctionLanguages': 'Languages for the bare HSL mode.',
   'advanced.highlight.maxMatchesPerDocument': 'Stop highlighting after this many colors in one document.',
   'advanced.highlight.hdrToneMapping': 'Tone mapping used to preview HDR colors in sRGB.',
-  'advanced.info.fields': 'Ordered list of hover fields. null uses the default order.',
-  'advanced.info.excludedFields': 'Hover fields to hide. Exclusions win over the field list.',
+  'advanced.colorPicker.mode':
+    'Native inline swatch and hover color picker (the picker is anchored on the swatch, so both come together). "dedupe" probes the other color providers in css/less/scss and only fills the gaps, so no color ever gets two swatches; "all" reports every supported syntax everywhere.',
+  'advanced.fields.enabled':
+    'Ordered list of color fields. Drives both the hover rows and which color syntax is highlighted. null uses the default order.',
+  'advanced.fields.excluded':
+    'Color fields to turn off. Exclusions win over the field list. Turning off a syntax also stops highlighting it.',
   'advanced.info.previewSize': 'Size of the hover color swatch.',
   'advanced.info.previewShape': 'Shape of the hover color swatch.',
   'advanced.info.showDiagnostics': 'Show parser notes in the hover.',
@@ -53,7 +58,7 @@ export const EN = {
   'advanced.scan.strings': 'Scan string literals for colors.',
   'advanced.scan.maxDocumentSizeKb': 'Skip documents larger than this size.',
   'advanced.contextualPreview':
-    'Assume a color scheme when previewing context dependent colors. Results are marked as assumed.',
+    'Color scheme assumed when previewing context dependent colors such as light-dark(). "auto" follows the editor theme. Results are marked as assumed.',
   'advanced.variables.resolve': 'Resolve CSS custom properties and preprocessor variables.',
   'advanced.variables.includePaths': 'Extra workspace relative search paths for imports.',
   'advanced.variables.maxImportDepth': 'Maximum import depth.',
@@ -69,7 +74,7 @@ export const EN = {
   'command.convert': 'Convert Color',
   'command.copyColorAs': 'Copy Color As',
   'command.toggleFeatures': 'Enable Features',
-  'command.configureInfoFields': 'Configure Hover Fields',
+  'command.configureColorFields': 'Configure Color Fields',
   'command.manage': 'Manage',
   'command.migrateLegacySettings': 'Migrate Legacy Plug-in Settings',
   'command.showEffectiveConfiguration': 'Show Effective Configuration',
@@ -87,11 +92,12 @@ export const ZH_CN = {
 
   'config.enabled': '启用 W3C Color Toolkit。',
   'config.languages': '要处理的语言。可填 language id、`*` 表示全部, 或 `!id` 表示排除。排除项优先于包含项。',
-  'config.highlight': '颜色高亮样式。`off` 表示关闭高亮。',
+  'config.highlight':
+    '颜色高亮样式。`square-before` / `square-after` 画实心色块, `dot-before` / `dot-after` 画圆点; `off` 表示关闭高亮。',
   'config.info': '悬停时显示颜色信息。',
   'config.convertSyntax': '`rgb()` 与 `hsl()` 的输出风格。',
   'config.precision': '生成颜色值时保留的有效数字位数。',
-  'config.experimental': '要启用的草案规范。两项默认都关闭。',
+  'config.experimental': '要启用的草案规范。两项默认都开启。',
   'config.advanced':
     '内置选项的增量覆盖。键为点分路径, 例如 `{"output.hexCase": "upper"}`。顶层设置不允许出现在这里。',
 
@@ -104,8 +110,12 @@ export const ZH_CN = {
   'advanced.highlight.hslWithoutFunctionLanguages': '启用无函数 HSL 模式的语言。',
   'advanced.highlight.maxMatchesPerDocument': '单个文档中超过该数量后停止高亮。',
   'advanced.highlight.hdrToneMapping': '在 sRGB 中预览 HDR 颜色时使用的色调映射。',
-  'advanced.info.fields': '悬停字段的有序列表。`null` 表示使用默认顺序。',
-  'advanced.info.excludedFields': '要隐藏的悬停字段。排除项优先于字段列表。',
+  'advanced.colorPicker.mode':
+    '原生行内色块与悬停取色器 (取色器挂在色块上, 两者同时出现)。`dedupe` 在 css/less/scss 里先探测其他颜色提供器, 只补它们没覆盖的位置, 因此不会有颜色出现两个色块; `all` 在所有语言上报全部受支持的语法。',
+  'advanced.fields.enabled':
+    '颜色字段的有序列表。同时决定悬停显示哪些行与高亮识别哪些颜色语法。`null` 表示使用默认顺序。',
+  'advanced.fields.excluded':
+    '要关闭的颜色字段。排除项优先于字段列表; 关闭某个语法同时会停止高亮它。',
   'advanced.info.previewSize': '悬停色块的尺寸。',
   'advanced.info.previewShape': '悬停色块的形状。',
   'advanced.info.showDiagnostics': '在悬停中显示解析说明。',
@@ -120,7 +130,8 @@ export const ZH_CN = {
   'advanced.scan.comments': '扫描注释中的颜色。',
   'advanced.scan.strings': '扫描字符串字面量中的颜色。',
   'advanced.scan.maxDocumentSizeKb': '超过该大小的文档不扫描。',
-  'advanced.contextualPreview': '预览上下文相关颜色时假设的配色方案。结果会标注为假设值。',
+  'advanced.contextualPreview':
+    '预览 `light-dark()` 等上下文相关颜色时假设的配色方案。`auto` 跟随编辑器主题。结果会标注为假设值。',
   'advanced.variables.resolve': '解析 CSS 自定义属性与预处理器变量。',
   'advanced.variables.includePaths': '导入解析时额外的工作区相对搜索路径。',
   'advanced.variables.maxImportDepth': '导入深度上限。',
@@ -134,7 +145,7 @@ export const ZH_CN = {
   'command.convert': '转换颜色',
   'command.copyColorAs': '复制颜色为',
   'command.toggleFeatures': '启用功能',
-  'command.configureInfoFields': '配置悬停字段',
+  'command.configureColorFields': '配置颜色字段',
   'command.manage': '管理',
   'command.migrateLegacySettings': '迁移旧插件设置',
   'command.showEffectiveConfiguration': '显示生效配置',

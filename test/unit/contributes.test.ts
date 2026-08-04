@@ -28,6 +28,7 @@ const bundleZh = readJson('l10n/bundle.l10n.zh-cn.json');
 
 const contributes = pkg.contributes as {
   configuration: { properties: Record<string, Record<string, unknown>> };
+  configurationDefaults: Record<string, unknown>;
   commands: { command: string; title: string; category: string }[];
   submenus: { id: string; label: string }[];
   menus: {
@@ -58,6 +59,12 @@ describe('package.json 基本声明', () => {
 
   it('声明 l10n 目录', () => {
     expect(pkg.l10n).toBe('./l10n');
+  });
+
+  it('把内置默认颜色提供器关掉, 避免与本扩展的色块叠加', () => {
+    // VS Code 会把多个 DocumentColorProvider 的色块叠加渲染 (不按 range 去重),
+    // 而内置默认提供器认的写法是本扩展的真子集, 因此默认关掉它。
+    expect(contributes.configurationDefaults['editor.defaultColorDecorators']).toBe('never');
   });
 
   it('不内置任何默认快捷键', () => {
@@ -111,7 +118,7 @@ describe('配置贡献点一致性', () => {
       }
     }
 
-    // 2. 可插入模板: 全量模板含全部 34 个键及默认值。
+    // 2. 可插入模板: 全量模板含全部 35 个键及默认值。
     const snippets = advanced.defaultSnippets as { label: string; body: Record<string, unknown> }[];
     expect(snippets.length).toBeGreaterThanOrEqual(2);
     const full = snippets[0].body;
@@ -139,11 +146,11 @@ describe('配置贡献点一致性', () => {
     }
   });
 
-  it('advanced 列出全部 34 个内置键并拒绝未知键', () => {
+  it('advanced 列出全部 35 个内置键并拒绝未知键', () => {
     const advanced = properties['w3cColorToolkit.advanced'];
     expect(advanced.additionalProperties).toBe(false);
     const advancedProperties = advanced.properties as Record<string, { default: unknown }>;
-    expect(Object.keys(advancedProperties)).toHaveLength(34);
+    expect(Object.keys(advancedProperties)).toHaveLength(35);
     for (const setting of ADVANCED_SETTINGS) {
       expect(advancedProperties[setting.key], `${setting.key} 未声明`).toBeDefined();
       expect(advancedProperties[setting.key].default).toEqual(setting.default);

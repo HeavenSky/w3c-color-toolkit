@@ -2,7 +2,8 @@
  * 多选与管理类 Quick Pick。
  *
  * - `toggleFeatures`: 多选功能开关, 一次写入, 取消零写入;
- * - `configureInfoFields`: 多选 Hover 字段, 全选且顺序未变时写回 null;
+ * - `configureColorFields`: 多选颜色字段 (同时决定 Hover 行与高亮语法),
+ *   全选且顺序未变时写回 null;
  * - `manage`: 单选进入管理动作。
  */
 import * as vscode from 'vscode';
@@ -10,7 +11,13 @@ import * as vscode from 'vscode';
 import { advancedValue } from '../configuration/advanced.js';
 import type { RuntimeConfiguration } from '../configuration/load.js';
 import { ADVANCED_KEY, CONFIG_SECTION } from '../configuration/schema.js';
-import { DEFAULT_FIELDS, OPTIONAL_FIELDS, HDR_FIELDS, type FieldId } from '../features/info/fields.js';
+import {
+  DEFAULT_FIELDS,
+  FIELDS,
+  type FieldDefinition,
+  type FieldGroup,
+  type FieldId,
+} from '../features/fields/registry.js';
 import { t } from '../l10n/strings.js';
 
 import { MANAGE_ACTIONS } from './ids.js';
@@ -26,7 +33,14 @@ function targetLabel(target: vscode.ConfigurationTarget): string {
   return target === vscode.ConfigurationTarget.Workspace ? 'Workspace' : 'User';
 }
 
-type ToggleId = 'highlight' | 'info' | 'convert' | 'variables' | 'cssColor6' | 'cssColorHdr';
+type ToggleId =
+  | 'highlight'
+  | 'colorPicker'
+  | 'info'
+  | 'convert'
+  | 'variables'
+  | 'cssColor6'
+  | 'cssColorHdr';
 
 interface ToggleItem extends vscode.QuickPickItem {
   readonly id: ToggleId;
@@ -39,6 +53,12 @@ export async function runToggleFeatures(config: RuntimeConfiguration): Promise<v
 
   const items: ToggleItem[] = [
     { id: 'highlight', label: t('toggle.highlight'), detail: writesTo, picked: config.highlightEnabled },
+    {
+      id: 'colorPicker',
+      label: t('toggle.colorPicker'),
+      detail: writesTo,
+      picked: config.colorPickerMode !== 'off',
+    },
     { id: 'info', label: t('toggle.info'), detail: writesTo, picked: config.infoEnabled },
     { id: 'convert', label: t('toggle.convert'), detail: writesTo, picked: config.convertEnabled },
     { id: 'variables', label: t('toggle.variables'), detail: writesTo, picked: config.variablesResolve },
@@ -82,6 +102,15 @@ export async function runToggleFeatures(config: RuntimeConfiguration): Promise<v
 
   // convert 与 variables 属于内置层, 需要写进 advanced 且保留其他键。
   const advancedPatch: Record<string, unknown> = {};
+  // 色块: 关闭写 off, 打开恢复默认的 dedupe (避免与内置 CSS 提供器重复)。
+  const nextColorPicker = selected.has('colorPicker')
+    ? config.colorPickerMode === 'off'
+      ? 'dedupe'
+      : config.colorPickerMode
+    : 'off';
+  if (nextColorPicker !== config.colorPickerMode) {
+    advancedPatch['colorPicker.mode'] = nextColorPicker;
+  }
   if (selected.has('convert') !== config.convertEnabled) {
     advancedPatch['convert.enabled'] = selected.has('convert');
   }
@@ -114,29 +143,61 @@ interface FieldItem extends vscode.QuickPickItem {
   readonly id: FieldId;
 }
 
-/** 多选 Hover 字段。 */
-export async function runConfigureInfoFields(config: RuntimeConfiguration): Promise<void> {
-  const active = new Set<string>(config.infoFields ?? DEFAULT_FIELDS);
-  const excluded = new Set(config.infoExcludedFields);
-  // HDR 字段已在默认表中, 实验开关关闭时把它们从列表里去掉, 避免展示不会渲染的项。
-  const hdrFields = new Set<string>(HDR_FIELDS);
-  const defaults = config.cssColorHdr
-    ? DEFAULT_FIELDS
-    : DEFAULT_FIELDS.filter((id) => !hdrFields.has(id));
+/** 分节标题: 同时告诉用户该组作用在 Hover 还是高亮。 */
+const GROUP_LABEL: Readonly<Record<FieldGroup, Parameters<typeof t>[0]>> = Object.freeze({
+  'css-format': 'quickPick.fieldGroupCssFormat',
+  'css-syntax': 'quickPick.fieldGroupCssSyntax',
+  'non-css-format': 'quickPick.fieldGroupNonCss',
+  meta: 'quickPick.fieldGroupMeta',
+});
 
-  const toItem = (id: FieldId): FieldItem => ({
-    id,
-    label: t(`field.${id}` as Parameters<typeof t>[0]),
-    description: id,
-    picked: active.has(id) && !excluded.has(id),
-  });
+const GROUP_ORDER: readonly FieldGroup[] = Object.freeze([
+  'css-format',
+  'css-syntax',
+  'non-css-format',
+  'meta',
+]);
 
-  const items: (FieldItem | vscode.QuickPickItem)[] = [
-    { label: t('quickPick.defaultFields'), kind: vscode.QuickPickItemKind.Separator },
-    ...defaults.map(toItem),
-    { label: t('quickPick.optionalFields'), kind: vscode.QuickPickItemKind.Separator },
-    ...OPTIONAL_FIELDS.map(toItem),
+/** 条目副标题: 生效范围 + 是否默认关闭 + 是否不构成完整颜色。 */
+function fieldDetail(field: FieldDefinition): string {
+  const parts = [
+    field.scope === 'both'
+      ? t('quickPick.fieldScopeBoth')
+      : field.scope === 'highlight'
+        ? t('quickPick.fieldScopeHighlight')
+        : t('quickPick.fieldScopeHover'),
   ];
+  if (field.group === 'meta') parts.push(t('quickPick.fieldNotAColor'));
+  if (field.optional) parts.push(t('quickPick.fieldDefaultOff'));
+  return parts.join(' · ');
+}
+
+/**
+ * 多选颜色字段。
+ *
+ * 同一份选择同时收窄 Hover 行与高亮语法, 因此不再有"高亮范围"这第二处配置。
+ */
+export async function runConfigureColorFields(config: RuntimeConfiguration): Promise<void> {
+  const active = new Set<string>(config.fields ?? DEFAULT_FIELDS);
+  const excluded = new Set(config.excludedFields);
+  // HDR 字段实验开关关闭时不展示, 避免勾选了却不生效。
+  const visible = FIELDS.filter((field) => !field.hdr || config.cssColorHdr);
+
+  const items: (FieldItem | vscode.QuickPickItem)[] = [];
+  for (const group of GROUP_ORDER) {
+    const inGroup = visible.filter((field) => field.group === group);
+    if (inGroup.length === 0) continue;
+    items.push({ label: t(GROUP_LABEL[group]), kind: vscode.QuickPickItemKind.Separator });
+    for (const field of inGroup) {
+      items.push({
+        id: field.id,
+        label: t(`field.${field.id}` as Parameters<typeof t>[0]),
+        description: field.id,
+        detail: fieldDetail(field),
+        picked: active.has(field.id) && !excluded.has(field.id),
+      });
+    }
+  }
 
   const picked = await vscode.window.showQuickPick(items, {
     canPickMany: true,
@@ -145,16 +206,32 @@ export async function runConfigureInfoFields(config: RuntimeConfiguration): Prom
   });
   if (!picked) return; // 取消: 零写入
 
-  const selected = picked
-    .filter((item): item is FieldItem => 'id' in item)
-    .map((item) => item.id);
+  const chosen = new Set<string>(
+    picked.filter((item): item is FieldItem => 'id' in item).map((item) => item.id),
+  );
+  // HDR 开关关闭时列表里没有 HDR 字段, 保留原有取值, 避免关一次开关就永久丢掉它们。
+  for (const field of FIELDS) {
+    if (field.hdr && !config.cssColorHdr && active.has(field.id) && !excluded.has(field.id)) {
+      chosen.add(field.id);
+    }
+  }
+
+  // 始终按注册表顺序写入: Quick Pick 的返回顺序是分组顺序, 直接写会把预览色块挤到最后。
+  // 自定义顺序请直接编辑 `fields.enabled` (placeHolder 里有提示)。
+  const selected = FIELDS.filter((field) => chosen.has(field.id)).map((field) => field.id);
 
   // 与默认顺序完全一致时写回 null, 保持配置文件干净。
   const isDefault =
     selected.length === DEFAULT_FIELDS.length &&
     selected.every((id, index) => id === DEFAULT_FIELDS[index]);
 
-  await patchAdvanced({ 'info.fields': isDefault ? null : selected }, preferredTarget());
+  const patch: Record<string, unknown> = { 'fields.enabled': isDefault ? null : selected };
+  // 勾选一个被 `fields.excluded` 排除的字段时同时解除排除, 否则勾选不生效。
+  const nextExcluded = config.excludedFields.filter((id) => !chosen.has(id));
+  if (nextExcluded.length !== config.excludedFields.length) {
+    patch['fields.excluded'] = nextExcluded;
+  }
+  await patchAdvanced(patch, preferredTarget());
 }
 
 interface ManageItem extends vscode.QuickPickItem {

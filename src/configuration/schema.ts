@@ -3,7 +3,7 @@
  *
  * 分两层:
  * - 暴露层: 8 个键, 在 `contributes.configuration` 中完整声明并出现在设置界面;
- * - 内置层: 34 项, 只有默认值, 通过 `w3cColorToolkit.advanced` 对象增量覆盖。
+ * - 内置层: 35 项, 只有默认值, 通过 `w3cColorToolkit.advanced` 对象增量覆盖。
  *
  * `package.json` 的 `contributes.configuration` 由 `scripts/gen-contributes.mjs`
  * 从本文件生成, 并由 `test/unit/contributes.test.ts` 断言一致。
@@ -46,7 +46,17 @@ export const EXPOSED_SETTINGS: readonly SettingDefinition[] = Object.freeze([
     key: 'highlight',
     type: 'string',
     default: 'underline',
-    enum: ['off', 'background', 'foreground', 'outline', 'underline', 'dot-before', 'dot-after'],
+    enum: [
+      'off',
+      'background',
+      'foreground',
+      'outline',
+      'underline',
+      'dot-before',
+      'dot-after',
+      'square-before',
+      'square-after',
+    ],
     nlsKey: 'config.highlight',
   },
   {
@@ -87,7 +97,7 @@ export const EXPOSED_SETTINGS: readonly SettingDefinition[] = Object.freeze([
   },
 ]);
 
-/** 内置层: 只能通过 `advanced` 覆盖的 34 项。 */
+/** 内置层: 只能通过 `advanced` 覆盖的 35 项。 */
 export const ADVANCED_SETTINGS: readonly SettingDefinition[] = Object.freeze([
   // 高亮 (9)
   { key: 'highlight.markRuler', type: 'boolean', default: true, nlsKey: 'advanced.highlight.markRuler' },
@@ -145,9 +155,22 @@ export const ADVANCED_SETTINGS: readonly SettingDefinition[] = Object.freeze([
     nlsKey: 'advanced.highlight.hdrToneMapping',
   },
 
-  // Hover (6)
-  { key: 'info.fields', type: 'string[]|null', default: null, nlsKey: 'advanced.info.fields' },
-  { key: 'info.excludedFields', type: 'string[]', default: [], nlsKey: 'advanced.info.excludedFields' },
+  // 原生色块与取色器 (1)
+  {
+    key: 'colorPicker.mode',
+    type: 'string',
+    // `dedupe`: 在内置 CSS 提供器覆盖的 css/less/scss 里探测一次, 只补它没覆盖的 range;
+    // 其他语言全量提供 (那里唯一可能重叠的内置默认提供器会自动让位)。
+    default: 'dedupe',
+    enum: ['off', 'dedupe', 'all'],
+    nlsKey: 'advanced.colorPicker.mode',
+  },
+
+  // 字段范围 (2): 同时决定 Hover 行与高亮的颜色语法范围。
+  { key: 'fields.enabled', type: 'string[]|null', default: null, nlsKey: 'advanced.fields.enabled' },
+  { key: 'fields.excluded', type: 'string[]', default: [], nlsKey: 'advanced.fields.excluded' },
+
+  // Hover (4)
   {
     key: 'info.previewSize',
     type: 'string',
@@ -219,8 +242,10 @@ export const ADVANCED_SETTINGS: readonly SettingDefinition[] = Object.freeze([
   {
     key: 'contextualPreview',
     type: 'string',
-    default: 'off',
-    enum: ['off', 'light', 'dark'],
+    // `auto` 跟随编辑器主题, 使 `light-dark()` 默认就能得到预览色;
+    // 结果在 Hover 中始终标注为假设值, 因此不构成"猜测成具体颜色"。
+    default: 'auto',
+    enum: ['off', 'auto', 'light', 'dark'],
     nlsKey: 'advanced.contextualPreview',
   },
 

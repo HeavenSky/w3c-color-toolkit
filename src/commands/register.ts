@@ -19,7 +19,7 @@ import type { Logger } from '../logging/output-channel.js';
 import { CONVERT_COMMANDS, COMMAND_PREFIX, HDR_CONTEXT_KEY } from './ids.js';
 import {
   effectiveConfigurationLines,
-  runConfigureInfoFields,
+  runConfigureColorFields,
   runManage,
   runToggleFeatures,
 } from './quick-pick.js';
@@ -64,8 +64,8 @@ export function registerCommands(deps: CommandDependencies): vscode.Disposable[]
     await runToggleFeatures(getConfig());
   });
 
-  register(`${COMMAND_PREFIX}.configureInfoFields`, async () => {
-    await runConfigureInfoFields(getConfig());
+  register(`${COMMAND_PREFIX}.configureColorFields`, async () => {
+    await runConfigureColorFields(getConfig());
   });
 
   register(`${COMMAND_PREFIX}.manage`, async () => {

@@ -30,7 +30,8 @@ const {
   scanText,
   serialize,
   fieldValue,
-  resolveFieldOrder,
+  resolveHighlightSyntaxes,
+  resolveHoverFields,
   previewConversion,
   convertSource,
   computePreviewColor,
@@ -199,18 +200,32 @@ check(
   })(),
 );
 
-// ── 4. Hover 字段 ──────────────────────────────────────────────
-console.log('\n=== Hover 字段 ===');
-const fields = resolveFieldOrder(null, [], true);
-check('默认字段 27 项 (HDR 开启)', fields.length === 27, fields.join(', '));
+// ── 4. 颜色字段 (Hover 行 + 高亮语法) ──────────────────────────
+console.log('\n=== 颜色字段 ===');
+const fields = resolveHoverFields(null, [], true);
+check('默认 Hover 字段 30 项 (HDR 开启)', fields.length === 30, fields.join(', '));
 for (const field of ['hex', 'rgb', 'hsl', 'oklch', 'display-p3', 'alpha', 'gamut']) {
   const value = fieldValue(field, hexMatch.resolved, SERIALIZE);
   console.log(`     ${field.padEnd(14)} → ${value}`);
   check(`字段 ${field} 有值`, value !== undefined);
 }
-check('excludedFields 优先于 fields', !resolveFieldOrder(['hex', 'rgb'], ['hex'], false).includes('hex'));
+check('fields.excluded 优先于 fields.enabled', !resolveHoverFields(['hex', 'rgb'], ['hex'], false).includes('hex'));
 check('默认排除 alpha / gamut / contrast', ['alpha','gamut','contrast-on-white','contrast-on-black'].every((f) => !fields.includes(f)));
-check('HDR 字段仅在开关开启时渲染', !resolveFieldOrder(null, [], false).includes('ictcp') && resolveFieldOrder(null, [], true).includes('ictcp'));
+check('HDR 字段仅在开关开启时渲染', !resolveHoverFields(null, [], false).includes('ictcp') && resolveHoverFields(null, [], true).includes('ictcp'));
+check('只读语法不进入 Hover 字段', !fields.includes('light-dark') && !fields.includes('color-mix'));
+
+const allSyntaxes = resolveHighlightSyntaxes(null, [], true);
+check(
+  '默认高亮覆盖全部已登记语法',
+  ['hex', 'srgb', 'legacy-rgb', 'hsl', 'oklch', 'color-display-p3', 'color-mix', 'relative-hsl', 'alpha', 'light-dark', 'system-color', 'device-cmyk', 'ictcp', 'hdr-color', 'named-color', 'transparent'].every((s) => allSyntaxes.allows(s)),
+);
+check('未登记语法默认放行', allSyntaxes.allows('some-future-syntax'));
+const withoutRelative = resolveHighlightSyntaxes(null, ['relative-color', 'light-dark'], true);
+check(
+  '关闭字段同时收窄高亮',
+  !withoutRelative.allows('relative-hsl') && !withoutRelative.allows('light-dark') && withoutRelative.allows('hex'),
+);
+check('HDR 语法随开关关闭', !resolveHighlightSyntaxes(null, [], false).allows('ictcp'));
 
 // ── 5. 预览色 ──────────────────────────────────────────────────
 console.log('\n=== 预览色 ===');
@@ -229,7 +244,7 @@ check('contextual 无预览源', previewSource(bySyntax.get('current-color')) ==
 
 // ── 6. 配置 ────────────────────────────────────────────────────
 console.log('\n=== 配置 ===');
-check('内置层 34 项默认值', Object.keys(advancedDefaults()).length === 34);
+check('内置层 35 项默认值', Object.keys(advancedDefaults()).length === 35);
 const resolvedAdvanced = resolveAdvanced({
   user: { 'output.hexCase': 'upper' },
   workspace: { 'scan.comments': false, precision: 3, 'bogus.key': 1 },

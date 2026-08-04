@@ -76,7 +76,9 @@
             "outline",
             "underline",
             "dot-before",
-            "dot-after"
+            "dot-after",
+            "square-before",
+            "square-after"
           ],
           "default": "underline",
           "description": "%config.highlight%",
@@ -199,7 +201,17 @@
               "default": "reinhard",
               "description": "%advanced.highlight.hdrToneMapping%"
             },
-            "info.fields": {
+            "colorPicker.mode": {
+              "type": "string",
+              "enum": [
+                "off",
+                "dedupe",
+                "all"
+              ],
+              "default": "dedupe",
+              "description": "%advanced.colorPicker.mode%"
+            },
+            "fields.enabled": {
               "type": [
                 "array",
                 "null"
@@ -208,15 +220,15 @@
                 "type": "string"
               },
               "default": null,
-              "description": "%advanced.info.fields%"
+              "description": "%advanced.fields.enabled%"
             },
-            "info.excludedFields": {
+            "fields.excluded": {
               "type": "array",
               "items": {
                 "type": "string"
               },
               "default": [],
-              "description": "%advanced.info.excludedFields%"
+              "description": "%advanced.fields.excluded%"
             },
             "info.previewSize": {
               "type": "string",
@@ -324,10 +336,11 @@
               "type": "string",
               "enum": [
                 "off",
+                "auto",
                 "light",
                 "dark"
               ],
-              "default": "off",
+              "default": "auto",
               "description": "%advanced.contextualPreview%"
             },
             "variables.resolve": {
@@ -393,7 +406,7 @@
           "defaultSnippets": [
             {
               "label": "All advanced options (with defaults)",
-              "description": "Insert all 34 built-in options with their default values",
+              "description": "Insert all 35 built-in options with their default values",
               "body": {
                 "highlight.markRuler": true,
                 "highlight.matchWords": "css-like",
@@ -408,8 +421,9 @@
                 ],
                 "highlight.maxMatchesPerDocument": 10000,
                 "highlight.hdrToneMapping": "reinhard",
-                "info.fields": null,
-                "info.excludedFields": [],
+                "colorPicker.mode": "dedupe",
+                "fields.enabled": null,
+                "fields.excluded": [],
                 "info.previewSize": "small",
                 "info.previewShape": "rectangle",
                 "info.showDiagnostics": true,
@@ -424,7 +438,7 @@
                 "scan.comments": true,
                 "scan.strings": true,
                 "scan.maxDocumentSizeKb": 2048,
-                "contextualPreview": "off",
+                "contextualPreview": "auto",
                 "variables.resolve": true,
                 "variables.includePaths": [],
                 "variables.maxImportDepth": 20,
@@ -448,6 +462,9 @@
         }
       }
     },
+    "configurationDefaults": {
+      "editor.defaultColorDecorators": "never"
+    },
     "commands": [
       {
         "command": "w3cColorToolkit.convert",
@@ -465,8 +482,8 @@
         "category": "%command.category%"
       },
       {
-        "command": "w3cColorToolkit.configureInfoFields",
-        "title": "%command.configureInfoFields%",
+        "command": "w3cColorToolkit.configureColorFields",
+        "title": "%command.configureColorFields%",
         "category": "%command.category%"
       },
       {

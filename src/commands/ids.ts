@@ -57,8 +57,8 @@ export const VISIBLE_COMMANDS: readonly CommandDefinition[] = Object.freeze([
     paletteVisible: true,
   },
   {
-    id: `${COMMAND_PREFIX}.configureInfoFields`,
-    nlsKey: 'command.configureInfoFields',
+    id: `${COMMAND_PREFIX}.configureColorFields`,
+    nlsKey: 'command.configureColorFields',
     paletteVisible: true,
   },
   {

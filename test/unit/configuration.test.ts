@@ -26,9 +26,9 @@ describe('两层配置的形状', () => {
     ]);
   });
 
-  it('内置层恰好 34 项', () => {
-    expect(ADVANCED_SETTINGS).toHaveLength(34);
-    expect(Object.keys(advancedDefaults())).toHaveLength(34);
+  it('内置层恰好 35 项', () => {
+    expect(ADVANCED_SETTINGS).toHaveLength(35);
+    expect(Object.keys(advancedDefaults())).toHaveLength(35);
   });
 
   it('两层没有重叠键', () => {
@@ -119,10 +119,12 @@ describe('advanced 增量覆盖', () => {
     expect(result.values['highlight.markRuler']).toBe(true);
   });
 
-  it('null 数组类型 info.fields 接受 null 与字符串数组', () => {
-    expect(resolveAdvanced({ user: { 'info.fields': null } }).issues).toHaveLength(0);
-    expect(resolveAdvanced({ user: { 'info.fields': ['hex'] } }).values['info.fields']).toEqual(['hex']);
-    expect(resolveAdvanced({ user: { 'info.fields': [1] } }).issues[0].kind).toBe('type-mismatch');
+  it('null 数组类型 fields.enabled 接受 null 与字符串数组', () => {
+    expect(resolveAdvanced({ user: { 'fields.enabled': null } }).issues).toHaveLength(0);
+    expect(resolveAdvanced({ user: { 'fields.enabled': ['hex'] } }).values['fields.enabled']).toEqual([
+      'hex',
+    ]);
+    expect(resolveAdvanced({ user: { 'fields.enabled': [1] } }).issues[0].kind).toBe('type-mismatch');
   });
 });
 

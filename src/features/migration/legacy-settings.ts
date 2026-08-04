@@ -144,8 +144,8 @@ export function planMigration(): MigrationPlan {
 
     // colorInfo.fields / excludedFields: 折叠 preview 变体
     for (const [legacyKey, targetKey] of [
-      ['colorInfo.fields', 'info.fields'],
-      ['colorInfo.excludedFields', 'info.excludedFields'],
+      ['colorInfo.fields', 'fields.enabled'],
+      ['colorInfo.excludedFields', 'fields.excluded'],
     ] as const) {
       const value = explicitValue('colorInfo', legacyKey.split('.')[1], scope);
       if (!Array.isArray(value)) continue;

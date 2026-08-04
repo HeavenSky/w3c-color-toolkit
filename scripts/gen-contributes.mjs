@@ -2,8 +2,9 @@
  * 从 TypeScript 单一来源生成 `package.json` 的 contributes 与两份 `package.nls` 文件。
  *
  * 来源:
- * - `src/configuration/schema.ts`: 8 个暴露层键 + 34 项内置层默认值;
- * - `src/commands/ids.ts` 与 `src/features/convert/format-catalog.ts`: 5 个可见命令 + 31 个隐藏命令。
+ * - `src/configuration/schema.ts`: 8 个暴露层键 + 35 项内置层默认值;
+ * - `src/commands/ids.ts` 与 `src/features/convert/format-catalog.ts`: 5 个可见命令 + 31 个隐藏命令;
+ * - `configurationDefaults`: 把 `editor.defaultColorDecorators` 默认值改为 `never` (见 buildContributes)。
  *
  * 用法:
  *   node scripts/gen-contributes.mjs          写入
@@ -77,6 +78,8 @@ function jsonSchemaFor(setting) {
 /** 内置层键的分组顺序, 只影响参考文档的排版。 */
 const ADVANCED_GROUPS = [
   ['highlight.', 'Highlight'],
+  ['colorPicker.', 'Color picker'],
+  ['fields.', 'Fields (hover + highlight)'],
   ['info.', 'Hover'],
   ['convert.', 'Convert'],
   ['output.', 'Output'],
@@ -234,6 +237,13 @@ function buildContributes(sources) {
       title: '%extension.displayName%',
       properties,
     },
+    // 关掉 VS Code 内置的默认颜色提供器: 它认的 hex 与 rgb/hsl 系写法是本扩展
+    // DocumentColorProvider 的真子集, 而 VS Code 会把多个提供器的色块叠加渲染
+    // (不按 range 去重)。把它的默认值设为 never, "一个颜色一个色块 + 一个取色器"
+    // 才是确定行为; 用户仍可在设置里改回 auto / always。
+    configurationDefaults: {
+      'editor.defaultColorDecorators': 'never',
+    },
     commands,
     submenus: [{ id: 'w3cColorToolkit.editorContext', label: '%extension.displayName%' }],
     menus: {
@@ -331,8 +341,8 @@ async function main() {
   if (sources.EXPOSED_SETTINGS.length !== 8) {
     errors.push(`expected 8 exposed settings, got ${sources.EXPOSED_SETTINGS.length}`);
   }
-  if (sources.ADVANCED_SETTINGS.length !== 34) {
-    errors.push(`expected 34 advanced settings, got ${sources.ADVANCED_SETTINGS.length}`);
+  if (sources.ADVANCED_SETTINGS.length !== 35) {
+    errors.push(`expected 35 advanced settings, got ${sources.ADVANCED_SETTINGS.length}`);
   }
 
   if (errors.length > 0) {

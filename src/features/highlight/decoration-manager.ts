@@ -60,6 +60,31 @@ function optionsFor(key: DecorationKey): vscode.DecorationRenderOptions {
           fontWeight: 'bold',
         },
       };
+    // 实心色块: 用不可断行空格加背景色画出, 边框保证纯白/纯黑在同色背景上仍可见。
+    case 'square-before':
+      return {
+        ...base,
+        before: {
+          contentText: '\u00a0',
+          backgroundColor: key.cssColor,
+          border: '1px solid #80808080',
+          width: '0.8em',
+          height: '0.8em',
+          margin: '0 0.25em 0 0',
+        },
+      };
+    case 'square-after':
+      return {
+        ...base,
+        after: {
+          contentText: '\u00a0',
+          backgroundColor: key.cssColor,
+          border: '1px solid #80808080',
+          width: '0.8em',
+          height: '0.8em',
+          margin: '0 0 0 0.25em',
+        },
+      };
     default:
       return base;
   }

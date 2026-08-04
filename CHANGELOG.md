@@ -2,6 +2,49 @@
 
 本文件记录 W3C Color Toolkit 的显著变更。
 
+## [未发布]
+
+### 新增
+
+- 行内色块与原生取色器: 注册 `DocumentColorProvider`, VS Code 因此会为本扩展支持的语法
+  画行内色块并在 Hover 中提供原生取色器, 覆盖 `oklch()`、`lab()`、`color()`、`color-mix()`、
+  相对颜色、HDR 空间, 以及注释与字符串里的颜色 —— 这些 VS Code 自带的提供器都不覆盖。
+  范围与高亮共用同一份字段表; 上限按 `editor.colorDecoratorsLimit` (默认 500) 截断并记日志。
+  由 `advanced.colorPicker.mode` 控制: `dedupe` (默认)、`all`、`off`;
+  "启用功能"命令里也有对应开关。
+  - `dedupe` 在 `css` / `less` / `scss` 里按文档版本探测一次其他颜色提供器, 只补它们没覆盖的
+    range, 因此任何颜色都不会出现两个色块。必须探测的原因: VS Code 叠加渲染所有提供器的结果
+    且不按 range 去重, 只要有扩展返回数组 (含空数组) 就不再使用内置默认提供器,
+    而 `vscode.executeDocumentColorProvider` 不回传提供器身份。
+  - 取色器写回时优先沿用原格式并跳过无法表达 alpha 的格式; 上下文相关值与只读语法
+    (`color-mix()`、相对颜色、`contrast-color()`、`device-cmyk()`、`color-layers()`)
+    只给只读色块, 不提供候选写法, 避免误拖把表达式压成字面值。
+- 通过 `contributes.configurationDefaults` 把 `editor.defaultColorDecorators` 的默认值改为
+  `never`: 内置默认提供器认的 hex 与 `rgb()`/`hsl()` 是本扩展上报范围的真子集,
+  关掉它只去掉重叠, 不损失覆盖; 用户仍可改回 `auto` / `always`。
+- 新增两种 marker 样式 `square-before` / `square-after`: 由本扩展自己的装饰画实心色块,
+  不依赖 VS Code 的颜色功能 (原有的 `dot-before` / `dot-after` 仍是圆点)。
+
+### 变更
+
+- 高亮与 Hover 共用同一份字段表: `advanced.info.fields` / `advanced.info.excludedFields`
+  改名为 `advanced.fields.enabled` / `advanced.fields.excluded`, 并同时决定
+  "Hover 显示哪些行"与"高亮识别哪些颜色语法", 不再需要为高亮单独配置。
+  命令 `w3cColorToolkit.configureInfoFields` (配置悬停字段) 改名为
+  `w3cColorToolkit.configureColorFields` (配置颜色字段)。
+- 字段表补齐到覆盖全部 41 种可扫描语法, 并按作用范围分组标注:
+  CSS 格式 (Hover + 高亮)、只读 CSS 语法 (仅高亮, 如 `color-mix()`、相对颜色、
+  `light-dark()`、系统色)、非 CSS 表示 (仅 Hover 的 `hsv`/`cmyk`)、
+  以及不构成完整颜色的附加信息 (仅 Hover 的预览、原始语法、alpha、色域、对比度、
+  规范层级、解析说明)。注册表未登记的语法一律放行, 解析器新增语法不会静默失去高亮。
+- 新增 Hover 字段 `color-srgb`、`color-srgb-linear`、`color-display-p3-linear`,
+  使 Hover 字段覆盖全部 24 个转换目标格式。
+- `advanced.contextualPreview` 新增 `auto` 并改为默认值: 跟随编辑器当前主题选择
+  `light-dark()` 的分支, 因此 `light-dark()` 默认就有预览色与高亮; 结果在 Hover 中
+  仍标注为假设值, 切换主题会重新扫描。设为 `off` 可回到旧行为。
+- "配置颜色字段"勾选一个此前被 `fields.excluded` 排除的字段时, 会同时解除排除;
+  HDR 开关关闭时不再因为勾选列表里没有 HDR 字段而把它们从配置中丢掉。
+
 ## [0.0.1] - 2026-08-04
 
 首个本地开发版本, 合并三个参考扩展的互补能力并共享统一颜色内核。

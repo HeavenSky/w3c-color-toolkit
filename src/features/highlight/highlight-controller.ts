@@ -3,12 +3,16 @@
  *
  * 订阅索引更新, 只消费 `resolved` 或已显式采用预览假设的 match;
  * 装饰按 (预览色, 样式) 复用, 编辑器切换与文档关闭时释放。
+ *
+ * 装饰范围与 Hover 字段共用一份配置: `fields.enabled` / `fields.excluded`
+ * 中被关掉的颜色语法不再高亮 (见 `features/fields/registry.ts`)。
  */
 import * as vscode from 'vscode';
 
 import type { RuntimeConfiguration } from '../../configuration/load.js';
 import type { DocumentIndexManager } from '../../index/document-index-manager.js';
 import { isLanguageEnabled } from '../../configuration/language-filter.js';
+import { resolveHighlightSyntaxes } from '../fields/registry.js';
 
 import { DecorationManager, type DecorationKey } from './decoration-manager.js';
 import { computePreviewColor, previewSource } from './preview-color.js';
@@ -66,8 +70,15 @@ export class HighlightController implements vscode.Disposable {
 
     const groups = new Map<string, { key: DecorationKey; ranges: vscode.Range[] }>();
     const seenRanges = new Set<string>();
+    // 每次渲染构造一次: 字段表只有几十项, 比缓存失效逻辑更简单可靠。
+    const syntaxes = resolveHighlightSyntaxes(
+      config.fields,
+      config.excludedFields,
+      config.cssColorHdr,
+    );
 
     for (const match of snapshot.matches) {
+      if (!syntaxes.allows(match.syntax)) continue;
       const resolved = previewSource(match);
       if (!resolved) continue;
 

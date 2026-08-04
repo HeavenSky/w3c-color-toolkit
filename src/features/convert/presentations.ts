@@ -78,6 +78,40 @@ export function previewConversion(
   return { serialized, needsConfirmation };
 }
 
+/**
+ * 原生取色器的候选写法。
+ *
+ * 顺序: 原格式优先 (保持作者的写法), 然后是四个常用格式; 已出现的文本去重。
+ * 目标格式无法表达 alpha 时跳过, 避免用户在取色器里选一下就静默丢掉透明度 ——
+ * 这与 `convert.alphaLoss: reject` 的默认策略一致。
+ */
+export function colorPresentationTexts(
+  resolved: ResolvedColor,
+  preferredTarget: TargetFormat | undefined,
+  options: SerializerOptions,
+): string[] {
+  const hasAlpha = !Number.isNaN(resolved.alpha) && resolved.alpha < 1;
+  const targets: TargetFormat[] = [];
+  for (const target of [preferredTarget, 'hex', 'rgb', 'hsl', 'oklch'] as const) {
+    if (!target || targets.includes(target)) continue;
+    // hex 能表达 alpha (#RRGGBBAA), 其余按 targetSupportsAlpha 判断。
+    if (hasAlpha && !targetSupportsAlpha(target)) continue;
+    targets.push(target);
+  }
+
+  const texts: string[] = [];
+  for (const target of targets) {
+    if (target === 'named-color') {
+      // 只在精确命中时给出颜色名, 否则取色器会把颜色悄悄换成最近似的名字。
+      const { coords } = convertTo(resolved, 'srgb');
+      if (!exactNamedColor(coords)) continue;
+    }
+    const { text } = serialize(resolved, target, options);
+    if (text && !texts.includes(text)) texts.push(text);
+  }
+  return texts;
+}
+
 export function isRejection(
   value: ConvertPreview | { readonly rejection: ConvertRejection },
 ): value is { readonly rejection: ConvertRejection } {

@@ -10,9 +10,8 @@ import * as vscode from 'vscode';
 import type { RuntimeConfiguration } from '../../configuration/load.js';
 import type { ColorMatch, SerializerOptions } from '../../core/types.js';
 import { renderContextualReason, renderDiagnostic, renderSpecLevel, t } from '../../l10n/strings.js';
+import { fieldValue, resolveHoverFields, type FieldId } from '../fields/registry.js';
 import { computePreviewColor, previewSource } from '../highlight/preview-color.js';
-
-import { fieldValue, resolveFieldOrder, type FieldId } from './fields.js';
 
 /** 只允许 `rgba(int, int, int, number)`; 其他形式一律拒绝, 防止注入。 */
 const SAFE_RGBA = /^rgba\(\d{1,3}, \d{1,3}, \d{1,3}, [\d.]+\)$/;
@@ -77,7 +76,7 @@ export function renderHover(match: ColorMatch, config: RuntimeConfiguration): vs
   markdown.isTrusted = false;
 
   const options = serializerOptionsOf(config);
-  const fields = resolveFieldOrder(config.infoFields, config.infoExcludedFields, config.cssColorHdr);
+  const fields = resolveHoverFields(config.fields, config.excludedFields, config.cssColorHdr);
   const resolved = previewSource(match);
 
   const lines: string[] = [];

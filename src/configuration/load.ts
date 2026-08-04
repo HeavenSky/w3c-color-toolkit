@@ -19,9 +19,17 @@ export type MarkerType =
   | 'outline'
   | 'underline'
   | 'dot-before'
-  | 'dot-after';
+  | 'dot-after'
+  | 'square-before'
+  | 'square-after';
 
 export type LogLevel = 'off' | 'error' | 'warn' | 'info' | 'debug';
+
+/**
+ * 原生色块与取色器的提供范围。
+ * `dedupe` 在 css/less/scss 里先探测其他提供器覆盖了哪些 range, 只补空缺。
+ */
+export type ColorPickerMode = 'off' | 'dedupe' | 'all';
 
 export interface RuntimeConfiguration {
   readonly enabled: boolean;
@@ -44,8 +52,11 @@ export interface RuntimeConfiguration {
   readonly hslWithoutFunctionLanguages: readonly string[];
   readonly maxMatchesPerDocument: number;
   readonly hdrToneMapping: HdrToneMapping;
-  readonly infoFields: readonly string[] | null;
-  readonly infoExcludedFields: readonly string[];
+  /** 原生行内色块与 Hover 取色器的提供范围。 */
+  readonly colorPickerMode: ColorPickerMode;
+  /** 字段范围, 同时作用于 Hover 行与高亮语法; null 表示默认顺序。 */
+  readonly fields: readonly string[] | null;
+  readonly excludedFields: readonly string[];
   readonly infoPreviewSize: 'small' | 'large';
   readonly infoPreviewShape: 'square' | 'rectangle';
   readonly infoShowDiagnostics: boolean;
@@ -72,6 +83,24 @@ export interface RuntimeConfiguration {
 
   /** `advanced` 的解析结果, 供"显示生效配置"与告警使用。 */
   readonly advanced: AdvancedResolution;
+}
+
+/** `contextualPreview` 的原始取值; `auto` 在此层解析掉, core 只见到三种确定值。 */
+type ContextualPreviewSetting = 'off' | 'auto' | 'light' | 'dark';
+
+/**
+ * `auto` 跟随编辑器当前主题。
+ *
+ * 这是唯一可以不猜就拿到的配色方案上下文: 用户看到的编辑器要么亮要么暗,
+ * `light-dark()` 按它取分支比"没有预览"更有用。Hover 仍标注为假设值。
+ * 主题切换由 `activate.ts` 的 `onDidChangeActiveColorTheme` 触发重扫。
+ */
+function resolveContextualPreview(value: ContextualPreviewSetting): 'off' | 'light' | 'dark' {
+  if (value !== 'auto') return value;
+  const kind = vscode.window.activeColorTheme.kind;
+  return kind === vscode.ColorThemeKind.Light || kind === vscode.ColorThemeKind.HighContrastLight
+    ? 'light'
+    : 'dark';
 }
 
 function readAdvanced(scope: vscode.ConfigurationScope | undefined): AdvancedResolution {
@@ -114,8 +143,9 @@ export function loadConfiguration(scope?: vscode.ConfigurationScope): RuntimeCon
     hslWithoutFunctionLanguages: get<string[]>('highlight.hslWithoutFunctionLanguages'),
     maxMatchesPerDocument: get<number>('highlight.maxMatchesPerDocument'),
     hdrToneMapping: get<HdrToneMapping>('highlight.hdrToneMapping'),
-    infoFields: get<string[] | null>('info.fields'),
-    infoExcludedFields: get<string[]>('info.excludedFields'),
+    colorPickerMode: get<ColorPickerMode>('colorPicker.mode'),
+    fields: get<string[] | null>('fields.enabled'),
+    excludedFields: get<string[]>('fields.excluded'),
     infoPreviewSize: get<'small' | 'large'>('info.previewSize'),
     infoPreviewShape: get<'square' | 'rectangle'>('info.previewShape'),
     infoShowDiagnostics: get<boolean>('info.showDiagnostics'),
@@ -130,7 +160,7 @@ export function loadConfiguration(scope?: vscode.ConfigurationScope): RuntimeCon
     scanComments: get<boolean>('scan.comments'),
     scanStrings: get<boolean>('scan.strings'),
     maxDocumentSizeKb: get<number>('scan.maxDocumentSizeKb'),
-    contextualPreview: get<'off' | 'light' | 'dark'>('contextualPreview'),
+    contextualPreview: resolveContextualPreview(get<ContextualPreviewSetting>('contextualPreview')),
     variablesResolve: get<boolean>('variables.resolve'),
     variablesIncludePaths: get<string[]>('variables.includePaths'),
     maxImportDepth: get<number>('variables.maxImportDepth'),

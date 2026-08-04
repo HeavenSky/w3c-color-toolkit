@@ -15,6 +15,7 @@ import { maybeNotifyCoexistence } from './features/coexistence/conflict-notice.j
 import { ConvertController } from './features/convert/convert-controller.js';
 import { HighlightController } from './features/highlight/highlight-controller.js';
 import { ColorHoverProvider } from './features/info/hover-provider.js';
+import { ColorSwatchProvider } from './features/picker/color-provider.js';
 import { DocumentIndexManager } from './index/document-index-manager.js';
 import { Logger } from './logging/output-channel.js';
 
@@ -66,6 +67,15 @@ export function activateShared(
     vscode.languages.registerHoverProvider({ scheme: '*', language: '*' }, hoverProvider),
   );
 
+  // 行内色块与 Hover 取色器由 VS Code 渲染, 数据来自同一份索引。
+  // 本扩展把 `editor.defaultColorDecorators` 的默认值改为 `never`
+  // (见 contributes.configurationDefaults): 内置默认提供器认的 hex/rgb/hsl
+  // 是本提供器的真子集, 关掉它可以让"一个颜色一个色块"成为确定行为。
+  const swatchProvider = new ColorSwatchProvider(manager, (document) => configFor(document), logger);
+  context.subscriptions.push(
+    vscode.languages.registerColorProvider({ scheme: '*', language: '*' }, swatchProvider),
+  );
+
   context.subscriptions.push(
     ...registerCommands({
       manager,
@@ -91,6 +101,14 @@ export function activateShared(
     vscode.workspace.onDidCloseTextDocument((document) => {
       manager.releaseDocument(document);
       highlight.forget(document);
+    }),
+    // `contextualPreview: auto` 按当前主题选择 light-dark() 的分支, 因此换主题要重扫。
+    vscode.window.onDidChangeActiveColorTheme(() => {
+      cached = undefined;
+      if (configFor().contextualPreview === 'off') return;
+      manager.invalidateAll();
+      highlight.clearAll();
+      highlight.renderVisible();
     }),
     vscode.workspace.onDidChangeConfiguration(async (event) => {
       if (!event.affectsConfiguration(CONFIG_SECTION)) return;

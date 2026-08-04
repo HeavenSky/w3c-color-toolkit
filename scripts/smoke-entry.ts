@@ -3,7 +3,11 @@
  */
 export { scanText } from '../src/core/scanner.js';
 export { serialize } from '../src/core/serializer.js';
-export { fieldValue, resolveFieldOrder } from '../src/features/info/fields.js';
+export {
+  fieldValue,
+  resolveHighlightSyntaxes,
+  resolveHoverFields,
+} from '../src/features/fields/registry.js';
 export { convertSource, previewConversion } from '../src/features/convert/presentations.js';
 export { computePreviewColor, previewSource } from '../src/features/highlight/preview-color.js';
 export { advancedDefaults } from '../src/configuration/schema.js';
