@@ -1,0 +1,132 @@
+name: Release
+
+# 打 v* 标签即发布: 校验 -> 打包 vsix -> 创建 GitHub Release 并附带 vsix.
+# 手动触发用于补发某个已存在的版本(不重新打标签).
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'package.json 中的版本号, 例如 0.0.1'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      has_vsce_pat: ${{ steps.secrets.outputs.has_vsce_pat }}
+    steps:
+      - uses: actions/checkout@v7
+
+      # pnpm 必须先装, setup-node 的 cache: pnpm 才能找到 store.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # 标签与 package.json 版本必须一致, 否则产物名与 Release 名会错位.
+      - name: Resolve and verify version
+        id: version
+        run: |
+          pkg_version="$(node -p "require('./package.json').version")"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            input_version="${{ github.event.inputs.version }}"
+          else
+            input_version="${GITHUB_REF_NAME#v}"
+          fi
+          if [ "$pkg_version" != "$input_version" ]; then
+            echo "版本不一致: package.json=$pkg_version, 触发版本=$input_version" >&2
+            exit 1
+          fi
+          echo "version=$pkg_version" >> "$GITHUB_OUTPUT"
+          echo "vsix=artifacts/w3c-color-toolkit-$pkg_version.vsix" >> "$GITHUB_OUTPUT"
+
+      # 贡献点与本地化都是生成物, 漂移会让设置界面与实现不一致, 必须先卡住.
+      - name: Check contributes drift
+        run: pnpm check:contributes
+
+      - name: Check l10n drift
+        run: pnpm check:l10n
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      # 不依赖 VS Code 运行时的端到端冒烟: 扫描 -> 解析 -> 求值 -> 色域映射 -> 序列化.
+      - name: Smoke check
+        run: node scripts/smoke.mjs
+
+      # package 脚本内部做生产构建并按允许清单断言 VSIX 内容.
+      - name: Package extension
+        run: pnpm package
+
+      # 取 CHANGELOG 中与本版本对应的小节作为 Release 说明; 缺失时只告警, 不阻断发布.
+      - name: Extract release notes
+        run: |
+          if node scripts/changelog-section.mjs "${{ steps.version.outputs.version }}" > RELEASE_NOTES.md; then
+            cat RELEASE_NOTES.md
+          else
+            echo "::warning::CHANGELOG.md 中未找到 ${{ steps.version.outputs.version }} 的小节, Release 说明为空"
+            : > RELEASE_NOTES.md
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          name: v${{ steps.version.outputs.version }}
+          tag_name: v${{ steps.version.outputs.version }}
+          body_path: RELEASE_NOTES.md
+          files: ${{ steps.version.outputs.vsix }}
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: w3c-color-toolkit-${{ steps.version.outputs.version }}.vsix
+          path: ${{ steps.version.outputs.vsix }}
+
+      # secrets 上下文在 job 级 if 中不可用, 因此在这里转成 job output 供下游判断.
+      - name: Check marketplace credentials
+        id: secrets
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: |
+          if [ -n "$VSCE_PAT" ]; then
+            echo "has_vsce_pat=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_vsce_pat=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # 仅在仓库配置了 VSCE_PAT 后运行; 未配置时跳过, 只发 GitHub Release.
+  marketplace:
+    needs: release
+    if: needs.release.outputs.has_vsce_pat == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # --no-dependencies: 产物由 esbuild 打成单文件, 不需要 vsce 解析 pnpm 的依赖树.
+      - name: Publish to VS Code Marketplace
+        run: pnpm exec vsce publish --no-dependencies
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}

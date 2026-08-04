@@ -1,0 +1,8 @@
+# 锚定本目录为 pnpm 项目根, 阻止 pnpm 向上找到其他 workspace root
+packages: []
+allowBuilds:
+  # 构建与打包必需
+  esbuild: true
+  '@vscode/vsce-sign': true
+  # vsce 的可选原生依赖, 只有 Marketplace 登录才需要; 不构建以避免原生模块
+  keytar: false

@@ -1,0 +1,37 @@
+# 只保留运行时需要的内容, 满足验收标准 17。
+.vscode/**
+.ai-ctx/**
+src/**
+test/**
+scripts/**
+node_modules/**
+artifacts/**
+docs/**
+.github/**
+out-test/**
+.vscode-test/**
+.vscode-test-web/**
+**/*.ts
+**/*.map
+tsconfig.json
+eslint.config.mjs
+vitest.config.ts
+vitest.perf.config.ts
+esbuild.mjs
+pnpm-lock.yaml
+pnpm-workspace.yaml
+.gitignore
+.eslintcache
+.named-colors.gen.txt
+*.gen.txt
+
+# 显式保留 (取反规则写在最后)
+!dist/**
+!l10n/**
+!package.nls.json
+!package.nls.zh-cn.json
+!LICENSE
+!NOTICE.md
+!README.md
+!README.zh-cn.md
+!CHANGELOG.md

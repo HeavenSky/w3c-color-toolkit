@@ -1,0 +1,824 @@
+{
+  "name": "w3c-color-toolkit",
+  "displayName": "%extension.displayName%",
+  "description": "%extension.description%",
+  "version": "0.0.1",
+  "license": "MIT",
+  "publisher": "HeavenSky",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/HeavenSky/w3c-color-toolkit"
+  },
+  "homepage": "https://github.com/HeavenSky/w3c-color-toolkit",
+  "bugs": {
+    "url": "https://github.com/HeavenSky/w3c-color-toolkit/issues"
+  },
+  "icon": "media/icon.png",
+  "categories": [
+    "Programming Languages",
+    "Visualization",
+    "Other"
+  ],
+  "keywords": [
+    "color",
+    "css",
+    "highlight",
+    "hover",
+    "convert"
+  ],
+  "engines": {
+    "vscode": "^1.101.0",
+    "node": ">=20.19.0"
+  },
+  "packageManager": "pnpm@11.9.0",
+  "main": "./dist/extension-node.js",
+  "browser": "./dist/extension-web.js",
+  "l10n": "./l10n",
+  "extensionKind": [
+    "workspace",
+    "ui"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "%capabilities.untrustedWorkspaces%"
+    }
+  },
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "configuration": {
+      "title": "%extension.displayName%",
+      "properties": {
+        "w3cColorToolkit.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "%config.enabled%",
+          "scope": "resource"
+        },
+        "w3cColorToolkit.languages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "*"
+          ],
+          "description": "%config.languages%",
+          "scope": "resource"
+        },
+        "w3cColorToolkit.highlight": {
+          "type": "string",
+          "enum": [
+            "off",
+            "background",
+            "foreground",
+            "outline",
+            "underline",
+            "dot-before",
+            "dot-after"
+          ],
+          "default": "underline",
+          "description": "%config.highlight%",
+          "scope": "resource"
+        },
+        "w3cColorToolkit.info": {
+          "type": "boolean",
+          "default": true,
+          "description": "%config.info%",
+          "scope": "resource"
+        },
+        "w3cColorToolkit.convertSyntax": {
+          "type": "string",
+          "enum": [
+            "modern",
+            "legacy"
+          ],
+          "default": "legacy",
+          "description": "%config.convertSyntax%",
+          "scope": "resource"
+        },
+        "w3cColorToolkit.precision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10,
+          "default": 5,
+          "description": "%config.precision%",
+          "scope": "resource"
+        },
+        "w3cColorToolkit.experimental": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "cssColor6",
+              "cssColorHdr"
+            ]
+          },
+          "default": [
+            "cssColor6",
+            "cssColorHdr"
+          ],
+          "description": "%config.experimental%",
+          "scope": "resource"
+        },
+        "w3cColorToolkit.advanced": {
+          "type": "object",
+          "scope": "resource",
+          "default": {},
+          "additionalProperties": false,
+          "properties": {
+            "highlight.markRuler": {
+              "type": "boolean",
+              "default": true,
+              "description": "%advanced.highlight.markRuler%"
+            },
+            "highlight.matchWords": {
+              "type": "string",
+              "enum": [
+                "off",
+                "css-like",
+                "all"
+              ],
+              "default": "css-like",
+              "description": "%advanced.highlight.matchWords%"
+            },
+            "highlight.hexAlphaOrder": {
+              "type": "string",
+              "enum": [
+                "rgba",
+                "argb"
+              ],
+              "default": "rgba",
+              "description": "%advanced.highlight.hexAlphaOrder%"
+            },
+            "highlight.matchRgbWithoutFunction": {
+              "type": "boolean",
+              "default": false,
+              "description": "%advanced.highlight.matchRgbWithoutFunction%"
+            },
+            "highlight.rgbWithoutFunctionLanguages": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": [
+                "*"
+              ],
+              "description": "%advanced.highlight.rgbWithoutFunctionLanguages%"
+            },
+            "highlight.matchHslWithoutFunction": {
+              "type": "boolean",
+              "default": false,
+              "description": "%advanced.highlight.matchHslWithoutFunction%"
+            },
+            "highlight.hslWithoutFunctionLanguages": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": [
+                "*"
+              ],
+              "description": "%advanced.highlight.hslWithoutFunctionLanguages%"
+            },
+            "highlight.maxMatchesPerDocument": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000000,
+              "default": 10000,
+              "description": "%advanced.highlight.maxMatchesPerDocument%"
+            },
+            "highlight.hdrToneMapping": {
+              "type": "string",
+              "enum": [
+                "none",
+                "reinhard",
+                "clip"
+              ],
+              "default": "reinhard",
+              "description": "%advanced.highlight.hdrToneMapping%"
+            },
+            "info.fields": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              },
+              "default": null,
+              "description": "%advanced.info.fields%"
+            },
+            "info.excludedFields": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": [],
+              "description": "%advanced.info.excludedFields%"
+            },
+            "info.previewSize": {
+              "type": "string",
+              "enum": [
+                "small",
+                "large"
+              ],
+              "default": "small",
+              "description": "%advanced.info.previewSize%"
+            },
+            "info.previewShape": {
+              "type": "string",
+              "enum": [
+                "square",
+                "rectangle"
+              ],
+              "default": "rectangle",
+              "description": "%advanced.info.previewShape%"
+            },
+            "info.showDiagnostics": {
+              "type": "boolean",
+              "default": true,
+              "description": "%advanced.info.showDiagnostics%"
+            },
+            "info.showSpecLevel": {
+              "type": "boolean",
+              "default": true,
+              "description": "%advanced.info.showSpecLevel%"
+            },
+            "convert.enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "%advanced.convert.enabled%"
+            },
+            "convert.alphaLoss": {
+              "type": "string",
+              "enum": [
+                "reject",
+                "confirm",
+                "drop"
+              ],
+              "default": "reject",
+              "description": "%advanced.convert.alphaLoss%"
+            },
+            "convert.missingComponentLoss": {
+              "type": "string",
+              "enum": [
+                "confirm",
+                "compute"
+              ],
+              "default": "confirm",
+              "description": "%advanced.convert.missingComponentLoss%"
+            },
+            "convert.namedColorFallback": {
+              "type": "string",
+              "enum": [
+                "reject",
+                "nearest"
+              ],
+              "default": "reject",
+              "description": "%advanced.convert.namedColorFallback%"
+            },
+            "convert.recentFirst": {
+              "type": "boolean",
+              "default": true,
+              "description": "%advanced.convert.recentFirst%"
+            },
+            "output.gamutMapping": {
+              "type": "string",
+              "enum": [
+                "css",
+                "clip",
+                "none"
+              ],
+              "default": "css",
+              "description": "%advanced.output.gamutMapping%"
+            },
+            "output.hexCase": {
+              "type": "string",
+              "enum": [
+                "lower",
+                "upper"
+              ],
+              "default": "lower",
+              "description": "%advanced.output.hexCase%"
+            },
+            "scan.comments": {
+              "type": "boolean",
+              "default": true,
+              "description": "%advanced.scan.comments%"
+            },
+            "scan.strings": {
+              "type": "boolean",
+              "default": true,
+              "description": "%advanced.scan.strings%"
+            },
+            "scan.maxDocumentSizeKb": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 102400,
+              "default": 2048,
+              "description": "%advanced.scan.maxDocumentSizeKb%"
+            },
+            "contextualPreview": {
+              "type": "string",
+              "enum": [
+                "off",
+                "light",
+                "dark"
+              ],
+              "default": "off",
+              "description": "%advanced.contextualPreview%"
+            },
+            "variables.resolve": {
+              "type": "boolean",
+              "default": true,
+              "description": "%advanced.variables.resolve%"
+            },
+            "variables.includePaths": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": [],
+              "description": "%advanced.variables.includePaths%"
+            },
+            "variables.maxImportDepth": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100,
+              "default": 20,
+              "description": "%advanced.variables.maxImportDepth%"
+            },
+            "variables.maxImportFiles": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10000,
+              "default": 200,
+              "description": "%advanced.variables.maxImportFiles%"
+            },
+            "variables.maxResolveDepth": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "description": "%advanced.variables.maxResolveDepth%"
+            },
+            "experimental.hdrAssumedHeadroom": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10,
+              "default": 0,
+              "description": "%advanced.experimental.hdrAssumedHeadroom%"
+            },
+            "coexistence.notify": {
+              "type": "boolean",
+              "default": true,
+              "description": "%advanced.coexistence.notify%"
+            },
+            "logLevel": {
+              "type": "string",
+              "enum": [
+                "off",
+                "error",
+                "warn",
+                "info",
+                "debug"
+              ],
+              "default": "warn",
+              "description": "%advanced.logLevel%"
+            }
+          },
+          "markdownDescription": "%config.advanced%",
+          "defaultSnippets": [
+            {
+              "label": "All advanced options (with defaults)",
+              "description": "Insert all 34 built-in options with their default values",
+              "body": {
+                "highlight.markRuler": true,
+                "highlight.matchWords": "css-like",
+                "highlight.hexAlphaOrder": "rgba",
+                "highlight.matchRgbWithoutFunction": false,
+                "highlight.rgbWithoutFunctionLanguages": [
+                  "*"
+                ],
+                "highlight.matchHslWithoutFunction": false,
+                "highlight.hslWithoutFunctionLanguages": [
+                  "*"
+                ],
+                "highlight.maxMatchesPerDocument": 10000,
+                "highlight.hdrToneMapping": "reinhard",
+                "info.fields": null,
+                "info.excludedFields": [],
+                "info.previewSize": "small",
+                "info.previewShape": "rectangle",
+                "info.showDiagnostics": true,
+                "info.showSpecLevel": true,
+                "convert.enabled": true,
+                "convert.alphaLoss": "reject",
+                "convert.missingComponentLoss": "confirm",
+                "convert.namedColorFallback": "reject",
+                "convert.recentFirst": true,
+                "output.gamutMapping": "css",
+                "output.hexCase": "lower",
+                "scan.comments": true,
+                "scan.strings": true,
+                "scan.maxDocumentSizeKb": 2048,
+                "contextualPreview": "off",
+                "variables.resolve": true,
+                "variables.includePaths": [],
+                "variables.maxImportDepth": 20,
+                "variables.maxImportFiles": 200,
+                "variables.maxResolveDepth": 20,
+                "experimental.hdrAssumedHeadroom": 0,
+                "coexistence.notify": true,
+                "logLevel": "warn"
+              }
+            },
+            {
+              "label": "Minimal example",
+              "description": "A few commonly changed options",
+              "body": {
+                "output.hexCase": "upper",
+                "highlight.matchWords": "all",
+                "scan.comments": false
+              }
+            }
+          ]
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "w3cColorToolkit.convert",
+        "title": "%command.convert%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "w3cColorToolkit.copyColorAs",
+        "title": "%command.copyColorAs%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "w3cColorToolkit.toggleFeatures",
+        "title": "%command.toggleFeatures%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "w3cColorToolkit.configureInfoFields",
+        "title": "%command.configureInfoFields%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "w3cColorToolkit.manage",
+        "title": "%command.manage%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "w3cColorToolkit.convertTo.hex",
+        "title": "%command.convertTo.hex%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "w3cColorToolkit.convertTo.rgb",
+        "title": "%command.convertTo.rgb%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "w3cColorToolkit.convertTo.hsl",
+        "title": "%command.convertTo.hsl%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "w3cColorToolkit.convertTo.oklch",
+        "title": "%command.convertTo.oklch%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "w3cColorToolkit.convertTo.hwb",
+        "title": "%command.convertTo.hwb%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "w3cColorToolkit.convertTo.lab",
+        "title": "%command.convertTo.lab%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "w3cColorToolkit.convertTo.lch",
+        "title": "%command.convertTo.lch%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "w3cColorToolkit.convertTo.oklab",
+        "title": "%command.convertTo.oklab%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "w3cColorToolkit.convertTo.srgb",
+        "title": "%command.convertTo.srgb%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "w3cColorToolkit.convertTo.srgbLinear",
+        "title": "%command.convertTo.srgbLinear%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "w3cColorToolkit.convertTo.displayP3",
+        "title": "%command.convertTo.displayP3%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "w3cColorToolkit.convertTo.displayP3Linear",
+        "title": "%command.convertTo.displayP3Linear%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "w3cColorToolkit.convertTo.a98Rgb",
+        "title": "%command.convertTo.a98Rgb%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "w3cColorToolkit.convertTo.prophotoRgb",
+        "title": "%command.convertTo.prophotoRgb%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "w3cColorToolkit.convertTo.rec2020",
+        "title": "%command.convertTo.rec2020%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "w3cColorToolkit.convertTo.xyzD50",
+        "title": "%command.convertTo.xyzD50%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "w3cColorToolkit.convertTo.xyzD65",
+        "title": "%command.convertTo.xyzD65%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "w3cColorToolkit.convertTo.namedColor",
+        "title": "%command.convertTo.namedColor%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "w3cColorToolkit.convertTo.ictcp",
+        "title": "%command.convertTo.ictcp%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "w3cColorToolkit.convertTo.jzazbz",
+        "title": "%command.convertTo.jzazbz%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "w3cColorToolkit.convertTo.jzczhz",
+        "title": "%command.convertTo.jzczhz%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "w3cColorToolkit.convertTo.rec2100Pq",
+        "title": "%command.convertTo.rec2100Pq%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "w3cColorToolkit.convertTo.rec2100Hlg",
+        "title": "%command.convertTo.rec2100Hlg%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "w3cColorToolkit.convertTo.rec2100Linear",
+        "title": "%command.convertTo.rec2100Linear%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "w3cColorToolkit.migrateLegacySettings",
+        "title": "%command.migrateLegacySettings%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "w3cColorToolkit.showEffectiveConfiguration",
+        "title": "%command.showEffectiveConfiguration%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "w3cColorToolkit.showSupportMatrix",
+        "title": "%command.showSupportMatrix%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "w3cColorToolkit.rescanDocument",
+        "title": "%command.rescanDocument%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "w3cColorToolkit.clearIndexCache",
+        "title": "%command.clearIndexCache%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "w3cColorToolkit.showOutputChannel",
+        "title": "%command.showOutputChannel%",
+        "category": "%command.category%"
+      },
+      {
+        "command": "w3cColorToolkit.reportUnsupportedSyntax",
+        "title": "%command.reportUnsupportedSyntax%",
+        "category": "%command.category%"
+      }
+    ],
+    "submenus": [
+      {
+        "id": "w3cColorToolkit.editorContext",
+        "label": "%extension.displayName%"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "w3cColorToolkit.convert",
+          "when": "editorIsOpen"
+        },
+        {
+          "command": "w3cColorToolkit.copyColorAs",
+          "when": "editorIsOpen"
+        },
+        {
+          "command": "w3cColorToolkit.convertTo.hex",
+          "when": "false"
+        },
+        {
+          "command": "w3cColorToolkit.convertTo.rgb",
+          "when": "false"
+        },
+        {
+          "command": "w3cColorToolkit.convertTo.hsl",
+          "when": "false"
+        },
+        {
+          "command": "w3cColorToolkit.convertTo.oklch",
+          "when": "false"
+        },
+        {
+          "command": "w3cColorToolkit.convertTo.hwb",
+          "when": "false"
+        },
+        {
+          "command": "w3cColorToolkit.convertTo.lab",
+          "when": "false"
+        },
+        {
+          "command": "w3cColorToolkit.convertTo.lch",
+          "when": "false"
+        },
+        {
+          "command": "w3cColorToolkit.convertTo.oklab",
+          "when": "false"
+        },
+        {
+          "command": "w3cColorToolkit.convertTo.srgb",
+          "when": "false"
+        },
+        {
+          "command": "w3cColorToolkit.convertTo.srgbLinear",
+          "when": "false"
+        },
+        {
+          "command": "w3cColorToolkit.convertTo.displayP3",
+          "when": "false"
+        },
+        {
+          "command": "w3cColorToolkit.convertTo.displayP3Linear",
+          "when": "false"
+        },
+        {
+          "command": "w3cColorToolkit.convertTo.a98Rgb",
+          "when": "false"
+        },
+        {
+          "command": "w3cColorToolkit.convertTo.prophotoRgb",
+          "when": "false"
+        },
+        {
+          "command": "w3cColorToolkit.convertTo.rec2020",
+          "when": "false"
+        },
+        {
+          "command": "w3cColorToolkit.convertTo.xyzD50",
+          "when": "false"
+        },
+        {
+          "command": "w3cColorToolkit.convertTo.xyzD65",
+          "when": "false"
+        },
+        {
+          "command": "w3cColorToolkit.convertTo.namedColor",
+          "when": "false"
+        },
+        {
+          "command": "w3cColorToolkit.convertTo.ictcp",
+          "when": "false"
+        },
+        {
+          "command": "w3cColorToolkit.convertTo.jzazbz",
+          "when": "false"
+        },
+        {
+          "command": "w3cColorToolkit.convertTo.jzczhz",
+          "when": "false"
+        },
+        {
+          "command": "w3cColorToolkit.convertTo.rec2100Pq",
+          "when": "false"
+        },
+        {
+          "command": "w3cColorToolkit.convertTo.rec2100Hlg",
+          "when": "false"
+        },
+        {
+          "command": "w3cColorToolkit.convertTo.rec2100Linear",
+          "when": "false"
+        },
+        {
+          "command": "w3cColorToolkit.migrateLegacySettings",
+          "when": "false"
+        },
+        {
+          "command": "w3cColorToolkit.showEffectiveConfiguration",
+          "when": "false"
+        },
+        {
+          "command": "w3cColorToolkit.showSupportMatrix",
+          "when": "false"
+        },
+        {
+          "command": "w3cColorToolkit.rescanDocument",
+          "when": "false"
+        },
+        {
+          "command": "w3cColorToolkit.clearIndexCache",
+          "when": "false"
+        },
+        {
+          "command": "w3cColorToolkit.showOutputChannel",
+          "when": "false"
+        },
+        {
+          "command": "w3cColorToolkit.reportUnsupportedSyntax",
+          "when": "false"
+        }
+      ],
+      "editor/context": [
+        {
+          "submenu": "w3cColorToolkit.editorContext",
+          "group": "1_modification",
+          "when": "editorTextFocus"
+        }
+      ],
+      "w3cColorToolkit.editorContext": [
+        {
+          "command": "w3cColorToolkit.convert",
+          "group": "w3cColorToolkit@1",
+          "when": "editorTextFocus"
+        },
+        {
+          "command": "w3cColorToolkit.copyColorAs",
+          "group": "w3cColorToolkit@1",
+          "when": "editorTextFocus"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "gen:icon": "node scripts/gen-icon.mjs",
+    "gen:contributes": "node scripts/gen-contributes.mjs",
+    "check:contributes": "node scripts/gen-contributes.mjs --check",
+    "gen:l10n": "node scripts/gen-l10n.mjs",
+    "check:l10n": "node scripts/gen-l10n.mjs --check",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:performance": "vitest run --config vitest.perf.config.ts",
+    "build": "node esbuild.mjs --production",
+    "watch": "node esbuild.mjs --watch",
+    "package": "node scripts/package.mjs",
+    "vscode:prepublish": "pnpm run build"
+  },
+  "dependencies": {
+    "@csstools/css-color-parser": "4.1.10",
+    "@csstools/css-parser-algorithms": "4.0.0",
+    "@csstools/css-tokenizer": "4.0.0",
+    "colorjs.io": "0.7.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.0",
+    "@types/vscode": "^1.101.0",
+    "@vscode/vsce": "^3.2.2",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5"
+  }
+}
