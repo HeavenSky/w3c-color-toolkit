@@ -2,7 +2,7 @@
 
 Notable changes to W3C Color Toolkit.
 
-## [0.0.3] - 2026-08-07
+## v0.0.3 2026-08-07
 
 ### Changed
 
@@ -20,7 +20,7 @@ Notable changes to W3C Color Toolkit.
   the l10n directory may carry per-source subdirectories. This extension uses none of those
   additions — the change is pure alignment, with no effect on behaviour.
 
-## [0.0.2] - 2026-08-05
+## v0.0.2 2026-08-05
 
 ### Added
 
@@ -73,7 +73,7 @@ Notable changes to W3C Color Toolkit.
   now clears the exclusion as well; turning the HDR switch off no longer drops HDR fields from the
   configuration merely because they were absent from the tick list.
 
-## [0.0.1] - 2026-08-04
+## v0.0.1 2026-08-04
 
 First local development build, merging the complementary capabilities of three reference
 extensions onto a shared colour core.

@@ -3,7 +3,14 @@
  *
  * 用法: node scripts/changelog-section.mjs 0.0.1
  * 找不到该版本或正文为空时以退出码 1 结束, 由调用方决定回退方式。
- * 版本标题形如 `## 0.0.1` 或 `## [0.0.1] - 2026-08-04`, 方括号与日期都可选。
+ *
+ * 标题格式统一为 `## v<版本> <日期> [标题]`, 标题可选:
+ *
+ *     ## v0.0.1 2026-08-04
+ *     ## v0.0.2 2026-08-05 Port Toolkit
+ *
+ * 匹配时对 `v` 前缀, 方括号与 `-` 分隔符都保持宽容 (`## 0.0.1`、`## [0.0.1] - 2026-08-04`
+ * 同样可被识别), 这样历史文件不会因为格式统一而突然抽不出正文; 新写的小节请用上面那一种。
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -19,8 +26,8 @@ if (!version) {
 
 const lines = readFileSync(join(ROOT, 'CHANGELOG.md'), 'utf8').split(/\r?\n/);
 
-const isVersionHeading = (line) => /^##\s+\[?\d+\.\d+\.\d+/.test(line);
-const matchesTarget = (line) => line.match(/^##\s+\[?(\d+\.\d+\.\d+[^\]\s]*)\]?/)?.[1] === version;
+const isVersionHeading = (line) => /^##\s+v?\[?\d+\.\d+\.\d+/.test(line);
+const matchesTarget = (line) => line.match(/^##\s+v?\[?(\d+\.\d+\.\d+[^\]\s]*)\]?/)?.[1] === version;
 
 const start = lines.findIndex((line) => isVersionHeading(line) && matchesTarget(line));
 if (start === -1) {

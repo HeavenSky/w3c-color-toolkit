@@ -14,7 +14,7 @@ a87908e5df76710a  .vscodeignore
 e0179a3239cea001  .vscode/tasks.json
 aa5631ef3e698a7f  .github/workflows/release.yml
 2ca1a3464b44129c  scripts/gen-icon.mjs
-d893b42cd6d4a8a5  scripts/changelog-section.mjs
+4d36833fdfbbe966  scripts/changelog-section.mjs
 0ead69a68f21c837  scripts/package.mjs
 eaa269f23b6ab2e3  scripts/check.mjs
 a1e18779567e873c  scripts/check-template.mjs
