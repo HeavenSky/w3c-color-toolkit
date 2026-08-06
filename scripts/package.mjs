@@ -5,7 +5,7 @@
  * 随插件内容改动。推导规则本身在 `scripts/lib/vsix-allowlist.mjs` 里, 是纯函数且有单测。
  */
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -29,11 +29,26 @@ if (!/^https:\/\/github\.com\/[^/]+\/[^/]+$/.test(repoUrl)) {
   process.exit(1);
 }
 
+/** 递归列出目录下的文件, 返回相对该目录的路径。 */
+function listFiles(dir, prefix = '') {
+  const found = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) found.push(...listFiles(join(dir, entry.name), relative));
+    else found.push(relative);
+  }
+  return found;
+}
+
 // ── 推导允许清单 ────────────────────────────────────────────
+// 入口所在目录要在构建之后读: `.wasm` 这类无法内联的产物是构建阶段才落盘的。
+// l10n 要递归读: 捆绑第三方语言服务器时, 它自带的语言包按来源放在各自的子目录里。
+const outDir = join(ROOT, pkg.main.replace(/^\.\//, '').split('/').slice(0, -1).join('/'));
 const allowed = deriveAllowlist({
   pkg,
   rootEntries: readdirSync(ROOT),
-  l10nEntries: pkg.l10n ? readdirSync(join(ROOT, pkg.l10n.replace(/^\.\//, ''))) : [],
+  l10nEntries: pkg.l10n ? listFiles(join(ROOT, pkg.l10n.replace(/^\.\//, ''))) : [],
+  outEntries: existsSync(outDir) ? readdirSync(outDir) : [],
 });
 
 // ── 打包 ────────────────────────────────────────────────────

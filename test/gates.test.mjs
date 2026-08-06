@@ -66,6 +66,59 @@ describe('deriveAllowlist', () => {
     });
     expect(allowed.has('media/panel.svg')).toBe(true);
   });
+
+  it('放行入口同目录下的 .wasm, 但不放行其它生成物', () => {
+    const allowed = deriveAllowlist({
+      pkg: basePkg,
+      rootEntries: [],
+      l10nEntries: [],
+      outEntries: ['extension.js', 'server.wasm', 'extension.js.map', 'stray.bin'],
+    });
+    expect(allowed.has('out/server.wasm')).toBe(true);
+    expect(allowed.has('out/extension.js.map')).toBe(false);
+    expect(allowed.has('out/stray.bin')).toBe(false);
+  });
+
+  it('省略 outEntries 时行为不变', () => {
+    const allowed = deriveAllowlist({ pkg: basePkg, rootEntries: [], l10nEntries: [] });
+    expect([...allowed].some((name) => name.endsWith('.wasm'))).toBe(false);
+  });
+
+  it('涵盖语言类贡献点引用的文件', () => {
+    const allowed = deriveAllowlist({
+      pkg: {
+        ...basePkg,
+        contributes: {
+          languages: [
+            {
+              id: 'toml',
+              configuration: './language-configuration.json',
+              icon: { light: 'media/toml-light.svg', dark: 'media/toml-dark.svg' },
+            },
+          ],
+          grammars: [{ language: 'toml', path: './syntaxes/toml.tmLanguage.json' }],
+          snippets: [{ language: 'toml', path: './snippets/toml.json' }],
+        },
+      },
+      rootEntries: [],
+      l10nEntries: [],
+    });
+    expect(allowed.has('language-configuration.json')).toBe(true);
+    expect(allowed.has('media/toml-light.svg')).toBe(true);
+    expect(allowed.has('media/toml-dark.svg')).toBe(true);
+    expect(allowed.has('syntaxes/toml.tmLanguage.json')).toBe(true);
+    expect(allowed.has('snippets/toml.json')).toBe(true);
+  });
+
+  it('涵盖 l10n 子目录 (捆绑的第三方语言包)', () => {
+    const allowed = deriveAllowlist({
+      pkg: basePkg,
+      rootEntries: [],
+      l10nEntries: ['bundle.l10n.zh-cn.json', 'yaml-server/bundle.l10n.json'],
+    });
+    expect(allowed.has('l10n/bundle.l10n.zh-cn.json')).toBe(true);
+    expect(allowed.has('l10n/yaml-server/bundle.l10n.json')).toBe(true);
+  });
 });
 
 describe('template-shared', () => {

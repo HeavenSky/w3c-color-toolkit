@@ -19,17 +19,29 @@ const NLS = ['package.nls.json', 'package.nls.zh-cn.json'];
 
 /**
  * @param {object} input
- * @param {object} input.pkg          解析后的 package.json
- * @param {string[]} input.rootEntries 仓库根目录下的文件名
- * @param {string[]} input.l10nEntries `pkg.l10n` 目录下的文件名; 无 `pkg.l10n` 时传空数组
+ * @param {object} input.pkg           解析后的 package.json
+ * @param {string[]} input.rootEntries  仓库根目录下的文件名
+ * @param {string[]} input.l10nEntries  `pkg.l10n` 目录下的文件路径, 相对该目录且**含子目录**
+ *                                      (例如 `bundle.l10n.zh-cn.json`, `yaml-server/bundle.l10n.json`);
+ *                                      无 `pkg.l10n` 时传空数组
+ * @param {string[]} [input.outEntries] `pkg.main` 所在目录下的文件名; 用于放行与 bundle 并列的
+ *                                      WebAssembly 产物。省略时按空数组处理。
  * @returns {Set<string>} VSIX 内应当存在的条目 (相对 `extension/`)
  */
-export function deriveAllowlist({ pkg, rootEntries, l10nEntries }) {
+export function deriveAllowlist({ pkg, rootEntries, l10nEntries, outEntries = [] }) {
   const allowed = new Set(['package.json']);
 
   allowed.add(strip(pkg.main));
   if (pkg.browser) allowed.add(strip(pkg.browser));
   if (pkg.icon) allowed.add(strip(pkg.icon));
+
+  // 与 bundle 并列的 `.wasm`: 由 Rust/Go 等编译而来的语言服务器无法被 esbuild 内联,
+  // 只能作为独立产物随包分发。限定在入口所在目录且只认 `.wasm`, 其它新出现的生成物
+  // 仍然会被允许清单拦下。
+  const outDir = strip(pkg.main).split('/').slice(0, -1).join('/');
+  for (const name of outEntries) {
+    if (name.endsWith('.wasm')) allowed.add(outDir ? `${outDir}/${name}` : name);
+  }
 
   if (pkg.l10n) {
     const dir = strip(pkg.l10n);
@@ -41,6 +53,23 @@ export function deriveAllowlist({ pkg, rootEntries, l10nEntries }) {
     for (const container of containers) {
       if (container.icon) allowed.add(strip(container.icon));
     }
+  }
+
+  // 语言类贡献点各自引用磁盘上的文件, 且都是运行时必需的 —— 少一个不会构建失败,
+  // 只会让高亮或括号行为在装上之后静默失效。
+  const contributes = pkg.contributes ?? {};
+  for (const language of contributes.languages ?? []) {
+    if (language.configuration) allowed.add(strip(language.configuration));
+    // 文件图标可以按明暗主题各给一份。
+    for (const variant of Object.values(language.icon ?? {})) {
+      if (typeof variant === 'string') allowed.add(strip(variant));
+    }
+  }
+  for (const grammar of contributes.grammars ?? []) {
+    if (grammar.path) allowed.add(strip(grammar.path));
+  }
+  for (const snippet of contributes.snippets ?? []) {
+    if (snippet.path) allowed.add(strip(snippet.path));
   }
 
   for (const name of NLS) {

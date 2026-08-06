@@ -3,6 +3,11 @@ artifacts/
 out/
 *.vsix
 
+# 构建期从依赖派生的中间产物: 打过补丁的胶水, 捆绑的第三方语言包。
+# 每次构建前重新生成, 因此不入库 —— 入库会让它与 node_modules 里的真源悄悄漂移。
+vendor/
+l10n/*/
+
 # VS Code 集成测试 harness 的缓存目录, 保留规则以防误提交
 .vscode-test/
 .vscode-test-web/
