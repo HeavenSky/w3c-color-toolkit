@@ -1,84 +1,127 @@
 # Changelog
 
-本文件记录 W3C Color Toolkit 的显著变更。
+Notable changes to W3C Color Toolkit.
+
+## [0.0.3] - 2026-08-07
+
+### Changed
+
+- New icon: three swatches side by side at the centre of the colour wheel. The previous icon was
+  a wheel around an empty hole — it said "colour space" but not what the extension does. Three
+  swatches in a row read as "one colour in several representations", which is exactly the inline
+  swatch and cross-colour-space conversion this extension provides. The swatch colours reuse the
+  wheel's own `ringColor` at three evenly spaced hues (25 / 145 / 265), so they cannot clash with
+  the ring. The inner radius grows from `0.205` to `0.219` to make room.
+
+### Internal
+
+- Build scaffolding synced with the shared skeleton: the VSIX allowlist now derives entries from
+  `contributes.languages` / `grammars` / `snippets` and permits a `*.wasm` next to the bundle;
+  the l10n directory may carry per-source subdirectories. This extension uses none of those
+  additions — the change is pure alignment, with no effect on behaviour.
 
 ## [0.0.2] - 2026-08-05
 
-### 新增
+### Added
 
-- 行内色块与原生取色器: 注册 `DocumentColorProvider`, VS Code 因此会为本扩展支持的语法
-  画行内色块并在 Hover 中提供原生取色器, 覆盖 `oklch()`、`lab()`、`color()`、`color-mix()`、
-  相对颜色、HDR 空间, 以及注释与字符串里的颜色 —— 这些 VS Code 自带的提供器都不覆盖。
-  范围与高亮共用同一份字段表; 上限按 `editor.colorDecoratorsLimit` (默认 500) 截断并记日志。
-  由 `advanced.colorPicker.mode` 控制: `dedupe` (默认)、`all`、`off`;
-  "启用功能"命令里也有对应开关。
-  - `dedupe` 在 `css` / `less` / `scss` 里按文档版本探测一次其他颜色提供器, 只补它们没覆盖的
-    range, 因此任何颜色都不会出现两个色块。必须探测的原因: VS Code 叠加渲染所有提供器的结果
-    且不按 range 去重, 只要有扩展返回数组 (含空数组) 就不再使用内置默认提供器,
-    而 `vscode.executeDocumentColorProvider` 不回传提供器身份。
-  - 取色器写回时优先沿用原格式并跳过无法表达 alpha 的格式; 上下文相关值与只读语法
-    (`color-mix()`、相对颜色、`contrast-color()`、`device-cmyk()`、`color-layers()`)
-    只给只读色块, 不提供候选写法, 避免误拖把表达式压成字面值。
-- 通过 `contributes.configurationDefaults` 把 `editor.defaultColorDecorators` 的默认值改为
-  `never`: 内置默认提供器认的 hex 与 `rgb()`/`hsl()` 是本扩展上报范围的真子集,
-  关掉它只去掉重叠, 不损失覆盖; 用户仍可改回 `auto` / `always`。
-- 新增两种 marker 样式 `square-before` / `square-after`: 由本扩展自己的装饰画实心色块,
-  不依赖 VS Code 的颜色功能 (原有的 `dot-before` / `dot-after` 仍是圆点)。
+- Inline swatches and the native colour picker: registering a `DocumentColorProvider` makes VS Code
+  draw inline swatches and offer its native picker on hover for every syntax this extension
+  supports — `oklch()`, `lab()`, `color()`, `color-mix()`, relative colours, HDR spaces, and
+  colours inside comments and strings — none of which the built-in providers cover. Ranges come
+  from the same field table the highlighter uses; the count is truncated at
+  `editor.colorDecoratorsLimit` (500 by default) and logged. Controlled by
+  `advanced.colorPicker.mode`: `dedupe` (default), `all`, `off`; the "Enable Features" command has
+  a matching toggle.
+  - In `css` / `less` / `scss`, `dedupe` probes the other colour providers once per document
+    version and fills in only the ranges they miss, so no colour ever gets two swatches. The probe
+    is unavoidable: VS Code overlays the results of every provider without deduplicating by range,
+    stops using its built-in default provider as soon as any extension returns an array (even an
+    empty one), and `vscode.executeDocumentColorProvider` does not report which provider produced
+    what.
+  - When the picker writes back it keeps the original format where possible and skips formats that
+    cannot express alpha. Context-dependent values and read-only syntax (`color-mix()`, relative
+    colours, `contrast-color()`, `device-cmyk()`, `color-layers()`) get a read-only swatch with no
+    candidate replacements, so a stray drag cannot flatten an expression into a literal.
+- `contributes.configurationDefaults` sets `editor.defaultColorDecorators` to `never`: the hex and
+  `rgb()`/`hsl()` forms the built-in provider recognises are a strict subset of what this extension
+  reports, so turning it off removes only the overlap and loses no coverage. Users can still set it
+  back to `auto` / `always`.
+- Two new marker styles, `square-before` / `square-after`, drawn as solid blocks by this
+  extension's own decorations rather than through VS Code's colour feature (the existing
+  `dot-before` / `dot-after` remain dots).
 
-### 变更
+### Changed
 
-- 高亮与 Hover 共用同一份字段表: `advanced.info.fields` / `advanced.info.excludedFields`
-  改名为 `advanced.fields.enabled` / `advanced.fields.excluded`, 并同时决定
-  "Hover 显示哪些行"与"高亮识别哪些颜色语法", 不再需要为高亮单独配置。
-  命令 `w3cColorToolkit.configureInfoFields` (配置悬停字段) 改名为
-  `w3cColorToolkit.configureColorFields` (配置颜色字段)。
-- 字段表补齐到覆盖全部 41 种可扫描语法, 并按作用范围分组标注:
-  CSS 格式 (Hover + 高亮)、只读 CSS 语法 (仅高亮, 如 `color-mix()`、相对颜色、
-  `light-dark()`、系统色)、非 CSS 表示 (仅 Hover 的 `hsv`/`cmyk`)、
-  以及不构成完整颜色的附加信息 (仅 Hover 的预览、原始语法、alpha、色域、对比度、
-  规范层级、解析说明)。注册表未登记的语法一律放行, 解析器新增语法不会静默失去高亮。
-- 新增 Hover 字段 `color-srgb`、`color-srgb-linear`、`color-display-p3-linear`,
-  使 Hover 字段覆盖全部 24 个转换目标格式。
-- `advanced.contextualPreview` 新增 `auto` 并改为默认值: 跟随编辑器当前主题选择
-  `light-dark()` 的分支, 因此 `light-dark()` 默认就有预览色与高亮; 结果在 Hover 中
-  仍标注为假设值, 切换主题会重新扫描。设为 `off` 可回到旧行为。
-- "配置颜色字段"勾选一个此前被 `fields.excluded` 排除的字段时, 会同时解除排除;
-  HDR 开关关闭时不再因为勾选列表里没有 HDR 字段而把它们从配置中丢掉。
+- Highlighting and hover now share one field table: `advanced.info.fields` /
+  `advanced.info.excludedFields` are renamed to `advanced.fields.enabled` /
+  `advanced.fields.excluded`, and together decide both which hover rows appear and which colour
+  syntaxes are highlighted — highlighting no longer needs separate configuration. The command
+  `w3cColorToolkit.configureInfoFields` is renamed to `w3cColorToolkit.configureColorFields`.
+- The field table now covers all 41 scannable syntaxes, grouped by scope: CSS formats (hover and
+  highlighting), read-only CSS syntax (highlighting only, e.g. `color-mix()`, relative colours,
+  `light-dark()`, system colours), non-CSS representations (hover-only `hsv` / `cmyk`), and
+  supplementary information that is not a colour in itself (hover-only preview, original syntax,
+  alpha, gamut, contrast, specification level, resolution notes). Syntaxes absent from the registry
+  are allowed through, so a new parser syntax cannot silently lose its highlighting.
+- New hover fields `color-srgb`, `color-srgb-linear` and `color-display-p3-linear`, bringing hover
+  coverage to all 24 conversion targets.
+- `advanced.contextualPreview` gains `auto` and adopts it as the default: the `light-dark()` branch
+  follows the editor's current theme, so `light-dark()` gets a preview colour and highlighting out
+  of the box. The result is still marked as assumed in the hover, and switching themes triggers a
+  rescan. Set it to `off` for the previous behaviour.
+- Ticking a field in "Configure Colour Fields" that was previously excluded by `fields.excluded`
+  now clears the exclusion as well; turning the HDR switch off no longer drops HDR fields from the
+  configuration merely because they were absent from the tick list.
 
 ## [0.0.1] - 2026-08-04
 
-首个本地开发版本, 合并三个参考扩展的互补能力并共享统一颜色内核。
+First local development build, merging the complementary capabilities of three reference
+extensions onto a shared colour core.
 
-### 新增
+### Added
 
-- 统一颜色内核: 扫描、解析、求值、色域映射与序列化由高亮、Hover 和转换共享,
-  三者对同一表达式得出相同的范围、颜色值、alpha、原始色彩空间与解析状态。
-- CSS Color 4 完整静态语法: 148 个命名颜色、四种 hex 长度、legacy 与 modern 语法、
-  百分比、alpha、四种角度单位、`none`、静态 `calc()`、10 个 `color()` 预定义空间。
-- CSS Color 5 可静态求值部分: `color-mix()` (含三个及以上颜色形式与四种 hue 插值)、
-  相对颜色语法、Relative Alpha Color `alpha()`、`contrast-color()`、
-  `device-cmyk()` 无 ICC fallback、`@color-profile` 的 `fallback` 描述符。
-- 上下文颜色分类: `currentColor`、19 个系统色、23 个 deprecated 系统色 (含替代关键字提示)、
-  `light-dark()`、无 fallback 的自定义 profile、非静态 alpha, 一律返回 `contextual` 而不是黑色。
-- CSS Color 6 实验支持 (默认开启, 可通过 `w3cColorToolkit.experimental` 关闭): `color-layers()`、
-  扩展 `contrast-color()`、`wcag2` / `wcag2(aa | aaa | large)`、`tbd-fg` / `tbd-bg`。
-- CSS Color HDR 1 实验支持 (默认开启, 同上开关): `ictcp()`、`jzazbz()`、`jzczhz()`、
-  `color(rec2100-pq | rec2100-hlg | rec2100-linear)`, 以及恒为上下文相关的 `hdr-color()`。
-- 三项功能: 六种 marker 的颜色高亮、可配置字段的 Hover 信息、24 个目标格式的转换。
-- 两层配置: 8 个暴露层键 + `w3cColorToolkit.advanced` 的 34 项增量覆盖。
-  `advanced` 自带三种就地参考: 中英文完整参考表格 (键 / 类型 / 默认值 / 说明)、
-  可插入的全量与最小模板、逐键补全与悬停说明。
-- 入口: 5 个命令面板命令、编辑器右键子菜单 (转换与复制), 以及 31 个可绑定快捷键的隐藏命令;
-  不内置默认快捷键。
-- 旧配置与旧命令迁移命令, 支持三个 scope 与幂等重复执行。
-- 英语与简体中文界面。命令标题随界面语言变化: 英文界面为 `Convert Color`, 中文界面为 `转换颜色`。
+- A unified colour core: scanning, parsing, evaluation, gamut mapping and serialisation are shared
+  by highlighting, hover and conversion, so all three derive the same range, colour value, alpha,
+  original colour space and resolution status for a given expression.
+- Complete CSS Color 4 static syntax: 148 named colours, four hex lengths, legacy and modern
+  syntax, percentages, alpha, four angle units, `none`, static `calc()`, and the 10 predefined
+  `color()` spaces.
+- The statically evaluable part of CSS Color 5: `color-mix()` (including three-or-more-colour forms
+  and four hue interpolation methods), relative colour syntax, Relative Alpha Color `alpha()`,
+  `contrast-color()`, `device-cmyk()` without an ICC fallback, and the `fallback` descriptor of
+  `@color-profile`.
+- Contextual colour classification: `currentColor`, 19 system colours, 23 deprecated system colours
+  (with replacement hints), `light-dark()`, custom profiles without a fallback, and non-static
+  alpha all resolve to `contextual` rather than to black.
+- Experimental CSS Color 6 support (on by default, switchable via `w3cColorToolkit.experimental`):
+  `color-layers()`, extended `contrast-color()`, `wcag2` / `wcag2(aa | aaa | large)`, `tbd-fg` /
+  `tbd-bg`.
+- Experimental CSS Color HDR 1 support (on by default, same switch): `ictcp()`, `jzazbz()`,
+  `jzczhz()`, `color(rec2100-pq | rec2100-hlg | rec2100-linear)`, and `hdr-color()`, which is
+  always contextual.
+- Three features: colour highlighting with six marker styles, hover information with configurable
+  fields, and conversion to 24 target formats.
+- Two configuration layers: 8 exposed keys plus 34 incremental overrides under
+  `w3cColorToolkit.advanced`. The `advanced` object carries three kinds of in-place reference: full
+  English and Chinese tables (key / type / default / description), insertable full and minimal
+  templates, and per-key completion with hover documentation.
+- Entry points: 5 Command Palette commands, an editor context submenu (convert and copy), and 31
+  hidden commands available for key binding. No default keybindings are contributed.
+- A migration command for legacy settings and commands, covering three scopes and safe to run
+  repeatedly.
+- UI available in English and 简体中文. Command titles follow the display language: `Convert Color`
+  in English, `转换颜色` in Chinese.
 
-### 已知限制
+### Known limitations
 
-- 超大文档 (数千个颜色以上) 的扫描明显慢于目标预算, 正在优化;
-  `advanced.scan.maxDocumentSizeKb` 与 `advanced.highlight.maxMatchesPerDocument` 用于限制开销。
-- `hdr-color()` 与显示器 HDR headroom 相关, 只能按假设值预览。
-- CSS Color 6 与 CSS Color HDR 均为草案, 数值与语法可能变化。
-- 未受信任的工作区不跨文件解析变量。
-- 不包含依赖 VS Code 运行时的自动化集成测试; 质量门为类型检查、贡献点与本地化一致性检查、
-  单元测试与不依赖运行时的冒烟检查, 涉及真实 Extension Host 的行为由人工验收覆盖。
+- Scanning very large documents (several thousand colours and up) is noticeably slower than the
+  target budget and is being worked on; `advanced.scan.maxDocumentSizeKb` and
+  `advanced.highlight.maxMatchesPerDocument` bound the cost in the meantime.
+- `hdr-color()` depends on the display's HDR headroom, so it can only be previewed as an assumed
+  value.
+- CSS Color 6 and CSS Color HDR are both drafts; values and syntax may change.
+- Variables are not resolved across files in untrusted workspaces.
+- There are no automated integration tests that depend on the VS Code runtime. The quality gates
+  are type checking, contribution-point and localisation consistency checks, unit tests and a
+  runtime-free smoke check; behaviour that needs a real Extension Host is covered by manual
+  acceptance.
