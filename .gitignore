@@ -1,17 +1,18 @@
 node_modules/
-dist/
+out/
 artifacts/
-.ai-ctx/cache/
+*.vsix
 
-# 已移除的 vscode 集成测试 harness 遗留缓存, 保留忽略规则以防误提交
-out-test/
+# VS Code 集成测试 harness 的缓存目录, 保留规则以防误提交
 .vscode-test/
 .vscode-test-web/
-*.vsix
-*.gen.txt
-.eslintcache
 
-# 覆盖全局 ~/.gitignore 的排除 (它忽略 `.*/` 与 lockfile), 本仓库需要提交这些
-!package-lock.json
+# 跨任务上下文里的自建缓存
+.ai-ctx/cache/
+
+# 全局 ~/.gitignore 忽略所有点目录与 lockfile, 这里恢复扩展开发与 CI 必需的文件
+!.vscode/
 !.github/
 !.github/**
+!.nvmrc
+!package-lock.json

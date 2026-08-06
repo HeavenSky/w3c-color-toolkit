@@ -1,32 +1,32 @@
-# 只保留运行时需要的内容, 满足验收标准 17。
+# 只保留运行时需要的内容; scripts/package.mjs 会按允许清单断言最终 VSIX 的完整内容。
 .vscode/**
+.github/**
 .ai-ctx/**
+.nvmrc
+docs/**
 src/**
 test/**
 scripts/**
 node_modules/**
 artifacts/**
-docs/**
-.github/**
-**/*.ts
-**/*.map
+media/icon.svg
+build.mjs
 tsconfig.json
-eslint.config.mjs
 vitest.config.ts
 vitest.perf.config.ts
-esbuild.mjs
 package-lock.json
 .gitignore
-.eslintcache
-.named-colors.gen.txt
-*.gen.txt
+**/*.ts
+**/*.map
+*.vsix
 
-# 显式保留 (取反规则写在最后)
-!dist/**
+# 显式保留 (取反规则必须写在最后)
+!out/**/*.js
 !l10n/**
+!media/icon.png
 !package.nls.json
 !package.nls.zh-cn.json
-!LICENSE
+!LICENSE.txt
 !NOTICE.md
 !README.md
 !README.zh-cn.md

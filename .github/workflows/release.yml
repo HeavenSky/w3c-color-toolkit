@@ -1,7 +1,10 @@
 name: Release
 
-# 打 v* 标签即发布: 校验 -> 打包 vsix -> 创建 GitHub Release 并附带 vsix.
+# 打 v* 标签即发布: 校验 -> 打包 vsix -> 创建 GitHub Release 并附带 vsix -> 发布到两个市场.
 # 手动触发用于补发某个已存在的版本(不重新打标签).
+#
+# 本文件里不出现仓库名与任何插件专属的校验逻辑: 版本, 包名与产物路径全部从 package.json
+# 推导, 校验内容由 `npm run check` 决定. 因此改插件不需要改工作流.
 on:
   push:
     tags:
@@ -20,41 +23,45 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
+      vsix: ${{ steps.version.outputs.vsix }}
+      vsix_name: ${{ steps.version.outputs.vsix_name }}
       has_vsce_pat: ${{ steps.secrets.outputs.has_vsce_pat }}
+      has_ovsx_pat: ${{ steps.secrets.outputs.has_ovsx_pat }}
     steps:
       - uses: actions/checkout@v7
 
+      # node 版本取 .nvmrc, 与本地开发保持同一个来源.
       - uses: actions/setup-node@v7
         with:
-          node-version: '24'
+          node-version-file: .nvmrc
           cache: npm
 
       - name: Install dependencies
         run: npm ci
 
       # 标签与 package.json 版本必须一致, 否则产物名与 Release 名会错位.
+      # 产物路径与名字都从 package.json 推导, 避免仓库名在工作流里再写一遍.
       - name: Resolve and verify version
         id: version
         run: |
           pkg_version="$(node -p "require('./package.json').version")"
+          pkg_name="$(node -p "require('./package.json').name")"
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             input_version="${{ github.event.inputs.version }}"
           else
             input_version="${GITHUB_REF_NAME#v}"
           fi
           if [ "$pkg_version" != "$input_version" ]; then
-            echo "版本不一致: package.json=$pkg_version, 触发版本=$input_version" >&2
+            echo "::error::版本不一致: package.json=$pkg_version, 触发版本=$input_version"
             exit 1
           fi
           echo "version=$pkg_version" >> "$GITHUB_OUTPUT"
-          echo "vsix=artifacts/w3c-color-toolkit-$pkg_version.vsix" >> "$GITHUB_OUTPUT"
+          echo "vsix_name=$pkg_name-$pkg_version.vsix" >> "$GITHUB_OUTPUT"
+          echo "vsix=artifacts/$pkg_name-$pkg_version.vsix" >> "$GITHUB_OUTPUT"
 
-      # 贡献点与本地化都是生成物, 漂移会让设置界面与实现不一致, 必须先卡住.
-      - name: Check contributes drift
-        run: npm run check:contributes
-
-      - name: Check l10n drift
-        run: npm run check:l10n
+      # 图标产物, 清单占位符, 本地化与各仓库专属规则; 漏了不会让构建失败, 只会静默出错.
+      - name: Check consistency
+        run: npm run check
 
       - name: Typecheck
         run: npm run typecheck
@@ -62,11 +69,7 @@ jobs:
       - name: Test
         run: npm test
 
-      # 不依赖 VS Code 运行时的端到端冒烟: 扫描 -> 解析 -> 求值 -> 色域映射 -> 序列化.
-      - name: Smoke check
-        run: node scripts/smoke.mjs
-
-      # package 脚本内部做生产构建并按允许清单断言 VSIX 内容.
+      # package 脚本内部触发 vscode:prepublish 做生产构建, 并按允许清单断言 VSIX 内容.
       - name: Package extension
         run: npm run package
 
@@ -90,7 +93,7 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
-          name: w3c-color-toolkit-${{ steps.version.outputs.version }}.vsix
+          name: ${{ steps.version.outputs.vsix_name }}
           path: ${{ steps.version.outputs.vsix }}
 
       # secrets 上下文在 job 级 if 中不可用, 因此在这里转成 job output 供下游判断.
@@ -98,14 +101,14 @@ jobs:
         id: secrets
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
         run: |
-          if [ -n "$VSCE_PAT" ]; then
-            echo "has_vsce_pat=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_vsce_pat=false" >> "$GITHUB_OUTPUT"
-          fi
+          [ -n "$VSCE_PAT" ] && echo "has_vsce_pat=true" >> "$GITHUB_OUTPUT" || echo "has_vsce_pat=false" >> "$GITHUB_OUTPUT"
+          [ -n "$OVSX_PAT" ] && echo "has_ovsx_pat=true" >> "$GITHUB_OUTPUT" || echo "has_ovsx_pat=false" >> "$GITHUB_OUTPUT"
 
   # 仅在仓库配置了 VSCE_PAT 后运行; 未配置时跳过, 只发 GitHub Release.
+  # 用 --packagePath 发布 release job 已校验并附到 Release 的那个 vsix, 不重新构建,
+  # 保证市场上的产物与 Release 附件逐字节一致.
   marketplace:
     needs: release
     if: needs.release.outputs.has_vsce_pat == 'true'
@@ -115,13 +118,38 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: '24'
+          node-version-file: .nvmrc
           cache: npm
 
+      # 只为拿到 vsce 可执行文件; 打包已在 release job 完成.
       - run: npm ci
 
-      # --no-dependencies: 产物由 esbuild 打成单文件, 不需要 vsce 解析依赖树.
+      - uses: actions/download-artifact@v8
+        with:
+          name: ${{ needs.release.outputs.vsix_name }}
+
       - name: Publish to VS Code Marketplace
-        run: npx --no-install vsce publish --no-dependencies
+        run: npx --no-install vsce publish --packagePath "${{ needs.release.outputs.vsix_name }}"
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
+
+  # Open VSX(VSCodium / Cursor / Windsurf 等非官方发行版的市场), 同样按 secret 存在与否开关.
+  open-vsx:
+    needs: release
+    if: needs.release.outputs.has_ovsx_pat == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: ${{ needs.release.outputs.vsix_name }}
+
+      - name: Publish to Open VSX
+        run: npx --yes ovsx publish "${{ needs.release.outputs.vsix_name }}"
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}

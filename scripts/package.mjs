@@ -1,22 +1,20 @@
 /**
- * 打包 VSIX 到 `artifacts/`, 并检查包内容。
+ * 打包 VSIX 到 `artifacts/`, 并断言包内容。
  *
- * 检查项 (对应验收标准 17):
- * - 必须包含 dist、l10n、两份 package.nls、LICENSE、NOTICE、README、CHANGELOG;
- * - 必须不包含 src、test、scripts、node_modules、参考仓库副本与 source map。
+ * 期望的包内容完全从 `package.json` 与仓库里实际存在的文档文件推导, 因此本文件不需要
+ * 随插件内容改动。用**允许清单**而不是禁止清单: 禁止清单只能拦住预料到的路径, 任何
+ * 新出现的生成目录都会静默混进包里。
  */
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const ROOT = new URL('..', import.meta.url).pathname;
+const ROOT = join(fileURLToPath(new URL('.', import.meta.url)), '..');
 const OUT_DIR = join(ROOT, 'artifacts');
-mkdirSync(OUT_DIR, { recursive: true });
 
 const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'));
 const target = join(OUT_DIR, `${pkg.name}-${pkg.version}.vsix`);
-
-const vsce = join(ROOT, 'node_modules', '.bin', 'vsce');
 
 // vsce 需要 baseContentUrl/baseImagesUrl 才能把 README 里的相对链接改写成绝对地址。
 // 从 package.json 的 repository 推导, 避免仓库地址在两处各写一遍。
@@ -29,14 +27,45 @@ if (!/^https:\/\/github\.com\/[^/]+\/[^/]+$/.test(repoUrl)) {
 }
 const BASE = `${repoUrl}/raw/HEAD/`;
 
+// ── 推导允许清单 ────────────────────────────────────────────
+const strip = (path) => path.replace(/^\.\//, '');
+const allowed = new Set(['package.json']);
+
+allowed.add(strip(pkg.main));
+if (pkg.browser) allowed.add(strip(pkg.browser));
+if (pkg.icon) allowed.add(strip(pkg.icon));
+
+if (pkg.l10n) {
+  const dir = strip(pkg.l10n);
+  for (const name of readdirSync(join(ROOT, dir))) allowed.add(`${dir}/${name}`);
+}
+
+for (const name of ['package.nls.json', 'package.nls.zh-cn.json']) {
+  if (existsSync(join(ROOT, name))) allowed.add(name);
+}
+
+// vsce 会把这几个文档重命名后再放进包里, 因此按打包后的实际名字断言。
+const RENAMED = { 'README.md': 'readme.md', 'CHANGELOG.md': 'changelog.md' };
+for (const name of ['LICENSE.txt', 'NOTICE.md', 'README.md', 'CHANGELOG.md']) {
+  if (existsSync(join(ROOT, name))) allowed.add(RENAMED[name] ?? name);
+}
+// README 的其它语言版本保留原名, 例如 README.zh-cn.md。
+for (const name of readdirSync(ROOT)) {
+  if (/^README\..+\.md$/.test(name) && name !== 'README.md') allowed.add(name);
+}
+
+// ── 打包 ────────────────────────────────────────────────────
+mkdirSync(OUT_DIR, { recursive: true });
+const vsce = join(ROOT, 'node_modules', '.bin', 'vsce');
+
 execFileSync(
   vsce,
   [
     'package',
     '--out',
     target,
+    // 产物由 esbuild 打成单文件, 不需要 vsce 解析并打包依赖树。
     '--no-dependencies',
-    '--skip-license',
     '--baseContentUrl',
     BASE,
     '--baseImagesUrl',
@@ -45,6 +74,7 @@ execFileSync(
   { cwd: ROOT, stdio: 'inherit' },
 );
 
+// ── 断言包内容 ──────────────────────────────────────────────
 const listing = execFileSync('unzip', ['-l', target], { encoding: 'utf8' });
 const entries = listing
   .split('\n')
@@ -52,31 +82,8 @@ const entries = listing
   .filter((name) => name.startsWith('extension/'))
   .map((name) => name.slice('extension/'.length));
 
-// 注意: vsce 会把 LICENSE / README.md / CHANGELOG.md 重命名为
-// LICENSE.txt / readme.md / changelog.md, 因此这里按打包后的实际名字断言。
-const required = [
-  'dist/extension-node.js',
-  'dist/extension-web.js',
-  'l10n/bundle.l10n.json',
-  'l10n/bundle.l10n.zh-cn.json',
-  'package.nls.json',
-  'package.nls.zh-cn.json',
-  'package.json',
-  'LICENSE.txt',
-  'NOTICE.md',
-  'readme.md',
-  'README.zh-cn.md',
-  'changelog.md',
-  'media/icon.png',
-];
-
-// `required` 同时是允许清单: 包内容必须与它完全相等。
-// 用允许清单而不是禁止清单 —— 禁止清单只能拦住预料到的路径,
-// 任何新出现的生成目录 (如曾经泄漏的 `out-test/`) 都会静默通过。
-const allowed = new Set(required);
-
 const problems = [];
-for (const name of required) {
+for (const name of allowed) {
   if (!entries.includes(name)) problems.push(`missing from VSIX: ${name}`);
 }
 for (const entry of entries) {
@@ -84,9 +91,9 @@ for (const entry of entries) {
 }
 
 console.log(`\nVSIX entries (${entries.length}):`);
-for (const entry of entries.sort()) console.log(`  ${entry}`);
+for (const entry of [...entries].sort()) console.log(`  ${entry}`);
 console.log(`\nsize: ${(statSync(target).size / 1024).toFixed(0)} KB`);
-console.log(`artifact: artifacts/${readdirSync(OUT_DIR).find((name) => name.endsWith('.vsix'))}`);
+console.log(`artifact: artifacts/${pkg.name}-${pkg.version}.vsix`);
 
 if (problems.length > 0) {
   console.error('\nVSIX content check failed:');

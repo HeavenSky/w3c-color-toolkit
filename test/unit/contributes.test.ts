@@ -4,7 +4,7 @@
  * 这些测试是方案第 10.3 节"命令与配置一致性"的落地:
  * 一旦有人手改 package.json 或忘记跑 `npm run gen:contributes`, 这里会失败。
  */
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -23,7 +23,6 @@ function readJson(relativePath: string): Record<string, unknown> {
 const pkg = readJson('package.json');
 const nlsEn = readJson('package.nls.json');
 const nlsZh = readJson('package.nls.zh-cn.json');
-const bundleEn = readJson('l10n/bundle.l10n.json');
 const bundleZh = readJson('l10n/bundle.l10n.zh-cn.json');
 
 const contributes = pkg.contributes as {
@@ -39,9 +38,10 @@ const contributes = pkg.contributes as {
 };
 
 describe('package.json 基本声明', () => {
-  it('声明 Node 与 Web 双入口', () => {
-    expect(pkg.main).toBe('./dist/extension-node.js');
-    expect(pkg.browser).toBe('./dist/extension-web.js');
+  it('main 与 browser 指向同一个 bundle (三种宿主共用一份产物)', () => {
+    // 全部文件读取都走 workspace.fs, 不使用 node 内置模块, 因此不需要为 Web 单独出一份。
+    expect(pkg.main).toBe('./out/extension.js');
+    expect(pkg.browser).toBe(pkg.main);
   });
 
   it('engines.vscode 固定为 ^1.101.0', () => {
@@ -338,13 +338,13 @@ describe('本地化一致性', () => {
     }
   });
 
-  it('两份 l10n bundle 的 key 集合完全一致', () => {
-    expect(Object.keys(bundleEn).sort()).toEqual(Object.keys(bundleZh).sort());
+  it('只有中文 bundle: 英语 key 就是默认文案本身, 恒等映射没有意义', () => {
+    // vscode.l10n.t 用默认文案作为 key, 缺 bundle 时直接回退到源码字面量。
+    expect(existsSync(join(ROOT, 'l10n/bundle.l10n.json'))).toBe(false);
   });
 
-  it('bundle 覆盖 RUNTIME_STRINGS 的全部文案', () => {
+  it('中文 bundle 覆盖 RUNTIME_STRINGS 的全部文案', () => {
     for (const text of Object.values(RUNTIME_STRINGS)) {
-      expect(bundleEn[text], `英语 bundle 缺少: ${text}`).toBeDefined();
       expect(bundleZh[text], `中文 bundle 缺少: ${text}`).toBeDefined();
     }
   });

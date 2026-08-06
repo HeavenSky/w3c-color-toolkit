@@ -1,8 +1,8 @@
 /**
- * Node 与 Web 共享的激活逻辑。
+ * 激活逻辑。由 `extension.ts` 调用, Node / Remote / Web 三种宿主共用。
  *
- * 两个入口的唯一差异是注入的 `FileReader` 实现 (`imports-node` / `imports-web`),
- * 其余全部代码共用。
+ * `FileReader` 仍以注入方式传入而不是直接 import: 它是唯一与宿主能力相关的接缝,
+ * 保留注入点让单元测试可以替换成内存实现。
  */
 import * as vscode from 'vscode';
 
@@ -20,7 +20,7 @@ import { DocumentIndexManager } from './index/document-index-manager.js';
 import { Logger } from './logging/output-channel.js';
 
 export interface ActivateOptions {
-  /** Node 与 Web 分别注入; 目前两者都基于 `workspace.fs`。 */
+  /** 基于 `workspace.fs` 的实现由 `extension.ts` 注入; 测试可替换。 */
   readonly createFileReader: () => FileReader;
   readonly hostKind: 'node' | 'web';
 }
