@@ -817,6 +817,7 @@
     "test": "vitest run",
     "test:performance": "vitest run --config vitest.perf.config.ts",
     "check": "node scripts/check.mjs",
+    "check:template": "node scripts/check-template.mjs",
     "gen:icon": "node scripts/gen-icon.mjs",
     "gen:contributes": "node scripts/gen-contributes.mjs",
     "gen:l10n": "node scripts/gen-l10n.mjs",

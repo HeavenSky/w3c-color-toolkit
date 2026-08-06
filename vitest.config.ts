@@ -6,10 +6,14 @@ import { defineConfig } from 'vitest/config';
  *
  * `test/performance/` 不在这里跑: 它耗时长且断言的是时间, 由 `vitest.perf.config.ts`
  * 单独触发 (没有性能测试的仓库不需要那份配置)。
+ *
+ * 同时收 `.mjs`: 构建脚本 (`scripts/**.mjs`) 也需要被测, 而 `tsconfig.json` 没开
+ * `allowJs`, 从 `.ts` 测试里 import `.mjs` 会让 `tsc --noEmit` 报缺声明文件。
+ * 反过来 tsc 不收录 `.mjs`, 所以用 `.mjs` 写这类测试两边都干净。
  */
 export default defineConfig({
   test: {
-    include: ['test/**/*.test.ts'],
+    include: ['test/**/*.test.{ts,mjs}'],
     exclude: ['test/performance/**'],
     environment: 'node',
   },
