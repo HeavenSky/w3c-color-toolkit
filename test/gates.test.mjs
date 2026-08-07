@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import { checkShared, digest, parseManifest, renderManifest } from '../scripts/lib/template-shared.mjs';
+import {
+  NAME_PLACEHOLDER,
+  SHARED_FILES,
+  checkShared,
+  digest,
+  isSkeletonRepo,
+  parseManifest,
+  renderManifest,
+} from '../scripts/lib/template-shared.mjs';
 import { deriveAllowlist } from '../scripts/lib/vsix-allowlist.mjs';
 
 /**
@@ -122,51 +130,166 @@ describe('deriveAllowlist', () => {
 });
 
 describe('template-shared', () => {
-  const manifest = ['# 说明行', `${digest('a')}  a.txt`, `${digest('b')}  b.txt`].join('\n');
+  /** 每个 A 类文件的假内容: 用路径本身当内容, 断言时好推算 hash。 */
+  const contentOf = (path) => `content of ${path}`;
+  const readAll = (path) => contentOf(path);
 
-  it('解析时跳过注释与空行', () => {
-    expect(parseManifest(manifest)).toEqual([
-      { hash: digest('a'), path: 'a.txt' },
-      { hash: digest('b'), path: 'b.txt' },
-    ]);
-  });
+  /** 一份内容与 `readAll` 匹配的完整清单。 */
+  const fullManifest = SHARED_FILES.map((path) => `${digest(contentOf(path))}  ${path}`).join('\n');
 
-  it('内容一致时通过', () => {
-    const problems = checkShared({
-      manifestText: manifest,
-      readFile: (path) => (path === 'a.txt' ? 'a' : 'b'),
+  const [FIRST, SECOND] = SHARED_FILES;
+
+  describe('parseManifest', () => {
+    it('区分追踪行与排除行, 跳过注释与空行', () => {
+      const { tracked, excluded } = parseManifest(
+        ['# 说明行', '', `${digest('a')}  a.txt`, '!b.txt  本仓库有意偏离'].join('\n'),
+      );
+      expect(tracked).toEqual([{ hash: digest('a'), path: 'a.txt' }]);
+      expect(excluded).toEqual([{ path: 'b.txt', reason: '本仓库有意偏离' }]);
     });
-    expect(problems).toEqual([]);
-  });
 
-  it('内容被改动时报告偏离', () => {
-    const problems = checkShared({
-      manifestText: manifest,
-      readFile: (path) => (path === 'a.txt' ? 'changed' : 'b'),
+    it('排除行的原因可以省略', () => {
+      const { excluded } = parseManifest('!b.txt');
+      expect(excluded).toEqual([{ path: 'b.txt', reason: '' }]);
     });
-    expect(problems).toHaveLength(1);
-    expect(problems[0]).toContain('a.txt');
-    expect(problems[0]).toContain('已偏离骨架');
-  });
 
-  it('文件缺失与未登记 hash 都会被报告', () => {
-    const problems = checkShared({
-      manifestText: [`${digest('a')}  a.txt`, 'legacy.txt'].join('\n'),
-      readFile: (path) => (path === 'legacy.txt' ? 'x' : undefined),
+    it('只有路径没有 hash 的旧格式行归入 tracked 且 hash 为 null', () => {
+      const { tracked } = parseManifest('legacy.txt');
+      expect(tracked).toEqual([{ hash: null, path: 'legacy.txt' }]);
     });
-    expect(problems).toHaveLength(2);
-    expect(problems[0]).toContain('文件不存在');
-    expect(problems[1]).toContain('没有记录 hash');
   });
 
-  it('--update 重写 hash 并保留自定义注释', () => {
-    const text = renderManifest(
-      ['# 偏离原因: 本仓库追加了自有产物行', `${digest('old')}  a.txt`].join('\n'),
-      [{ hash: null, path: 'a.txt' }],
-      () => 'new',
-    );
-    expect(text).toContain('# 偏离原因: 本仓库追加了自有产物行');
-    expect(text).toContain(`${digest('new')}  a.txt`);
-    expect(text).not.toContain(digest('old'));
+  describe('renderManifest', () => {
+    it('按 SHARED_FILES 全量生成, 不依赖上一版清单', () => {
+      // 这正是"清单被清空也能重建"的依据: 输入里没有任何旧清单。
+      const text = renderManifest({ readFile: readAll });
+      const lines = text.trim().split('\n');
+      expect(lines).toHaveLength(SHARED_FILES.length);
+      expect(lines[0]).toBe(`${digest(contentOf(FIRST))}  ${FIRST}`);
+    });
+
+    it('排除项就地输出为 ! 行, 原因一并保留', () => {
+      const text = renderManifest({
+        excluded: [{ path: SECOND, reason: '本仓库需要额外放行某个产物' }],
+        readFile: readAll,
+      });
+      const lines = text.trim().split('\n');
+      expect(lines).toHaveLength(SHARED_FILES.length);
+      expect(lines[1]).toBe(`!${SECOND}  本仓库需要额外放行某个产物`);
+      expect(text).not.toContain(`  ${SECOND}\n`);
+    });
+
+    it('排除项没有原因时只输出路径', () => {
+      const text = renderManifest({ excluded: [{ path: SECOND, reason: '' }], readFile: readAll });
+      expect(text.split('\n')[1]).toBe(`!${SECOND}`);
+    });
+  });
+
+  describe('checkShared 覆盖校验', () => {
+    it('空清单报告缺项, 而不是静默通过', () => {
+      // 旧实现在这里会报告"通过 (0 个文件)", 检查在最该报警的时候最安静。
+      const problems = checkShared({ manifestText: '', readFile: readAll });
+      expect(problems).toHaveLength(1);
+      expect(problems[0]).toContain(`缺少 ${SHARED_FILES.length} 项`);
+    });
+
+    it('少几行时报告缺少的数量', () => {
+      const partial = fullManifest.split('\n').slice(0, -3).join('\n');
+      const problems = checkShared({ manifestText: partial, readFile: readAll });
+      expect(problems).toHaveLength(1);
+      expect(problems[0]).toContain('缺少 3 项');
+    });
+
+    it('混进 SHARED_FILES 之外的条目时报告多出', () => {
+      const problems = checkShared({
+        manifestText: `${fullManifest}\n${digest('x')}  stray.txt`,
+        readFile: readAll,
+      });
+      expect(problems).toHaveLength(1);
+      expect(problems[0]).toContain('多出 1 项');
+      expect(problems[0]).toContain('stray.txt');
+    });
+
+    it('覆盖不全时不再逐项比对 —— 只报一条', () => {
+      const problems = checkShared({ manifestText: '', readFile: () => undefined });
+      expect(problems).toHaveLength(1);
+    });
+
+    it('排除项计入覆盖, 不算缺项', () => {
+      const withExclusion = SHARED_FILES.map((path) =>
+        path === SECOND ? `!${path}  有意偏离` : `${digest(contentOf(path))}  ${path}`,
+      ).join('\n');
+      expect(checkShared({ manifestText: withExclusion, readFile: readAll })).toEqual([]);
+    });
+  });
+
+  describe('checkShared 逐项比对', () => {
+    it('内容一致时通过', () => {
+      expect(checkShared({ manifestText: fullManifest, readFile: readAll })).toEqual([]);
+    });
+
+    it('内容被改动时报告偏离, 并给出 ! 语法的修复动作', () => {
+      const problems = checkShared({
+        manifestText: fullManifest,
+        readFile: (path) => (path === FIRST ? 'changed' : contentOf(path)),
+      });
+      expect(problems).toHaveLength(1);
+      expect(problems[0]).toContain(FIRST);
+      expect(problems[0]).toContain('已偏离骨架');
+      expect(problems[0]).toContain(`!${FIRST}`);
+    });
+
+    it('文件不存在时的文案与内容偏离不同', () => {
+      // 两者的修复动作不同: 一个是去骨架拿文件, 一个是本仓库改坏了。
+      const problems = checkShared({
+        manifestText: fullManifest,
+        readFile: (path) => (path === FIRST ? undefined : contentOf(path)),
+      });
+      expect(problems).toHaveLength(1);
+      expect(problems[0]).toContain('是 A 类文件但本仓库没有');
+      expect(problems[0]).not.toContain('已偏离骨架');
+    });
+
+    it('被排除的文件即使内容不符也不报告', () => {
+      const withExclusion = SHARED_FILES.map((path) =>
+        path === SECOND ? `!${path}  有意偏离` : `${digest(contentOf(path))}  ${path}`,
+      ).join('\n');
+      const problems = checkShared({
+        manifestText: withExclusion,
+        readFile: (path) => (path === SECOND ? '完全不同的内容' : contentOf(path)),
+      });
+      expect(problems).toEqual([]);
+    });
+
+    it('未登记 hash 的旧格式行提示补齐', () => {
+      const legacy = SHARED_FILES.map((path) =>
+        path === FIRST ? path : `${digest(contentOf(path))}  ${path}`,
+      ).join('\n');
+      const problems = checkShared({ manifestText: legacy, readFile: readAll });
+      expect(problems).toHaveLength(1);
+      expect(problems[0]).toContain('没有记录 hash');
+    });
+  });
+
+  describe('isSkeletonRepo', () => {
+    it('两个判据都满足才是骨架', () => {
+      expect(isSkeletonRepo({ hasMarker: true, packageName: NAME_PLACEHOLDER })).toBe(true);
+    });
+
+    it('缺标记文件不算 —— 派生仓库删掉它就退出了', () => {
+      expect(isSkeletonRepo({ hasMarker: false, packageName: NAME_PLACEHOLDER })).toBe(false);
+    });
+
+    it('包名已替换不算 —— 标记文件被 cp -R 带走时靠这条兜底', () => {
+      expect(isSkeletonRepo({ hasMarker: true, packageName: 'some-derived-ext' })).toBe(false);
+    });
+
+    it('两个都不满足自然不算', () => {
+      expect(isSkeletonRepo({ hasMarker: false, packageName: 'some-derived-ext' })).toBe(false);
+    });
+
+    it('读不到 package.json 时按非骨架处理', () => {
+      expect(isSkeletonRepo({ hasMarker: true, packageName: undefined })).toBe(false);
+    });
   });
 });
