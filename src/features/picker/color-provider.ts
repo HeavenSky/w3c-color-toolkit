@@ -39,7 +39,14 @@ import { colorPresentationTexts } from '../convert/presentations.js';
 import { resolveHighlightSyntaxes, targetForSyntax } from '../fields/registry.js';
 import { previewSrgb, previewSource } from '../highlight/preview-color.js';
 
-import { planSwatches, rangeKey } from './swatch-plan.js';
+import {
+  planSwatches,
+  rangeKey,
+  readProbeCache,
+  shouldCacheProbe,
+  writeProbeCache,
+  type ProbeEntry,
+} from './swatch-plan.js';
 
 /**
  * 内置 CSS 扩展 (`vscode.css-language-features`) 提供颜色的语言。
@@ -47,6 +54,20 @@ import { planSwatches, rangeKey } from './swatch-plan.js';
  * `sass`、`stylus`、`postcss` 不在其中, 因此那里不需要探测。
  */
 const BUILT_IN_COLOR_LANGUAGES: ReadonlySet<string> = new Set(['css', 'less', 'scss']);
+
+/** 上面那个内置扩展的 id; 用于判断探测到的空结果是暂态还是稳定事实。 */
+const BUILT_IN_COLOR_EXTENSION_ID = 'vscode.css-language-features';
+
+/**
+ * 内置 CSS 提供器是否已经就绪。
+ *
+ * 本扩展在 `onStartupFinished` 激活, 内置 CSS 在 `onLanguage:css/less/scss` 激活,
+ * 因此工作区启动时就打开的 scss 文件很可能在它激活之前被探测一次。扩展缺失时返回 false,
+ * 此时空结果同样不缓存 —— 那种情况下本来也没有别人可去重, 代价只是多一次命令调用。
+ */
+function builtInColorProviderReady(): boolean {
+  return vscode.extensions.getExtension(BUILT_IN_COLOR_EXTENSION_ID)?.isActive === true;
+}
 
 /** VS Code 渲染色块的上限设置; 与 `editor.colorDecoratorsLimit` 的默认值一致。 */
 const DEFAULT_DECORATOR_LIMIT = 500;
@@ -62,10 +83,17 @@ function serializerOptionsOf(config: RuntimeConfiguration): SerializerOptions {
 }
 
 export class ColorSwatchProvider implements vscode.DocumentColorProvider {
-  /** 探测期间置位: 嵌套回到本提供器时返回 undefined, 只让其他提供器应答。 */
-  private probing = false;
-  /** 探测结果按 (uri, version) 缓存, 避免每次按键都多一次跨进程往返。 */
-  private probeCache: { readonly key: string; readonly covered: ReadonlySet<string> } | undefined;
+  /**
+   * 正在探测的文档 uri; 嵌套回到本提供器时返回 undefined, 只让其他提供器应答。
+   *
+   * 按文档隔离而不是用一个实例级布尔: `provideDocumentColors` 是异步的, 多个可见编辑器
+   * 会并发进来。用单个布尔时, 文档 A 的探测在 `finally` 里把标志置回 false, 而文档 B 的
+   * 探测可能仍在 await 中 —— 此时本提供器不再被屏蔽, 会把自己的 range 也算进 B 的
+   * `covered`, 于是 B 的色块被自己顶掉。
+   */
+  private readonly probing = new Set<string>();
+  /** 探测结果按 uri 缓存, 每个 uri 一条并携带文档版本; 避免每次按键都多一次跨进程往返。 */
+  private readonly probeCache = new Map<string, ProbeEntry>();
 
   constructor(
     private readonly manager: DocumentIndexManager,
@@ -77,7 +105,7 @@ export class ColorSwatchProvider implements vscode.DocumentColorProvider {
     document: vscode.TextDocument,
   ): Promise<vscode.ColorInformation[] | undefined> {
     // 探测触发的嵌套调用: 让位, 且必须返回 undefined (空数组会顶掉默认提供器)。
-    if (this.probing) return undefined;
+    if (this.probing.has(document.uri.toString())) return undefined;
 
     const config = this.getConfig(document);
     if (isDocumentHidden(document, config) || config.colorPickerMode === 'off') return undefined;
@@ -157,44 +185,54 @@ export class ColorSwatchProvider implements vscode.DocumentColorProvider {
    * 问一次"其他提供器覆盖了哪些 range"。
    *
    * 命令会走完整的提供器链, 因此必须用 `probing` 屏蔽自己;
-   * 结果按文档版本缓存, 同一版本内的重复调用零成本。
+   * 结果按 uri 缓存并携带文档版本, 同一版本内的重复调用零成本。
+   *
+   * 缓存写入发生在清除 `probing` 标记**之前**: 反过来会留下一个"标记已清除但缓存还没落"
+   * 的窗口, 期间进来的调用会重新触发一次跨进程探测。
    */
   private async probeOtherProviders(
     document: vscode.TextDocument,
   ): Promise<ReadonlySet<string> | undefined> {
-    const key = `${document.uri.toString()}@${document.version}`;
-    if (this.probeCache?.key === key) return this.probeCache.covered;
+    const uri = document.uri.toString();
+    const cached = readProbeCache(this.probeCache, uri, document.version);
+    if (cached) return cached;
 
-    this.probing = true;
-    let colors: vscode.ColorInformation[] | undefined;
+    this.probing.add(uri);
     try {
-      colors = await vscode.commands.executeCommand<vscode.ColorInformation[]>(
-        'vscode.executeDocumentColorProvider',
-        document.uri,
-      );
-    } catch (error) {
-      // 探测失败不能让色块整体消失: 退化为"没人覆盖", 全量上报。
-      this.logger.warnOnce(
-        'swatch-probe-failed',
-        `vscode.executeDocumentColorProvider failed: ${String(error)}`,
-      );
-      colors = undefined;
-    } finally {
-      this.probing = false;
-    }
-    if (!colors) return undefined;
+      let colors: vscode.ColorInformation[] | undefined;
+      try {
+        colors = await vscode.commands.executeCommand<vscode.ColorInformation[]>(
+          'vscode.executeDocumentColorProvider',
+          document.uri,
+        );
+      } catch (error) {
+        // 探测失败不能让色块整体消失: 退化为"没人覆盖", 全量上报。
+        this.logger.warnOnce(
+          'swatch-probe-failed',
+          `vscode.executeDocumentColorProvider failed: ${String(error)}`,
+        );
+        colors = undefined;
+      }
+      if (!colors) return undefined;
 
-    const covered = new Set<string>();
-    for (const color of colors) {
-      covered.add(
-        rangeKey({
-          start: document.offsetAt(color.range.start),
-          end: document.offsetAt(color.range.end),
-        }),
-      );
+      const covered = new Set<string>();
+      for (const color of colors) {
+        covered.add(
+          rangeKey({
+            start: document.offsetAt(color.range.start),
+            end: document.offsetAt(color.range.end),
+          }),
+        );
+      }
+      // 其他提供器尚未激活时的空结果是暂态, 不能缓存 —— 否则"没人覆盖"会被钉死到文档
+      // 下一次改动为止, 表现为色块重复且没有任何错误日志。
+      if (shouldCacheProbe(covered.size, builtInColorProviderReady())) {
+        writeProbeCache(this.probeCache, uri, { version: document.version, covered });
+      }
+      return covered;
+    } finally {
+      this.probing.delete(uri);
     }
-    this.probeCache = { key, covered };
-    return covered;
   }
 
   /** 取回该 range 对应的 match, 用于判断原格式与解析状态。 */
