@@ -11,6 +11,7 @@ import * as vscode from 'vscode';
 
 import type { RuntimeConfiguration } from '../../configuration/load.js';
 import type { DocumentIndexManager } from '../../index/document-index-manager.js';
+import { isDocumentHidden } from '../../configuration/disable-gate.js';
 import { isLanguageEnabled } from '../../configuration/language-filter.js';
 import { resolveHighlightSyntaxes } from '../fields/registry.js';
 
@@ -54,7 +55,7 @@ export class HighlightController implements vscode.Disposable {
     const config = this.getConfig(document);
 
     if (
-      !config.enabled ||
+      isDocumentHidden(document, config) ||
       !config.highlightEnabled ||
       !isLanguageEnabled(config.languages, document.languageId)
     ) {

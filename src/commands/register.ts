@@ -7,6 +7,7 @@
  */
 import * as vscode from 'vscode';
 
+import { isDocumentHidden } from '../configuration/disable-gate.js';
 import type { RuntimeConfiguration } from '../configuration/load.js';
 import { formatByCommandSuffix } from '../features/convert/format-catalog.js';
 import type { ConvertController } from '../features/convert/convert-controller.js';
@@ -136,6 +137,8 @@ export function registerCommands(deps: CommandDependencies): vscode.Disposable[]
     const editor = activeEditor();
     if (!editor) return;
     const document = editor.document;
+    // 隐身文档上静默无操作, 与转换命令一致; 原因已由 ensure() 记进 Output Channel。
+    if (isDocumentHidden(document, getConfig(document))) return;
     manager.ensure(document);
     const index = manager.indexOf(document);
     const offset = document.offsetAt(editor.selection.active);

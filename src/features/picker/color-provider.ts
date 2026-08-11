@@ -29,6 +29,7 @@
  */
 import * as vscode from 'vscode';
 
+import { isDocumentHidden } from '../../configuration/disable-gate.js';
 import { isLanguageEnabled } from '../../configuration/language-filter.js';
 import type { RuntimeConfiguration } from '../../configuration/load.js';
 import { buildResolved } from '../../core/colorjs-bridge.js';
@@ -80,7 +81,7 @@ export class ColorSwatchProvider implements vscode.DocumentColorProvider {
     if (this.probing) return undefined;
 
     const config = this.getConfig(document);
-    if (!config.enabled || config.colorPickerMode === 'off') return undefined;
+    if (isDocumentHidden(document, config) || config.colorPickerMode === 'off') return undefined;
     if (!isLanguageEnabled(config.languages, document.languageId)) return undefined;
 
     const snapshot = this.manager.ensure(document);

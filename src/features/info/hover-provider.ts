@@ -6,6 +6,7 @@
  */
 import * as vscode from 'vscode';
 
+import { isDocumentHidden } from '../../configuration/disable-gate.js';
 import { isLanguageEnabled } from '../../configuration/language-filter.js';
 import type { RuntimeConfiguration } from '../../configuration/load.js';
 import { scanText } from '../../core/scanner.js';
@@ -25,7 +26,9 @@ export class ColorHoverProvider implements vscode.HoverProvider {
     position: vscode.Position,
   ): vscode.ProviderResult<vscode.Hover> {
     const config = this.getConfig(document);
-    if (!config.enabled || !config.infoEnabled) return undefined;
+    // 闸门必须在 findMatch 之前: 那里有"索引未就绪时只扫当前行"的兜底路径,
+    // 放在后面会让隐身文档仍然弹出 Hover。
+    if (isDocumentHidden(document, config) || !config.infoEnabled) return undefined;
     if (!isLanguageEnabled(config.languages, document.languageId)) return undefined;
 
     const offset = document.offsetAt(position);

@@ -10,6 +10,7 @@
  */
 import * as vscode from 'vscode';
 
+import { isDocumentHidden } from '../../configuration/disable-gate.js';
 import type { RuntimeConfiguration } from '../../configuration/load.js';
 import type { TargetFormat } from '../../core/serializer.js';
 import type { ColorMatch, SerializerOptions } from '../../core/types.js';
@@ -119,6 +120,9 @@ export class ConvertController {
   /** Quick Pick 入口。 */
   async convertWithPicker(editor: vscode.TextEditor, copyOnly = false): Promise<void> {
     const config = this.getConfig(editor.document);
+    // 隐身文档上静默无操作: 闸门必须在任何 showInformationMessage 之前, 否则会弹出
+    // "光标处没有颜色", 而隐身的语义是这个扩展在这里根本不存在。
+    if (isDocumentHidden(editor.document, config)) return;
     if (!config.convertEnabled) return;
 
     const { matches } = this.collectMatches(editor);
@@ -153,6 +157,7 @@ export class ConvertController {
   /** 直达命令入口。 */
   async convertTo(editor: vscode.TextEditor, target: TargetFormat): Promise<void> {
     const config = this.getConfig(editor.document);
+    if (isDocumentHidden(editor.document, config)) return;
     if (!config.convertEnabled) return;
 
     const { matches } = this.collectMatches(editor);
@@ -197,6 +202,7 @@ export class ConvertController {
   /** 复制到剪贴板, 不修改文档。 */
   async copy(editor: vscode.TextEditor, target: TargetFormat): Promise<void> {
     const config = this.getConfig(editor.document);
+    if (isDocumentHidden(editor.document, config)) return;
     const { matches } = this.collectMatches(editor);
     if (matches.length === 0) {
       void vscode.window.showInformationMessage(t('ui.noColorAtCursor'));

@@ -8,6 +8,7 @@
 import * as vscode from 'vscode';
 
 import { isCssLikeLanguage, type ScanOptions } from '../core/scanner.js';
+import { hiddenReason } from '../configuration/disable-gate.js';
 import type { RuntimeConfiguration } from '../configuration/load.js';
 import { configurationDigest } from '../configuration/load.js';
 import type { Logger } from '../logging/output-channel.js';
@@ -98,14 +99,15 @@ export class DocumentIndexManager implements vscode.Disposable {
   /** 同步获取索引; 已是最新时不重新扫描。 */
   ensure(document: vscode.TextDocument): IndexSnapshot | undefined {
     const config = this.getConfig(document);
-    if (!config.enabled) return undefined;
 
-    const sizeKb = Buffer.byteLength(document.getText(), 'utf8') / 1024;
-    if (sizeKb > config.maxDocumentSizeKb) {
-      this.logger.warnOnce(
-        `too-large:${document.uri.toString()}`,
-        `document exceeds ${config.maxDocumentSizeKb} KB and is not scanned: ${document.uri.toString()}`,
-      );
+    const hidden = hiddenReason(document, config);
+    if (hidden) {
+      const key = document.uri.toString();
+      if (hidden !== 'disabled' && hidden !== 'output-scheme') {
+        this.logger.warnOnce(`hidden:${hidden}:${key}`, `document is hidden (${hidden}): ${key}`);
+      }
+      // 丢掉索引实例: 留着只会是一份没人该读的旧快照。
+      this.release(key);
       return undefined;
     }
 

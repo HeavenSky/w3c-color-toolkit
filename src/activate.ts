@@ -8,6 +8,8 @@ import * as vscode from 'vscode';
 
 import type { FileReader } from './adapters/types.js';
 import { registerCommands, syncHdrContextKey } from './commands/register.js';
+import { invalidPatterns } from './configuration/disable-filter.js';
+import { disableRulesOf, isDocumentHidden } from './configuration/disable-gate.js';
 import { isLanguageEnabled } from './configuration/language-filter.js';
 import { loadConfiguration, type RuntimeConfiguration } from './configuration/load.js';
 import { CONFIG_SECTION } from './configuration/schema.js';
@@ -91,7 +93,12 @@ export function activateShared(
   // 文档事件
   context.subscriptions.push(
     vscode.workspace.onDidChangeTextDocument((event) => {
-      if (!shouldTrack(event.document, configFor(event.document))) return;
+      if (!shouldTrack(event.document, configFor(event.document))) {
+        // 文档可能是刚刚被编辑到超过大小阈值才转为隐身的; 直接 return 会把此前渲染的
+        // 装饰留在屏幕上, 因为之后再没有任何事件会驱动这个文档重渲染。
+        highlight.renderDocument(event.document);
+        return;
+      }
       manager.scheduleRefresh(event.document);
     }),
     vscode.workspace.onDidOpenTextDocument((document) => {
@@ -129,8 +136,7 @@ export function activateShared(
 }
 
 function shouldTrack(document: vscode.TextDocument, config: RuntimeConfiguration): boolean {
-  if (!config.enabled) return false;
-  if (document.uri.scheme === 'output') return false;
+  if (isDocumentHidden(document, config)) return false;
   return isLanguageEnabled(config.languages, document.languageId);
 }
 
@@ -140,6 +146,15 @@ function reportAdvancedIssues(config: RuntimeConfiguration, logger: Logger): voi
       issue.detail ? ` — ${issue.detail}` : ''
     }`;
     logger.warnOnce(`${issue.kind}:${issue.key}:${issue.scope}`, message);
+  }
+
+  // 无效的禁用模式是配置级问题, 与具体文档无关, 因此和上面的 advanced 告警同源上报:
+  // 放在 `ensure()` 里会因隐身早退而漏报一部分情况。
+  for (const pattern of invalidPatterns(disableRulesOf(config))) {
+    logger.warnOnce(
+      `invalid-pattern:${pattern}`,
+      `disable pattern is ignored because it contains "/" or is empty: ${pattern}`,
+    );
   }
 }
 
