@@ -21,6 +21,7 @@ import {
   collapsePreviewFields,
   collectColorInfoLanguages,
   COLOR_HIGHLIGHT_MAPPINGS,
+  invertLanguageAllowlist,
   mergeHighlight,
   type TargetTier,
 } from './legacy-map.js';
@@ -162,7 +163,14 @@ export function planMigration(): MigrationPlan {
     if (languages !== undefined) {
       const { selectors, ignoredColorsField } = collectColorInfoLanguages(languages);
       if (selectors.length > 0) {
-        push('colorInfo.languages', languages, 'languages', 'exposed', selectors, scope);
+        push(
+          'colorInfo.languages',
+          languages,
+          'disable.languageIds',
+          'advanced',
+          invertLanguageAllowlist(selectors),
+          scope,
+        );
       }
       if (ignoredColorsField) {
         skipped.push({

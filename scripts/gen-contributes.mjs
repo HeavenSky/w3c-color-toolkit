@@ -2,7 +2,7 @@
  * 从 TypeScript 单一来源生成 `package.json` 的 contributes 与两份 `package.nls` 文件。
  *
  * 来源:
- * - `src/configuration/schema.ts`: 8 个暴露层键 + 38 项内置层默认值;
+ * - `src/configuration/schema.ts`: 7 个暴露层键 + 37 项内置层默认值;
  * - `src/commands/ids.ts` 与 `src/features/convert/format-catalog.ts`: 5 个可见命令 + 31 个隐藏命令;
  * - `configurationDefaults`: 把 `editor.defaultColorDecorators` 默认值改为 `never` (见 buildContributes)。
  *
@@ -111,7 +111,7 @@ function typeLabel(setting) {
 const ADVANCED_INTRO = {
   en: [
     'Incremental overrides for the built-in options. Keys are **flat dotted paths**; ' +
-      'omitted keys keep their default. The 8 top-level settings must not appear here.',
+      'omitted keys keep their default. The 7 top-level settings must not appear here.',
     '',
     'Tip: type `"` inside the object for completion, or pick the ' +
       '"All advanced options" snippet to insert every key with its default.',
@@ -121,7 +121,7 @@ const ADVANCED_INTRO = {
   ],
   'zh-cn': [
     '内置选项的增量覆盖。键为**扁平点分路径**; 未出现的键保持默认值。' +
-      '8 个顶层设置不允许出现在这里。',
+      '7 个顶层设置不允许出现在这里。',
     '',
     '提示: 在对象内输入 `"` 可获得补全, 或选择"All advanced options"模板' +
       '一次插入全部键及其默认值。',
@@ -339,11 +339,11 @@ async function main() {
   const hiddenCount = sources.HIDDEN_COMMANDS.length;
   if (visibleCount !== 5) errors.push(`expected 5 visible commands, got ${visibleCount}`);
   if (hiddenCount !== 31) errors.push(`expected 31 hidden commands, got ${hiddenCount}`);
-  if (sources.EXPOSED_SETTINGS.length !== 8) {
-    errors.push(`expected 8 exposed settings, got ${sources.EXPOSED_SETTINGS.length}`);
+  if (sources.EXPOSED_SETTINGS.length !== 7) {
+    errors.push(`expected 7 exposed settings, got ${sources.EXPOSED_SETTINGS.length}`);
   }
-  if (sources.ADVANCED_SETTINGS.length !== 38) {
-    errors.push(`expected 38 advanced settings, got ${sources.ADVANCED_SETTINGS.length}`);
+  if (sources.ADVANCED_SETTINGS.length !== 37) {
+    errors.push(`expected 37 advanced settings, got ${sources.ADVANCED_SETTINGS.length}`);
   }
 
   if (errors.length > 0) {

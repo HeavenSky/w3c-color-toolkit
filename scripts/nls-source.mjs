@@ -15,8 +15,6 @@ export const EN = {
 
   // 暴露层配置
   'config.enabled': 'Enable W3C Color Toolkit.',
-  'config.languages':
-    'Languages to process. Use a language id, "*" for all, or "!id" to exclude. Exclusions win over inclusions.',
   'config.highlight':
     'Color highlight style. "square-before" / "square-after" draw a filled swatch, "dot-before" / "dot-after" a bullet. "off" disables highlighting.',
   'config.info': 'Show color information on hover.',
@@ -62,7 +60,6 @@ export const EN = {
   'advanced.output.hexCase': 'Letter case of generated hex values.',
   'advanced.scan.comments': 'Scan comments for colors.',
   'advanced.scan.strings': 'Scan string literals for colors.',
-  'advanced.scan.maxDocumentSizeKb': 'Skip documents larger than this size.',
   'advanced.contextualPreview':
     'Color scheme assumed when previewing context dependent colors such as light-dark(). "auto" follows the editor theme. Results are marked as assumed.',
   'advanced.variables.resolve': 'Resolve CSS custom properties and preprocessor variables.',
@@ -97,7 +94,6 @@ export const ZH_CN = {
   'capabilities.untrustedWorkspaces': '未受信任的工作区只解析当前文档中的变量, 不读取导入的文件。',
 
   'config.enabled': '启用 W3C Color Toolkit。',
-  'config.languages': '要处理的语言。可填 language id、`*` 表示全部, 或 `!id` 表示排除。排除项优先于包含项。',
   'config.highlight':
     '颜色高亮样式。`square-before` / `square-after` 画实心色块, `dot-before` / `dot-after` 画圆点; `off` 表示关闭高亮。',
   'config.info': '悬停时显示颜色信息。',
@@ -141,7 +137,6 @@ export const ZH_CN = {
   'advanced.output.hexCase': '生成 Hex 值的大小写。',
   'advanced.scan.comments': '扫描注释中的颜色。',
   'advanced.scan.strings': '扫描字符串字面量中的颜色。',
-  'advanced.scan.maxDocumentSizeKb': '超过该大小的文档不扫描。',
   'advanced.contextualPreview':
     '预览 `light-dark()` 等上下文相关颜色时假设的配色方案。`auto` 跟随编辑器主题。结果会标注为假设值。',
   'advanced.variables.resolve': '解析 CSS 自定义属性与预处理器变量。',

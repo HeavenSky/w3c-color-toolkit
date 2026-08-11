@@ -38,7 +38,7 @@ const {
   previewSource,
   advancedDefaults,
   resolveAdvanced,
-  isLanguageEnabled,
+  disableReason,
   renderSupportMatrixRows,
 } = api;
 
@@ -244,7 +244,7 @@ check('contextual 无预览源', previewSource(bySyntax.get('current-color')) ==
 
 // ── 6. 配置 ────────────────────────────────────────────────────
 console.log('\n=== 配置 ===');
-check('内置层 38 项默认值', Object.keys(advancedDefaults()).length === 38);
+check('内置层 37 项默认值', Object.keys(advancedDefaults()).length === 37);
 const resolvedAdvanced = resolveAdvanced({
   user: { 'output.hexCase': 'upper' },
   workspace: { 'scan.comments': false, precision: 3, 'bogus.key': 1 },
@@ -253,7 +253,21 @@ check('advanced 跨 scope 逐键合并', resolvedAdvanced.values['output.hexCase
 check('工作区键生效', resolvedAdvanced.values['scan.comments'] === false);
 check('暴露层键被拒绝', resolvedAdvanced.issues.some((i) => i.kind === 'exposed-key'));
 check('未知键被忽略', resolvedAdvanced.issues.some((i) => i.kind === 'unknown-key'));
-check('语言过滤: 排除项优先', isLanguageEnabled(['*', '!plaintext'], 'plaintext') === false);
+const DISABLE_RULES = { maxFileSizeMb: 2, fileNames: ['*.min.css'], languageIds: ['plaintext'] };
+const disableInput = { baseName: 'a.css', languageId: 'css', length: 100 };
+check(
+  '隐身判定: 文件名模式命中',
+  disableReason({ ...disableInput, baseName: 'a.min.css' }, DISABLE_RULES) === 'file-name',
+);
+check(
+  '隐身判定: language id 模式命中',
+  disableReason({ ...disableInput, languageId: 'plaintext' }, DISABLE_RULES) === 'language-id',
+);
+check(
+  '隐身判定: 超过大小阈值',
+  disableReason({ ...disableInput, length: 3 * 1048576 }, DISABLE_RULES) === 'file-size',
+);
+check('隐身判定: 都不命中时启用', disableReason(disableInput, DISABLE_RULES) === undefined);
 
 // ── 7. 支持矩阵 ────────────────────────────────────────────────
 const rows = renderSupportMatrixRows();

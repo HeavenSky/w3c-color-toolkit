@@ -10,7 +10,6 @@ import type { FileReader } from './adapters/types.js';
 import { registerCommands, syncHdrContextKey } from './commands/register.js';
 import { invalidPatterns } from './configuration/disable-filter.js';
 import { disableRulesOf, isDocumentHidden } from './configuration/disable-gate.js';
-import { isLanguageEnabled } from './configuration/language-filter.js';
 import { loadConfiguration, type RuntimeConfiguration } from './configuration/load.js';
 import { CONFIG_SECTION } from './configuration/schema.js';
 import { maybeNotifyCoexistence } from './features/coexistence/conflict-notice.js';
@@ -136,8 +135,7 @@ export function activateShared(
 }
 
 function shouldTrack(document: vscode.TextDocument, config: RuntimeConfiguration): boolean {
-  if (isDocumentHidden(document, config)) return false;
-  return isLanguageEnabled(config.languages, document.languageId);
+  return !isDocumentHidden(document, config);
 }
 
 function reportAdvancedIssues(config: RuntimeConfiguration, logger: Logger): void {

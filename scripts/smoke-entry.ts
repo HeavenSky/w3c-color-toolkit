@@ -12,7 +12,7 @@ export { convertSource, previewConversion } from '../src/features/convert/presen
 export { computePreviewColor, previewSource } from '../src/features/highlight/preview-color.js';
 export { advancedDefaults } from '../src/configuration/schema.js';
 export { resolveAdvanced } from '../src/configuration/advanced.js';
-export { isLanguageEnabled } from '../src/configuration/language-filter.js';
+export { disableReason } from '../src/configuration/disable-filter.js';
 
 import { renderSupportMatrix } from '../src/commands/support-matrix.js';
 import type { RuntimeConfiguration } from '../src/configuration/load.js';

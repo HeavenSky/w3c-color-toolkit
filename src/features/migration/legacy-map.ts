@@ -20,10 +20,42 @@ export interface LegacyMapping {
   readonly note?: string;
 }
 
+/**
+ * 旧的语言"允许清单"→ 新的 gitignore "禁用清单"。
+ *
+ * 两种语义正好相反, 但在 gitignore 的"后者覆盖前者"下可以精确表达:
+ *
+ * | 旧值 (允许清单)        | 新值 (禁用清单)             |
+ * | ---------------------- | --------------------------- |
+ * | `["*"]`                | `[]`                        |
+ * | `["*", "!plaintext"]`  | `["plaintext"]`             |
+ * | `["css", "scss"]`      | `["*", "!css", "!scss"]`    |
+ * | `[]`                   | `["*"]`                     |
+ *
+ * 含 `*` 时只有排除项有信息量 (其余明文项本就被允许); 不含 `*` 时用 `["*", ...]` 全禁
+ * 再逐项放行, 此时原来的排除项本就不在允许范围内, 同样冗余。旧语义里排除项与顺序无关,
+ * 上表的输出顺序保证了在顺序敏感的新语义下结果一致。
+ */
+export function invertLanguageAllowlist(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const entries = value.filter((item): item is string => typeof item === 'string').map((item) => item.trim());
+  const includesAll = entries.includes('*');
+
+  if (includesAll) {
+    return entries.filter((item) => item.startsWith('!')).map((item) => item.slice(1));
+  }
+  return ['*', ...entries.filter((item) => !item.startsWith('!')).map((item) => `!${item}`)];
+}
+
 /** `color-highlight.*` */
 export const COLOR_HIGHLIGHT_MAPPINGS: readonly LegacyMapping[] = Object.freeze([
   // enable 与 markerType 合并为单个 `highlight` 键, 由 mergeHighlight 单独处理。
-  { legacyKey: 'color-highlight.languages', targetKey: 'languages', tier: 'exposed' },
+  {
+    legacyKey: 'color-highlight.languages',
+    targetKey: 'disable.languageIds',
+    tier: 'advanced',
+    transform: invertLanguageAllowlist,
+  },
   {
     legacyKey: 'color-highlight.matchWords',
     targetKey: 'highlight.matchWords',

@@ -253,7 +253,6 @@ export async function runManage(): Promise<void> {
 export function effectiveConfigurationLines(config: RuntimeConfiguration): string[] {
   const lines: string[] = [
     `enabled = ${config.enabled}`,
-    `languages = ${JSON.stringify(config.languages)}`,
     `highlight = ${config.markerType}`,
     `info = ${config.infoEnabled}`,
     `convertSyntax = ${config.convertSyntax}`,

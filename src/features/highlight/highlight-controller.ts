@@ -12,7 +12,6 @@ import * as vscode from 'vscode';
 import type { RuntimeConfiguration } from '../../configuration/load.js';
 import type { DocumentIndexManager } from '../../index/document-index-manager.js';
 import { isDocumentHidden } from '../../configuration/disable-gate.js';
-import { isLanguageEnabled } from '../../configuration/language-filter.js';
 import { resolveHighlightSyntaxes } from '../fields/registry.js';
 
 import { DecorationManager, type DecorationKey } from './decoration-manager.js';
@@ -54,11 +53,7 @@ export class HighlightController implements vscode.Disposable {
     const document = editor.document;
     const config = this.getConfig(document);
 
-    if (
-      isDocumentHidden(document, config) ||
-      !config.highlightEnabled ||
-      !isLanguageEnabled(config.languages, document.languageId)
-    ) {
+    if (isDocumentHidden(document, config) || !config.highlightEnabled) {
       this.decorations.clear(editor);
       return;
     }

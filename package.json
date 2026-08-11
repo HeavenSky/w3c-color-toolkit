@@ -56,17 +56,6 @@
           "description": "%config.enabled%",
           "scope": "resource"
         },
-        "w3cColorToolkit.languages": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "default": [
-            "*"
-          ],
-          "description": "%config.languages%",
-          "scope": "resource"
-        },
         "w3cColorToolkit.highlight": {
           "type": "string",
           "enum": [
@@ -348,13 +337,6 @@
               "default": true,
               "description": "%advanced.scan.strings%"
             },
-            "scan.maxDocumentSizeKb": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 102400,
-              "default": 2048,
-              "description": "%advanced.scan.maxDocumentSizeKb%"
-            },
             "contextualPreview": {
               "type": "string",
               "enum": [
@@ -429,7 +411,7 @@
           "defaultSnippets": [
             {
               "label": "All advanced options (with defaults)",
-              "description": "Insert all 38 built-in options with their default values",
+              "description": "Insert all 37 built-in options with their default values",
               "body": {
                 "disable.maxFileSizeMb": 2,
                 "disable.fileNames": [],
@@ -463,7 +445,6 @@
                 "output.hexCase": "lower",
                 "scan.comments": true,
                 "scan.strings": true,
-                "scan.maxDocumentSizeKb": 2048,
                 "contextualPreview": "auto",
                 "variables.resolve": true,
                 "variables.includePaths": [],

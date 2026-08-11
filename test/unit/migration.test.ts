@@ -8,11 +8,13 @@ import {
   collapsePreviewFields,
   collectColorInfoLanguages,
   COLOR_HIGHLIGHT_MAPPINGS,
+  invertLanguageAllowlist,
   LEGACY_COMMAND_MAP,
   LEGACY_EXTENSION_IDS,
   mergeHighlight,
   PREVIEW_FIELD_COLLAPSE,
 } from '../../src/features/migration/legacy-map.js';
+import { disableReason } from '../../src/configuration/disable-filter.js';
 import { ADVANCED_KEYS, EXPOSED_KEYS } from '../../src/configuration/schema.js';
 
 describe('旧配置键覆盖', () => {
@@ -53,6 +55,32 @@ describe('旧配置键覆盖', () => {
 });
 
 describe('值转换', () => {
+  it('languages: 允许清单反转为 gitignore 禁用清单', () => {
+    const mapping = COLOR_HIGHLIGHT_MAPPINGS.find(
+      (item) => item.targetKey === 'disable.languageIds',
+    )!;
+    expect(mapping.tier).toBe('advanced');
+    // 含 `*`: 只有排除项有信息量。
+    expect(mapping.transform?.(['*'])).toEqual([]);
+    expect(mapping.transform?.(['*', '!plaintext'])).toEqual(['plaintext']);
+    // 不含 `*`: 先全禁再逐项放行。
+    expect(mapping.transform?.(['css', 'scss'])).toEqual(['*', '!css', '!scss']);
+    expect(mapping.transform?.([])).toEqual(['*']);
+    // 旧语义里排除项与顺序无关, 反转后仍等价。
+    expect(mapping.transform?.(['css', '!css'])).toEqual(['*', '!css']);
+    expect(mapping.transform?.('nonsense')).toBeUndefined();
+  });
+
+  it('languages: 反转结果直接喂给隐身判定仍然等价', () => {
+    const languageIds = invertLanguageAllowlist(['css', 'scss']) as string[];
+    const rules = { maxFileSizeMb: 0, fileNames: [], languageIds };
+    const at = (languageId: string) =>
+      disableReason({ baseName: 'a', languageId, length: 0 }, rules);
+    expect(at('css')).toBeUndefined();
+    expect(at('scss')).toBeUndefined();
+    expect(at('plaintext')).toBe('language-id');
+  });
+
   it('matchWords: false → off, true → all', () => {
     const mapping = COLOR_HIGHLIGHT_MAPPINGS.find((item) => item.targetKey === 'highlight.matchWords')!;
     expect(mapping.transform?.(false)).toBe('off');

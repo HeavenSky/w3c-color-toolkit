@@ -33,7 +33,6 @@ export type ColorPickerMode = 'off' | 'dedupe' | 'all';
 
 export interface RuntimeConfiguration {
   readonly enabled: boolean;
-  readonly languages: readonly string[];
   readonly markerType: MarkerType;
   readonly highlightEnabled: boolean;
   readonly infoEnabled: boolean;
@@ -76,7 +75,6 @@ export interface RuntimeConfiguration {
   readonly hexCase: HexCase;
   readonly scanComments: boolean;
   readonly scanStrings: boolean;
-  readonly maxDocumentSizeKb: number;
   readonly contextualPreview: 'off' | 'light' | 'dark';
   readonly variablesResolve: boolean;
   readonly variablesIncludePaths: readonly string[];
@@ -131,7 +129,6 @@ export function loadConfiguration(scope?: vscode.ConfigurationScope): RuntimeCon
 
   return {
     enabled: config.get<boolean>('enabled', true),
-    languages: config.get<string[]>('languages', ['*']),
     markerType,
     highlightEnabled: markerType !== 'off',
     infoEnabled: config.get<boolean>('info', true),
@@ -168,7 +165,6 @@ export function loadConfiguration(scope?: vscode.ConfigurationScope): RuntimeCon
     hexCase: get<HexCase>('output.hexCase'),
     scanComments: get<boolean>('scan.comments'),
     scanStrings: get<boolean>('scan.strings'),
-    maxDocumentSizeKb: get<number>('scan.maxDocumentSizeKb'),
     contextualPreview: resolveContextualPreview(get<ContextualPreviewSetting>('contextualPreview')),
     variablesResolve: get<boolean>('variables.resolve'),
     variablesIncludePaths: get<string[]>('variables.includePaths'),
@@ -187,7 +183,9 @@ export function loadConfiguration(scope?: vscode.ConfigurationScope): RuntimeCon
 export function configurationDigest(config: RuntimeConfiguration): string {
   return JSON.stringify([
     config.enabled,
-    config.languages,
+    config.maxFileSizeMb,
+    config.disabledFileNames,
+    config.disabledLanguageIds,
     config.markerType,
     config.markRuler,
     config.infoEnabled,

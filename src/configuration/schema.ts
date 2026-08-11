@@ -2,8 +2,8 @@
  * 配置的唯一来源。
  *
  * 分两层:
- * - 暴露层: 8 个键, 在 `contributes.configuration` 中完整声明并出现在设置界面;
- * - 内置层: 38 项, 只有默认值, 通过 `w3cColorToolkit.advanced` 对象增量覆盖。
+ * - 暴露层: 7 个键, 在 `contributes.configuration` 中完整声明并出现在设置界面;
+ * - 内置层: 37 项, 只有默认值, 通过 `w3cColorToolkit.advanced` 对象增量覆盖。
  *
  * `package.json` 的 `contributes.configuration` 由 `scripts/gen-contributes.mjs`
  * 从本文件生成, 并由 `test/unit/contributes.test.ts` 断言一致。
@@ -28,19 +28,13 @@ export interface SettingDefinition {
   readonly nlsKey: string;
 }
 
-/** 暴露层: 出现在设置界面的 8 个键。 */
+/** 暴露层: 出现在设置界面的 7 个键。 */
 export const EXPOSED_SETTINGS: readonly SettingDefinition[] = Object.freeze([
   {
     key: 'enabled',
     type: 'boolean',
     default: true,
     nlsKey: 'config.enabled',
-  },
-  {
-    key: 'languages',
-    type: 'string[]',
-    default: ['*'],
-    nlsKey: 'config.languages',
   },
   {
     key: 'highlight',
@@ -97,7 +91,7 @@ export const EXPOSED_SETTINGS: readonly SettingDefinition[] = Object.freeze([
   },
 ]);
 
-/** 内置层: 只能通过 `advanced` 覆盖的 38 项。 */
+/** 内置层: 只能通过 `advanced` 覆盖的 37 项。 */
 export const ADVANCED_SETTINGS: readonly SettingDefinition[] = Object.freeze([
   // 隐身 (3): 三条件是或关系, 任一命中就完全不介入该文件。
   // 三项必须连续, 否则生成的参考表会重复出现同一个分组标题。
@@ -233,7 +227,7 @@ export const ADVANCED_SETTINGS: readonly SettingDefinition[] = Object.freeze([
   },
   { key: 'convert.recentFirst', type: 'boolean', default: true, nlsKey: 'advanced.convert.recentFirst' },
 
-  // 输出与扫描 (6)
+  // 输出与扫描 (5)
   {
     key: 'output.gamutMapping',
     type: 'string',
@@ -250,14 +244,6 @@ export const ADVANCED_SETTINGS: readonly SettingDefinition[] = Object.freeze([
   },
   { key: 'scan.comments', type: 'boolean', default: true, nlsKey: 'advanced.scan.comments' },
   { key: 'scan.strings', type: 'boolean', default: true, nlsKey: 'advanced.scan.strings' },
-  {
-    key: 'scan.maxDocumentSizeKb',
-    type: 'integer',
-    default: 2048,
-    minimum: 1,
-    maximum: 102400,
-    nlsKey: 'advanced.scan.maxDocumentSizeKb',
-  },
   {
     key: 'contextualPreview',
     type: 'string',

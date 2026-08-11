@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import { resolveAdvanced } from '../../src/configuration/advanced.js';
-import { isLanguageEnabled, parseLanguageFilter } from '../../src/configuration/language-filter.js';
 import {
   ADVANCED_KEYS,
   ADVANCED_SETTINGS,
@@ -12,11 +11,10 @@ import {
 } from '../../src/configuration/schema.js';
 
 describe('两层配置的形状', () => {
-  it('暴露层恰好 8 个键', () => {
-    expect(EXPOSED_SETTINGS).toHaveLength(8);
+  it('暴露层恰好 7 个键', () => {
+    expect(EXPOSED_SETTINGS).toHaveLength(7);
     expect(EXPOSED_KEYS).toEqual([
       'enabled',
-      'languages',
       'highlight',
       'info',
       'convertSyntax',
@@ -26,9 +24,9 @@ describe('两层配置的形状', () => {
     ]);
   });
 
-  it('内置层恰好 38 项', () => {
-    expect(ADVANCED_SETTINGS).toHaveLength(38);
-    expect(Object.keys(advancedDefaults())).toHaveLength(38);
+  it('内置层恰好 37 项', () => {
+    expect(ADVANCED_SETTINGS).toHaveLength(37);
+    expect(Object.keys(advancedDefaults())).toHaveLength(37);
   });
 
   it('两层没有重叠键', () => {
@@ -125,43 +123,5 @@ describe('advanced 增量覆盖', () => {
       'hex',
     ]);
     expect(resolveAdvanced({ user: { 'fields.enabled': [1] } }).issues[0].kind).toBe('type-mismatch');
-  });
-});
-
-describe('语言过滤', () => {
-  it('* 匹配所有语言', () => {
-    expect(isLanguageEnabled(['*'], 'css')).toBe(true);
-    expect(isLanguageEnabled(['*'], 'plaintext')).toBe(true);
-  });
-
-  it('显式包含项只匹配自身', () => {
-    expect(isLanguageEnabled(['css', 'scss'], 'css')).toBe(true);
-    expect(isLanguageEnabled(['css', 'scss'], 'less')).toBe(false);
-  });
-
-  it('! 前缀排除项优先于包含项', () => {
-    expect(isLanguageEnabled(['*', '!plaintext'], 'plaintext')).toBe(false);
-    expect(isLanguageEnabled(['*', '!plaintext'], 'css')).toBe(true);
-  });
-
-  it('排除项优先与顺序无关', () => {
-    expect(isLanguageEnabled(['!css', 'css'], 'css')).toBe(false);
-    expect(isLanguageEnabled(['css', '!css'], 'css')).toBe(false);
-  });
-
-  it('空数组不启用任何语言', () => {
-    expect(isLanguageEnabled([], 'css')).toBe(false);
-  });
-
-  it('大小写不敏感', () => {
-    expect(isLanguageEnabled(['CSS'], 'css')).toBe(true);
-    expect(isLanguageEnabled(['*', '!CSS'], 'css')).toBe(false);
-  });
-
-  it('解析结果区分包含、排除与通配', () => {
-    const filter = parseLanguageFilter(['*', 'css', '!plaintext', ' ']);
-    expect(filter.includesAll).toBe(true);
-    expect(filter.includes).toEqual(['css']);
-    expect(filter.excludes).toEqual(['plaintext']);
   });
 });

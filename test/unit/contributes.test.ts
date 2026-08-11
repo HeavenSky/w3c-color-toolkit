@@ -88,8 +88,8 @@ describe('package.json 基本声明', () => {
 describe('配置贡献点一致性', () => {
   const properties = contributes.configuration.properties;
 
-  it('设置界面只出现 8 个键', () => {
-    expect(Object.keys(properties)).toHaveLength(8);
+  it('设置界面只出现 7 个键', () => {
+    expect(Object.keys(properties)).toHaveLength(7);
   });
 
   it('每个暴露层键都已声明, 且默认值一致', () => {
@@ -118,7 +118,7 @@ describe('配置贡献点一致性', () => {
       }
     }
 
-    // 2. 可插入模板: 全量模板含全部 38 个键及默认值。
+    // 2. 可插入模板: 全量模板含全部 37 个键及默认值。
     const snippets = advanced.defaultSnippets as { label: string; body: Record<string, unknown> }[];
     expect(snippets.length).toBeGreaterThanOrEqual(2);
     const full = snippets[0].body;
@@ -146,11 +146,11 @@ describe('配置贡献点一致性', () => {
     }
   });
 
-  it('advanced 列出全部 38 个内置键并拒绝未知键', () => {
+  it('advanced 列出全部 37 个内置键并拒绝未知键', () => {
     const advanced = properties['w3cColorToolkit.advanced'];
     expect(advanced.additionalProperties).toBe(false);
     const advancedProperties = advanced.properties as Record<string, { default: unknown }>;
-    expect(Object.keys(advancedProperties)).toHaveLength(38);
+    expect(Object.keys(advancedProperties)).toHaveLength(37);
     for (const setting of ADVANCED_SETTINGS) {
       expect(advancedProperties[setting.key], `${setting.key} 未声明`).toBeDefined();
       expect(advancedProperties[setting.key].default).toEqual(setting.default);
