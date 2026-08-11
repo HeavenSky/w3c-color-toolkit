@@ -222,20 +222,19 @@ rgb(): rgb(240, 112, 63)
 
 ## 配置
 
-### 设置界面中的 8 个键
+### 设置界面中的 7 个键
 
 | 配置键 | 类型 | 默认值 | 作用 |
 | --- | --- | --- | --- |
 | `w3cColorToolkit.enabled` | boolean | `true` | 总开关 |
-| `w3cColorToolkit.languages` | string[] | `["*"]` | 语言过滤; `"*"` 为全部, `"!id"` 为排除项, 排除优先 |
 | `w3cColorToolkit.highlight` | enum | `underline` | 标记样式, 或 `off` |
 | `w3cColorToolkit.info` | boolean | `true` | Hover 信息 |
 | `w3cColorToolkit.convertSyntax` | `modern` \| `legacy` | `legacy` | `rgb()` / `hsl()` 输出风格 |
 | `w3cColorToolkit.precision` | 整数 1–10 | `5` | 生成值的有效数字位数 |
 | `w3cColorToolkit.experimental` | string[] | `["cssColor6", "cssColorHdr"]` | 启用的草案规范; 两项默认都开启 |
-| `w3cColorToolkit.advanced` | object | `{}` | 35 项内置选项的增量覆盖 |
+| `w3cColorToolkit.advanced` | object | `{}` | 37 项内置选项的增量覆盖 |
 
-8 个键的 scope 均为 `resource`, 因此可以按文件夹分别设置。
+7 个键的 scope 均为 `resource`, 因此可以按文件夹分别设置。
 
 ### advanced 对象
 
@@ -257,12 +256,26 @@ rgb(): rgb(240, 112, 63)
 规则:
 
 - 未出现的键保持内置默认值; 数组与对象整体替换;
-- 8 个顶层设置**不允许**出现在这里, 出现即忽略并告警, 从而消除两层之间的优先级歧义;
+- 7 个顶层设置**不允许**出现在这里, 出现即忽略并告警, 从而消除两层之间的优先级歧义;
 - 未知键与类型不符被忽略, 数值越界被钳制, 所有情况都记入日志而不抛异常;
 - User / Workspace / Folder 三个 scope 由扩展**逐键合并**, 因为 VS Code 对 object 类型设置是整体替换;
 - **管理 → 显示生效配置** 会输出合并结果并标注每个键的来源。
 
-#### 全部 35 项
+#### 全部 37 项
+
+**禁用** —— 让扩展彻底不介入
+
+三个条件任一成立即生效: 超过大小上限, **或**文件名命中, **或** language id 命中。被隐身的文件
+没有高亮, 没有色块, Hover 没有响应, 命令也不动作, 并且完全不会被扫描。
+
+| 键 | 取值 | 默认值 | 作用 |
+| --- | --- | --- | --- |
+| `disable.maxFileSizeMb` | number 0–1024 | `2` | 超过该长度的文档隐藏本扩展。允许小数 (`1.5`)。`0` 表示不限制。**单位是 MB 的 UTF-16 码元数, 不是磁盘字节数** —— 中日韩等非 ASCII 文本里一个码元最多对应三个 UTF-8 字节, 因此实际阈值比磁盘尺寸宽松。 |
+| `disable.fileNames` | string[] | `[]` | gitignore 语法模式, **只匹配文件名**, 因此模式不能包含 `/` (含 `/` 的模式会被忽略并记入输出面板)。后面的条目覆盖前面的, `!` 表示重新启用。例: `["*.min.css", "!vendor.min.css"]` |
+| `disable.languageIds` | string[] | `[]` | 同一套语法, 匹配 language id。用来拦住文件名模式拦不住的情况, 例如 `Dockerfile`, `Makefile`, 以及手动切换过语言模式的文件。例: `["plaintext", "*script*"]` |
+
+`!` 只在所在那一组内部生效: `disable.fileNames` 里的否定项救不回已经被 `disable.languageIds`
+排除的文件。没有跨维度的豁免开关 —— 需要放行就收窄对应那一组模式。
 
 **高亮**
 
@@ -323,7 +336,6 @@ rgb(): rgb(240, 112, 63)
 | --- | --- | --- | --- |
 | `scan.comments` | boolean | `true` | 扫描注释中的颜色 |
 | `scan.strings` | boolean | `true` | 扫描字符串字面量中的颜色 |
-| `scan.maxDocumentSizeKb` | 整数 1–102400 | `2048` | 跳过大于该尺寸的文档 |
 
 **变量**
 
@@ -411,8 +423,9 @@ rgb(): rgb(240, 112, 63)
 不回传"这个颜色是谁给的"。按 range 探测是保证"一个颜色一个色块"的唯一办法。
 
 **某个颜色没有高亮。** 按可能性排序: `w3cColorToolkit.highlight` 为 `off`;
-该语言被 `w3cColorToolkit.languages` 排除; 对应语法的字段在*配置颜色字段*里被关掉;
-该值是上下文相关值 (见上文); 文档超过 `advanced.scan.maxDocumentSizeKb`;
+该文件被 `advanced.disable.fileNames` 或 `advanced.disable.languageIds` 隐身;
+对应语法的字段在*配置颜色字段*里被关掉; 该值是上下文相关值 (见上文);
+文档超过 `advanced.disable.maxFileSizeMb`;
 颜色数超过 `advanced.highlight.maxMatchesPerDocument`; 或者它是非 CSS 语言里的裸颜色名而
 `advanced.highlight.matchWords` 仍为 `css-like`。
 
@@ -436,7 +449,7 @@ rgb(): rgb(240, 112, 63)
 
 ## 已知限制
 
-- 超大文档的扫描速度低于目标性能预算; `advanced.scan.maxDocumentSizeKb` 与
+- 超大文档的扫描速度低于目标性能预算; `advanced.disable.maxFileSizeMb` 与
   `advanced.highlight.maxMatchesPerDocument` 用于限制开销。
 - CSS Color 6 与 CSS Color HDR 均为草案, 数值与语法可能变化。
 - 未受信任的工作区只解析当前文档中的变量。

@@ -2,6 +2,49 @@
 
 Notable changes to W3C Color Toolkit.
 
+## v0.0.4 2026-08-11 Disable mode
+
+### Added
+
+- A disable mode that makes the extension go fully invisible in files you do not want it in. Three
+  built-in options, any one of which is enough (they are OR-ed):
+  `advanced.disable.maxFileSizeMb` (number, default `2`, decimals allowed, `0` = no limit),
+  `advanced.disable.fileNames` and `advanced.disable.languageIds` (gitignore-style patterns).
+  A hidden file gets no highlighting, no overview-ruler marker, no inline swatch or native picker,
+  no hover, and the conversion commands plus *Report unsupported syntax* do nothing; it is never
+  scanned either, so the size limit really is a performance guard rather than work that is computed
+  and thrown away. The reason is logged once per file in the output channel.
+- Patterns follow gitignore semantics — later entries win and `!` re-enables — but are matched
+  against the file name or the language id alone, so a pattern containing `/` is ignored and
+  reported. `!` applies within its own list; it cannot rescue a file the other list excluded.
+  The language dimension exists because a name pattern cannot catch `Dockerfile`, `Makefile`, or a
+  file whose language you switched by hand.
+
+### Removed
+
+- **Breaking.** `w3cColorToolkit.languages` is gone. It was an allow-list; the replacement
+  `advanced.disable.languageIds` is a deny-list, and the two cannot be reconciled by renaming alone,
+  so old values are no longer read. Convert them by hand — with gitignore's "later entries win" the
+  translation is exact: `["*"]` → `[]`, `["*", "!plaintext"]` → `["plaintext"]`,
+  `["css", "scss"]` → `["*", "!css", "!scss"]`, `[]` → `["*"]`. Settings migrated from
+  `color-highlight.languages` or `colorInfo.languages` are converted automatically by
+  **Manage → Migrate legacy settings**.
+- **Breaking.** `advanced.scan.maxDocumentSizeKb` is replaced by `advanced.disable.maxFileSizeMb`.
+  The old key only skipped indexing — hover still fell back to scanning the current line, so an
+  over-size document was not actually left alone. The new key hides the extension outright. The
+  default is unchanged in effect (`2` MB = the old `2048` KB), but note the unit is now MB of UTF-16
+  code units rather than bytes, so for non-ASCII text the effective limit is looser than the size on
+  disk.
+
+### Fixed
+
+- The size check no longer uses `Buffer`, which does not exist in the Web extension host, and no
+  longer materialises the whole document just to measure it.
+- Decorations are now cleared when a document becomes hidden by growing past the size limit while
+  you type. Previously nothing drove a re-render on that path, so stale markers stayed on screen.
+- The conversion commands now respect the language and file filters. Only highlighting, hover and
+  swatches did before.
+
 ## v0.0.3 2026-08-07
 
 ### Changed

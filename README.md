@@ -243,20 +243,19 @@ Command id suffixes follow the format list: `hex`, `rgb`, `hsl`, `oklch`, `hwb`,
 
 ## Settings
 
-### The 8 settings in the Settings UI
+### The 7 settings in the Settings UI
 
 | Setting | Type | Default | Purpose |
 | --- | --- | --- | --- |
 | `w3cColorToolkit.enabled` | boolean | `true` | Master switch |
-| `w3cColorToolkit.languages` | string[] | `["*"]` | Language filter; `"*"` = all, `"!id"` excludes, exclusions win |
 | `w3cColorToolkit.highlight` | enum | `underline` | Marker style, or `off` |
 | `w3cColorToolkit.info` | boolean | `true` | Hover information |
 | `w3cColorToolkit.convertSyntax` | `modern` \| `legacy` | `legacy` | `rgb()` / `hsl()` output style |
 | `w3cColorToolkit.precision` | integer 1–10 | `5` | Significant digits in generated values |
 | `w3cColorToolkit.experimental` | string[] | `["cssColor6", "cssColorHdr"]` | Draft specs to enable; both on by default |
-| `w3cColorToolkit.advanced` | object | `{}` | Incremental overrides for the 35 built-in options |
+| `w3cColorToolkit.advanced` | object | `{}` | Incremental overrides for the 37 built-in options |
 
-All eight have `resource` scope, so they can be set per folder.
+All seven have `resource` scope, so they can be set per folder.
 
 ### The advanced object
 
@@ -280,7 +279,7 @@ validation for every key. Two snippets are available: *All advanced options (wit
 Rules:
 
 - keys you omit keep their built-in default; arrays and objects are replaced as a whole;
-- the 8 top-level settings must **not** appear here — they are ignored with a warning, which removes
+- the 7 top-level settings must **not** appear here — they are ignored with a warning, which removes
   any ambiguity about precedence;
 - unknown keys and wrong types are ignored, out-of-range numbers are clamped, and every case is
   logged instead of throwing;
@@ -288,7 +287,22 @@ Rules:
   replaces object settings wholesale;
 - **Manage → Show effective configuration** prints the merged result with the origin of each key.
 
-#### All 35 options
+#### All 37 options
+
+**Disable** — where the extension stays out of the way entirely
+
+Any of the three conditions is enough: over the size limit, **or** the file name matches, **or** the
+language id matches. A hidden file gets no highlighting, no swatch, no hover and no working commands,
+and it is never scanned.
+
+| Key | Values | Default | Purpose |
+| --- | --- | --- | --- |
+| `disable.maxFileSizeMb` | number 0–1024 | `2` | Hide the extension in documents longer than this. Decimals are allowed (`1.5`). `0` means no limit. **The unit is MB of UTF-16 code units, not bytes on disk** — for CJK and other non-ASCII text one code unit is up to three UTF-8 bytes, so the effective limit is looser than the file size on disk. |
+| `disable.fileNames` | string[] | `[]` | gitignore-style patterns matched against **the file name only**, so a pattern must not contain `/` (one that does is ignored and reported in the output channel). Later entries win; `!` re-enables. Example: `["*.min.css", "!vendor.min.css"]` |
+| `disable.languageIds` | string[] | `[]` | The same syntax, matched against the language id. Catches files a name pattern cannot, such as `Dockerfile`, `Makefile` or anything whose language you switched by hand. Example: `["plaintext", "*script*"]` |
+
+`!` only applies within its own list: a negation in `disable.fileNames` cannot rescue a file that
+`disable.languageIds` already excluded. There is no cross-cutting override — narrow the list instead.
 
 **Highlight**
 
@@ -349,7 +363,6 @@ Rules:
 | --- | --- | --- | --- |
 | `scan.comments` | boolean | `true` | Scan comments for colors |
 | `scan.strings` | boolean | `true` | Scan string literals for colors |
-| `scan.maxDocumentSizeKb` | integer 1–102400 | `2048` | Skip documents larger than this |
 
 **Variables**
 
@@ -447,9 +460,9 @@ empty one), and `vscode.executeDocumentColorProvider` does not tell you which pr
 color. Probing the ranges is the only way to guarantee exactly one swatch.
 
 **A color is not highlighted.** In order of likelihood: `w3cColorToolkit.highlight` is `off`; the
-language is excluded by `w3cColorToolkit.languages`; the field for that syntax is turned off in
-*Configure Color Fields*; the value is context dependent (see above); the document is larger than
-`advanced.scan.maxDocumentSizeKb`; there are more colors than
+file is hidden by `advanced.disable.fileNames` or `advanced.disable.languageIds`; the field for that
+syntax is turned off in *Configure Color Fields*; the value is context dependent (see above); the
+document is larger than `advanced.disable.maxFileSizeMb`; there are more colors than
 `advanced.highlight.maxMatchesPerDocument`; or it is a bare color name in a non-CSS language and
 `advanced.highlight.matchWords` is still `css-like`.
 
@@ -477,7 +490,7 @@ report.
 ## Known limitations
 
 - Scanning very large documents is slower than the target performance budget;
-  `advanced.scan.maxDocumentSizeKb` and `advanced.highlight.maxMatchesPerDocument` bound the work.
+  `advanced.disable.maxFileSizeMb` and `advanced.highlight.maxMatchesPerDocument` bound the work.
 - CSS Color 6 and CSS Color HDR are drafts; values and syntax may still change.
 - Untrusted workspaces resolve variables only within the current document.
 - No remote ICC profile download; `device-cmyk()` uses the naive fallback and is marked approximate.
