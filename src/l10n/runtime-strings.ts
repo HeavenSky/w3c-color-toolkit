@@ -147,7 +147,6 @@ export const RUNTIME_STRINGS = {
   'toggle.cssColor6': 'CSS Color 6 (experimental)',
   'toggle.cssColorHdr': 'CSS Color HDR (experimental)',
 
-  'manage.migrate': 'Migrate legacy plug-in settings',
   'manage.showEffective': 'Show effective configuration',
   'manage.showMatrix': 'Show specification support matrix',
   'manage.rescan': 'Rescan the current document',
@@ -167,15 +166,6 @@ export const RUNTIME_STRINGS = {
   'convert.cancel': 'Cancel',
 
   // 迁移
-  'migration.nothingToMigrate': 'No explicit legacy settings were found.',
-  'migration.previewTitle': 'The following settings will be written',
-  'migration.apply': 'Apply',
-  'migration.cancel': 'Cancel',
-  'migration.done': 'Migrated {0} setting(s).',
-  'migration.skippedExisting': 'skipped, target already set',
-  'migration.skippedDefault': 'skipped, same as default',
-  'migration.skippedNoTarget': 'not migrated: {0}',
-  'migration.noChange': 'no change',
 
   // 共存
   'coexistence.detected':

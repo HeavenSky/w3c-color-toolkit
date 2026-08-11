@@ -141,7 +141,6 @@ export const ZH_CN_RUNTIME = {
   'toggle.cssColor6': 'CSS Color 6 (实验)',
   'toggle.cssColorHdr': 'CSS Color HDR (实验)',
 
-  'manage.migrate': '迁移旧插件设置',
   'manage.showEffective': '显示生效配置',
   'manage.showMatrix': '显示规范支持矩阵',
   'manage.rescan': '重新扫描当前文档',
@@ -159,15 +158,6 @@ export const ZH_CN_RUNTIME = {
   'convert.yes': '转换',
   'convert.cancel': '取消',
 
-  'migration.nothingToMigrate': '没有找到显式设置的旧配置。',
-  'migration.previewTitle': '将写入以下设置',
-  'migration.apply': '应用',
-  'migration.cancel': '取消',
-  'migration.done': '已迁移 {0} 项设置。',
-  'migration.skippedExisting': '已跳过, 目标已有设置',
-  'migration.skippedDefault': '已跳过, 与默认值相同',
-  'migration.skippedNoTarget': '未迁移: {0}',
-  'migration.noChange': '无变化',
 
   'coexistence.detected':
     'W3C Color Toolkit 检测到其他颜色扩展 ({0})。高亮、悬停或命令可能重复。',

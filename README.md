@@ -203,7 +203,6 @@ Five entries appear in the Command Palette (category **W3C Color Toolkit**):
 
 | Action | Command id |
 | --- | --- |
-| Migrate legacy plug-in settings | `w3cColorToolkit.migrateLegacySettings` |
 | Show effective configuration | `w3cColorToolkit.showEffectiveConfiguration` |
 | Show specification support matrix | `w3cColorToolkit.showSupportMatrix` |
 | Rescan the current document | `w3cColorToolkit.rescanDocument` |
@@ -211,13 +210,9 @@ Five entries appear in the Command Palette (category **W3C Color Toolkit**):
 | Open the log | `w3cColorToolkit.showOutputChannel` |
 | Log unsupported syntax | `w3cColorToolkit.reportUnsupportedSyntax` |
 
-*Migrate legacy plug-in settings* imports settings you had explicitly set for an older color
-extension into their `w3cColorToolkit` equivalents. It shows a preview, writes only after you confirm,
-never touches the old settings, keeps each scope in that same scope, and is safe to run twice.
-
 ### Keyboard shortcuts
 
-The 24 direct `w3cColorToolkit.convertTo.*` commands and the 7 Manage actions are hidden from the
+The 24 direct `w3cColorToolkit.convertTo.*` commands and the 6 Manage actions are hidden from the
 Command Palette but **fully bindable** — they appear in the Keyboard Shortcuts editor. No default
 keybindings are shipped, to avoid clashing with yours:
 
@@ -253,7 +248,7 @@ Command id suffixes follow the format list: `hex`, `rgb`, `hsl`, `oklch`, `hwb`,
 | `w3cColorToolkit.convertSyntax` | `modern` \| `legacy` | `legacy` | `rgb()` / `hsl()` output style |
 | `w3cColorToolkit.precision` | integer 1–10 | `3` | Significant digits in generated values |
 | `w3cColorToolkit.experimental` | string[] | `["cssColor6", "cssColorHdr"]` | Draft specs to enable; both on by default |
-| `w3cColorToolkit.advanced` | object | `{}` | Incremental overrides for the 37 built-in options |
+| `w3cColorToolkit.advanced` | object | `{}` | Incremental overrides for the 33 built-in options |
 
 All seven have `resource` scope, so they can be set per folder.
 
@@ -287,7 +282,7 @@ Rules:
   replaces object settings wholesale;
 - **Manage → Show effective configuration** prints the merged result with the origin of each key.
 
-#### All 37 options
+#### All 33 options
 
 **Disable** — where the extension stays out of the way entirely
 
@@ -311,10 +306,6 @@ and it is never scanned.
 | `highlight.markRuler` | boolean | `true` | Show a marker in the overview ruler |
 | `highlight.matchWords` | `off` \| `css-like` \| `all` | `css-like` | Where bare color names count: nowhere, CSS-like languages only (`css`, `scss`, `sass`, `less`, `stylus`, `postcss`), or everywhere |
 | `highlight.hexAlphaOrder` | `rgba` \| `argb` | `rgba` | Reading of 8-digit hex: `#RRGGBBAA` or `#AARRGGBB` |
-| `highlight.matchRgbWithoutFunction` | boolean | `false` | Recognise bare `255, 136, 0` as RGB |
-| `highlight.rgbWithoutFunctionLanguages` | string[] | `["*"]` | Languages for the bare RGB mode |
-| `highlight.matchHslWithoutFunction` | boolean | `false` | Recognise bare `30, 100%, 50%` as HSL |
-| `highlight.hslWithoutFunctionLanguages` | string[] | `["*"]` | Languages for the bare HSL mode |
 | `highlight.maxMatchesPerDocument` | integer 1–1000000 | `1000` | Stop highlighting after this many colors in one document |
 | `highlight.hdrToneMapping` | `none` \| `reinhard` \| `clip` | `reinhard` | Tone mapping used to preview HDR colors in sRGB |
 

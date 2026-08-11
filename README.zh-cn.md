@@ -185,7 +185,6 @@ rgb(): rgb(240, 112, 63)
 
 | 动作 | 命令 id |
 | --- | --- |
-| 迁移旧插件设置 | `w3cColorToolkit.migrateLegacySettings` |
 | 显示生效配置 | `w3cColorToolkit.showEffectiveConfiguration` |
 | 显示规范支持矩阵 | `w3cColorToolkit.showSupportMatrix` |
 | 重扫当前文档 | `w3cColorToolkit.rescanDocument` |
@@ -193,12 +192,9 @@ rgb(): rgb(240, 112, 63)
 | 打开日志 | `w3cColorToolkit.showOutputChannel` |
 | 记录未支持语法 | `w3cColorToolkit.reportUnsupportedSyntax` |
 
-*迁移旧插件设置* 会把你为旧版颜色插件显式设置过的配置导入到对应的 `w3cColorToolkit` 键上:
-先给预览, 确认后才写入, 不修改旧配置, 每个 scope 写回同一 scope, 重复执行结果一致。
-
 ### 快捷键
 
-24 个直达 `w3cColorToolkit.convertTo.*` 命令与 7 个管理动作在命令面板中隐藏, 但**完全可绑定** ——
+24 个直达 `w3cColorToolkit.convertTo.*` 命令与 6 个管理动作在命令面板中隐藏, 但**完全可绑定** ——
 它们仍会出现在键盘快捷方式界面。本扩展不内置任何默认快捷键, 以免与既有绑定冲突:
 
 ```jsonc
@@ -232,7 +228,7 @@ rgb(): rgb(240, 112, 63)
 | `w3cColorToolkit.convertSyntax` | `modern` \| `legacy` | `legacy` | `rgb()` / `hsl()` 输出风格 |
 | `w3cColorToolkit.precision` | 整数 1–10 | `3` | 生成值的有效数字位数 |
 | `w3cColorToolkit.experimental` | string[] | `["cssColor6", "cssColorHdr"]` | 启用的草案规范; 两项默认都开启 |
-| `w3cColorToolkit.advanced` | object | `{}` | 37 项内置选项的增量覆盖 |
+| `w3cColorToolkit.advanced` | object | `{}` | 33 项内置选项的增量覆盖 |
 
 7 个键的 scope 均为 `resource`, 因此可以按文件夹分别设置。
 
@@ -261,7 +257,7 @@ rgb(): rgb(240, 112, 63)
 - User / Workspace / Folder 三个 scope 由扩展**逐键合并**, 因为 VS Code 对 object 类型设置是整体替换;
 - **管理 → 显示生效配置** 会输出合并结果并标注每个键的来源。
 
-#### 全部 37 项
+#### 全部 33 项
 
 **禁用** —— 让扩展彻底不介入
 
@@ -284,10 +280,6 @@ rgb(): rgb(240, 112, 63)
 | `highlight.markRuler` | boolean | `true` | 在概览标尺上显示标记 |
 | `highlight.matchWords` | `off` \| `css-like` \| `all` | `css-like` | 裸颜色名在哪里算颜色: 都不算、仅 CSS 系语言 (`css`、`scss`、`sass`、`less`、`stylus`、`postcss`)、或所有语言 |
 | `highlight.hexAlphaOrder` | `rgba` \| `argb` | `rgba` | 八位 hex 的解读: `#RRGGBBAA` 还是 `#AARRGGBB` |
-| `highlight.matchRgbWithoutFunction` | boolean | `false` | 把裸 `255, 136, 0` 识别为 RGB |
-| `highlight.rgbWithoutFunctionLanguages` | string[] | `["*"]` | 裸 RGB 模式生效的语言 |
-| `highlight.matchHslWithoutFunction` | boolean | `false` | 把裸 `30, 100%, 50%` 识别为 HSL |
-| `highlight.hslWithoutFunctionLanguages` | string[] | `["*"]` | 裸 HSL 模式生效的语言 |
 | `highlight.maxMatchesPerDocument` | 整数 1–1000000 | `1000` | 单文档超过该数量后停止高亮 |
 | `highlight.hdrToneMapping` | `none` \| `reinhard` \| `clip` | `reinhard` | 预览 HDR 颜色时使用的色调映射 |
 

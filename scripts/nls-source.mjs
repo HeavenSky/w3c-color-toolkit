@@ -35,10 +35,6 @@ export const EN = {
   'advanced.highlight.matchWords':
     'Where to recognise color names: nowhere, CSS-like languages only, or every language.',
   'advanced.highlight.hexAlphaOrder': 'Interpretation of eight digit hex: #RRGGBBAA or #AARRGGBB.',
-  'advanced.highlight.matchRgbWithoutFunction': 'Recognise bare "255, 136, 0" as an RGB color.',
-  'advanced.highlight.rgbWithoutFunctionLanguages': 'Languages for the bare RGB mode.',
-  'advanced.highlight.matchHslWithoutFunction': 'Recognise bare "30, 100%, 50%" as an HSL color.',
-  'advanced.highlight.hslWithoutFunctionLanguages': 'Languages for the bare HSL mode.',
   'advanced.highlight.maxMatchesPerDocument': 'Stop highlighting after this many colors in one document.',
   'advanced.highlight.hdrToneMapping': 'Tone mapping used to preview HDR colors in sRGB.',
   'advanced.colorPicker.mode':
@@ -79,7 +75,6 @@ export const EN = {
   'command.toggleFeatures': 'Enable Features',
   'command.configureColorFields': 'Configure Color Fields',
   'command.manage': 'Manage',
-  'command.migrateLegacySettings': 'Migrate Legacy Plug-in Settings',
   'command.showEffectiveConfiguration': 'Show Effective Configuration',
   'command.showSupportMatrix': 'Show Specification Support Matrix',
   'command.rescanDocument': 'Rescan Current Document',
@@ -112,10 +107,6 @@ export const ZH_CN = {
   'advanced.highlight.markRuler': '在概览标尺中显示标记。',
   'advanced.highlight.matchWords': '在哪些语言中识别颜色名: 不识别、仅 CSS 系语言、全部语言。',
   'advanced.highlight.hexAlphaOrder': '八位 Hex 的解释方式: `#RRGGBBAA` 或 `#AARRGGBB`。',
-  'advanced.highlight.matchRgbWithoutFunction': '把裸写的 `255, 136, 0` 识别为 RGB 颜色。',
-  'advanced.highlight.rgbWithoutFunctionLanguages': '启用无函数 RGB 模式的语言。',
-  'advanced.highlight.matchHslWithoutFunction': '把裸写的 `30, 100%, 50%` 识别为 HSL 颜色。',
-  'advanced.highlight.hslWithoutFunctionLanguages': '启用无函数 HSL 模式的语言。',
   'advanced.highlight.maxMatchesPerDocument': '单个文档中超过该数量后停止高亮。',
   'advanced.highlight.hdrToneMapping': '在 sRGB 中预览 HDR 颜色时使用的色调映射。',
   'advanced.colorPicker.mode':
@@ -154,7 +145,6 @@ export const ZH_CN = {
   'command.toggleFeatures': '启用功能',
   'command.configureColorFields': '配置颜色字段',
   'command.manage': '管理',
-  'command.migrateLegacySettings': '迁移旧插件设置',
   'command.showEffectiveConfiguration': '显示生效配置',
   'command.showSupportMatrix': '显示规范支持矩阵',
   'command.rescanDocument': '重新扫描当前文档',

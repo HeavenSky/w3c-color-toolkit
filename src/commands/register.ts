@@ -1,7 +1,7 @@
 /**
  * 命令注册。
  *
- * 5 个可见命令 + 31 个隐藏命令 (24 个 `convertTo.*` 与 7 个 `manage` 条目)。
+ * 5 个可见命令 + 30 个隐藏命令 (24 个 `convertTo.*` 与 6 个 `manage` 条目)。
  * 隐藏只作用于命令面板, 用户仍可在 Keyboard Shortcuts 中绑定。
  * 本期不声明任何默认快捷键。
  */
@@ -12,7 +12,6 @@ import type { RuntimeConfiguration } from '../configuration/load.js';
 import { formatByCommandSuffix } from '../features/convert/format-catalog.js';
 import type { ConvertController } from '../features/convert/convert-controller.js';
 import type { HighlightController } from '../features/highlight/highlight-controller.js';
-import { runMigrationCommand } from '../features/migration/legacy-settings.js';
 import type { DocumentIndexManager } from '../index/document-index-manager.js';
 import { t } from '../l10n/strings.js';
 import type { Logger } from '../logging/output-channel.js';
@@ -96,11 +95,7 @@ export function registerCommands(deps: CommandDependencies): vscode.Disposable[]
     });
   }
 
-  // ── 隐藏的 7 个 manage 动作 ────────────────────────────────────
-  register(`${COMMAND_PREFIX}.migrateLegacySettings`, async () => {
-    await runMigrationCommand(logger);
-  });
-
+  // ── 隐藏的 6 个 manage 动作 ────────────────────────────────────
   register(`${COMMAND_PREFIX}.showEffectiveConfiguration`, () => {
     logger.report('effective configuration', effectiveConfigurationLines(getConfig()));
     logger.show();

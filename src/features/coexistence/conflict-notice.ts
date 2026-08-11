@@ -9,9 +9,18 @@ import * as vscode from 'vscode';
 
 import { t } from '../../l10n/strings.js';
 
-import { LEGACY_EXTENSION_IDS } from '../migration/legacy-map.js';
-
 const SUPPRESS_KEY = 'w3cColorToolkit.coexistenceSuppressed';
+
+/**
+ * 本扩展所合并的三个原扩展的 extension id。
+ *
+ * 只用于共存检测: 三者与本扩展功能重叠, 同时启用会出现重复的高亮, 悬停或命令。
+ */
+export const LEGACY_EXTENSION_IDS: readonly string[] = Object.freeze([
+  'bbugh.change-color-format',
+  'naumovs.color-highlight',
+  'bierner.color-info',
+]);
 
 export function detectLegacyExtensions(): readonly string[] {
   return LEGACY_EXTENSION_IDS.filter((id) => vscode.extensions.getExtension(id) !== undefined);

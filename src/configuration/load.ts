@@ -51,10 +51,6 @@ export interface RuntimeConfiguration {
   readonly markRuler: boolean;
   readonly matchWords: MatchWords;
   readonly hexAlphaOrder: 'rgba' | 'argb';
-  readonly matchRgbWithoutFunction: boolean;
-  readonly rgbWithoutFunctionLanguages: readonly string[];
-  readonly matchHslWithoutFunction: boolean;
-  readonly hslWithoutFunctionLanguages: readonly string[];
   readonly maxMatchesPerDocument: number;
   readonly hdrToneMapping: HdrToneMapping;
   /** 原生行内色块与 Hover 取色器的提供范围。 */
@@ -143,10 +139,6 @@ export function loadConfiguration(scope?: vscode.ConfigurationScope): RuntimeCon
     markRuler: get<boolean>('highlight.markRuler'),
     matchWords: get<MatchWords>('highlight.matchWords'),
     hexAlphaOrder: get<'rgba' | 'argb'>('highlight.hexAlphaOrder'),
-    matchRgbWithoutFunction: get<boolean>('highlight.matchRgbWithoutFunction'),
-    rgbWithoutFunctionLanguages: get<string[]>('highlight.rgbWithoutFunctionLanguages'),
-    matchHslWithoutFunction: get<boolean>('highlight.matchHslWithoutFunction'),
-    hslWithoutFunctionLanguages: get<string[]>('highlight.hslWithoutFunctionLanguages'),
     maxMatchesPerDocument: get<number>('highlight.maxMatchesPerDocument'),
     hdrToneMapping: get<HdrToneMapping>('highlight.hdrToneMapping'),
     colorPickerMode: get<ColorPickerMode>('colorPicker.mode'),

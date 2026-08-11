@@ -68,17 +68,12 @@ export const VISIBLE_COMMANDS: readonly CommandDefinition[] = Object.freeze([
   },
 ]);
 
-/** `manage` 的 7 个条目, 同时注册为隐藏命令。 */
+/** `manage` 的 6 个条目, 同时注册为隐藏命令。 */
 export const MANAGE_ACTIONS: readonly {
   readonly id: string;
   readonly nlsKey: string;
   readonly labelKey: string;
 }[] = Object.freeze([
-  {
-    id: `${COMMAND_PREFIX}.migrateLegacySettings`,
-    nlsKey: 'command.migrateLegacySettings',
-    labelKey: 'manage.migrate',
-  },
   {
     id: `${COMMAND_PREFIX}.showEffectiveConfiguration`,
     nlsKey: 'command.showEffectiveConfiguration',

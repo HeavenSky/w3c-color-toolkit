@@ -2,6 +2,24 @@
 
 Notable changes to W3C Color Toolkit.
 
+## v0.0.5 2026-08-12 Drop dead configuration
+
+### Removed
+
+- **Breaking.** Four built-in options that never did anything are gone:
+  `advanced.highlight.matchRgbWithoutFunction`, `advanced.highlight.rgbWithoutFunctionLanguages`,
+  `advanced.highlight.matchHslWithoutFunction` and `advanced.highlight.hslWithoutFunctionLanguages`.
+  They described a "bare `255, 136, 0` counts as a colour" mode that was never implemented — the
+  scanner has no such branch and `ScanOptions` has no matching field, so changing them had no effect
+  whatsoever. Setting them now produces an `unknown-key` warning in the output channel instead of
+  silently doing nothing.
+- **Breaking.** Legacy settings migration is gone: the `w3cColorToolkit.migrateLegacySettings`
+  command, its Manage entry, and the whole mapping table from `color-highlight.*` / `colorInfo.*`
+  keys. Configure this extension directly instead. The coexistence notice — the one that warns when
+  the three original extensions are still installed — is unaffected.
+
+The built-in options drop from 37 to 33, and hidden commands from 31 to 30.
+
 ## v0.0.4 2026-08-11 Disable mode
 
 ### Added

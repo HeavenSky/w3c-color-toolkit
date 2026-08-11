@@ -172,36 +172,6 @@
               "default": "rgba",
               "description": "%advanced.highlight.hexAlphaOrder%"
             },
-            "highlight.matchRgbWithoutFunction": {
-              "type": "boolean",
-              "default": false,
-              "description": "%advanced.highlight.matchRgbWithoutFunction%"
-            },
-            "highlight.rgbWithoutFunctionLanguages": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "default": [
-                "*"
-              ],
-              "description": "%advanced.highlight.rgbWithoutFunctionLanguages%"
-            },
-            "highlight.matchHslWithoutFunction": {
-              "type": "boolean",
-              "default": false,
-              "description": "%advanced.highlight.matchHslWithoutFunction%"
-            },
-            "highlight.hslWithoutFunctionLanguages": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "default": [
-                "*"
-              ],
-              "description": "%advanced.highlight.hslWithoutFunctionLanguages%"
-            },
             "highlight.maxMatchesPerDocument": {
               "type": "integer",
               "minimum": 1,
@@ -417,7 +387,7 @@
           "defaultSnippets": [
             {
               "label": "All advanced options (with defaults)",
-              "description": "Insert all 37 built-in options with their default values",
+              "description": "Insert all 33 built-in options with their default values",
               "body": {
                 "disable.maxFileSizeMb": 1,
                 "disable.fileNames": [
@@ -431,14 +401,6 @@
                 "highlight.markRuler": true,
                 "highlight.matchWords": "css-like",
                 "highlight.hexAlphaOrder": "rgba",
-                "highlight.matchRgbWithoutFunction": false,
-                "highlight.rgbWithoutFunctionLanguages": [
-                  "*"
-                ],
-                "highlight.matchHslWithoutFunction": false,
-                "highlight.hslWithoutFunctionLanguages": [
-                  "*"
-                ],
                 "highlight.maxMatchesPerDocument": 1000,
                 "highlight.hdrToneMapping": "reinhard",
                 "colorPicker.mode": "dedupe",
@@ -631,11 +593,6 @@
         "category": "%command.category%"
       },
       {
-        "command": "w3cColorToolkit.migrateLegacySettings",
-        "title": "%command.migrateLegacySettings%",
-        "category": "%command.category%"
-      },
-      {
         "command": "w3cColorToolkit.showEffectiveConfiguration",
         "title": "%command.showEffectiveConfiguration%",
         "category": "%command.category%"
@@ -776,10 +733,6 @@
         },
         {
           "command": "w3cColorToolkit.convertTo.rec2100Linear",
-          "when": "false"
-        },
-        {
-          "command": "w3cColorToolkit.migrateLegacySettings",
           "when": "false"
         },
         {

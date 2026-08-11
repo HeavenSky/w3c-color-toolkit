@@ -118,7 +118,7 @@ describe('配置贡献点一致性', () => {
       }
     }
 
-    // 2. 可插入模板: 全量模板含全部 37 个键及默认值。
+    // 2. 可插入模板: 全量模板含全部 33 个键及默认值。
     const snippets = advanced.defaultSnippets as { label: string; body: Record<string, unknown> }[];
     expect(snippets.length).toBeGreaterThanOrEqual(2);
     const full = snippets[0].body;
@@ -146,11 +146,11 @@ describe('配置贡献点一致性', () => {
     }
   });
 
-  it('advanced 列出全部 37 个内置键并拒绝未知键', () => {
+  it('advanced 列出全部 33 个内置键并拒绝未知键', () => {
     const advanced = properties['w3cColorToolkit.advanced'];
     expect(advanced.additionalProperties).toBe(false);
     const advancedProperties = advanced.properties as Record<string, { default: unknown }>;
-    expect(Object.keys(advancedProperties)).toHaveLength(37);
+    expect(Object.keys(advancedProperties)).toHaveLength(33);
     for (const setting of ADVANCED_SETTINGS) {
       expect(advancedProperties[setting.key], `${setting.key} 未声明`).toBeDefined();
       expect(advancedProperties[setting.key].default).toEqual(setting.default);
@@ -165,10 +165,10 @@ describe('命令贡献点一致性', () => {
     );
   });
 
-  it('可见命令 5 个, 隐藏命令 31 个', () => {
+  it('可见命令 5 个, 隐藏命令 30 个', () => {
     expect(VISIBLE_COMMANDS).toHaveLength(5);
-    expect(HIDDEN_COMMANDS).toHaveLength(31);
-    expect(ALL_COMMANDS).toHaveLength(36);
+    expect(HIDDEN_COMMANDS).toHaveLength(30);
+    expect(ALL_COMMANDS).toHaveLength(35);
   });
 
   it('命令面板中只有 5 个命令可见', () => {
