@@ -130,6 +130,29 @@
           "default": {},
           "additionalProperties": false,
           "properties": {
+            "disable.maxFileSizeMb": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1024,
+              "default": 2,
+              "description": "%advanced.disable.maxFileSizeMb%"
+            },
+            "disable.fileNames": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": [],
+              "description": "%advanced.disable.fileNames%"
+            },
+            "disable.languageIds": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": [],
+              "description": "%advanced.disable.languageIds%"
+            },
             "highlight.markRuler": {
               "type": "boolean",
               "default": true,
@@ -406,8 +429,11 @@
           "defaultSnippets": [
             {
               "label": "All advanced options (with defaults)",
-              "description": "Insert all 35 built-in options with their default values",
+              "description": "Insert all 38 built-in options with their default values",
               "body": {
+                "disable.maxFileSizeMb": 2,
+                "disable.fileNames": [],
+                "disable.languageIds": [],
                 "highlight.markRuler": true,
                 "highlight.matchWords": "css-like",
                 "highlight.hexAlphaOrder": "rgba",

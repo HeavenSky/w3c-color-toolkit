@@ -3,7 +3,7 @@
  *
  * 分两层:
  * - 暴露层: 8 个键, 在 `contributes.configuration` 中完整声明并出现在设置界面;
- * - 内置层: 35 项, 只有默认值, 通过 `w3cColorToolkit.advanced` 对象增量覆盖。
+ * - 内置层: 38 项, 只有默认值, 通过 `w3cColorToolkit.advanced` 对象增量覆盖。
  *
  * `package.json` 的 `contributes.configuration` 由 `scripts/gen-contributes.mjs`
  * 从本文件生成, 并由 `test/unit/contributes.test.ts` 断言一致。
@@ -97,8 +97,27 @@ export const EXPOSED_SETTINGS: readonly SettingDefinition[] = Object.freeze([
   },
 ]);
 
-/** 内置层: 只能通过 `advanced` 覆盖的 35 项。 */
+/** 内置层: 只能通过 `advanced` 覆盖的 38 项。 */
 export const ADVANCED_SETTINGS: readonly SettingDefinition[] = Object.freeze([
+  // 隐身 (3): 三条件是或关系, 任一命中就完全不介入该文件。
+  // 三项必须连续, 否则生成的参考表会重复出现同一个分组标题。
+  {
+    key: 'disable.maxFileSizeMb',
+    type: 'number',
+    // 2 MB 与改造前的 `scan.maxDocumentSizeKb: 2048` 等价, 因此默认行为不变。
+    default: 2,
+    minimum: 0,
+    maximum: 1024,
+    nlsKey: 'advanced.disable.maxFileSizeMb',
+  },
+  { key: 'disable.fileNames', type: 'string[]', default: [], nlsKey: 'advanced.disable.fileNames' },
+  {
+    key: 'disable.languageIds',
+    type: 'string[]',
+    default: [],
+    nlsKey: 'advanced.disable.languageIds',
+  },
+
   // 高亮 (9)
   { key: 'highlight.markRuler', type: 'boolean', default: true, nlsKey: 'advanced.highlight.markRuler' },
   {

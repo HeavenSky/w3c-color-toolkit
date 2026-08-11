@@ -43,6 +43,12 @@ export interface RuntimeConfiguration {
   readonly cssColorHdr: boolean;
 
   // 内置层
+  /** 隐身阈值, 单位 MB, 按 UTF-16 码元计; `0` 表示不限制。 */
+  readonly maxFileSizeMb: number;
+  /** 命中即隐身的文件名模式 (gitignore 语法, 只匹配文件名)。 */
+  readonly disabledFileNames: readonly string[];
+  /** 命中即隐身的 language id 模式 (gitignore 语法)。 */
+  readonly disabledLanguageIds: readonly string[];
   readonly markRuler: boolean;
   readonly matchWords: MatchWords;
   readonly hexAlphaOrder: 'rgba' | 'argb';
@@ -134,6 +140,9 @@ export function loadConfiguration(scope?: vscode.ConfigurationScope): RuntimeCon
     cssColor6: experimental.includes('cssColor6'),
     cssColorHdr: experimental.includes('cssColorHdr'),
 
+    maxFileSizeMb: get<number>('disable.maxFileSizeMb'),
+    disabledFileNames: get<string[]>('disable.fileNames'),
+    disabledLanguageIds: get<string[]>('disable.languageIds'),
     markRuler: get<boolean>('highlight.markRuler'),
     matchWords: get<MatchWords>('highlight.matchWords'),
     hexAlphaOrder: get<'rgba' | 'argb'>('highlight.hexAlphaOrder'),

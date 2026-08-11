@@ -2,7 +2,7 @@
  * 从 TypeScript 单一来源生成 `package.json` 的 contributes 与两份 `package.nls` 文件。
  *
  * 来源:
- * - `src/configuration/schema.ts`: 8 个暴露层键 + 35 项内置层默认值;
+ * - `src/configuration/schema.ts`: 8 个暴露层键 + 38 项内置层默认值;
  * - `src/commands/ids.ts` 与 `src/features/convert/format-catalog.ts`: 5 个可见命令 + 31 个隐藏命令;
  * - `configurationDefaults`: 把 `editor.defaultColorDecorators` 默认值改为 `never` (见 buildContributes)。
  *
@@ -77,6 +77,7 @@ function jsonSchemaFor(setting) {
 
 /** 内置层键的分组顺序, 只影响参考文档的排版。 */
 const ADVANCED_GROUPS = [
+  ['disable.', 'Disable'],
   ['highlight.', 'Highlight'],
   ['colorPicker.', 'Color picker'],
   ['fields.', 'Fields (hover + highlight)'],
@@ -341,8 +342,8 @@ async function main() {
   if (sources.EXPOSED_SETTINGS.length !== 8) {
     errors.push(`expected 8 exposed settings, got ${sources.EXPOSED_SETTINGS.length}`);
   }
-  if (sources.ADVANCED_SETTINGS.length !== 35) {
-    errors.push(`expected 35 advanced settings, got ${sources.ADVANCED_SETTINGS.length}`);
+  if (sources.ADVANCED_SETTINGS.length !== 38) {
+    errors.push(`expected 38 advanced settings, got ${sources.ADVANCED_SETTINGS.length}`);
   }
 
   if (errors.length > 0) {

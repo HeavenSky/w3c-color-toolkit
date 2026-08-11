@@ -26,9 +26,9 @@ describe('两层配置的形状', () => {
     ]);
   });
 
-  it('内置层恰好 35 项', () => {
-    expect(ADVANCED_SETTINGS).toHaveLength(35);
-    expect(Object.keys(advancedDefaults())).toHaveLength(35);
+  it('内置层恰好 38 项', () => {
+    expect(ADVANCED_SETTINGS).toHaveLength(38);
+    expect(Object.keys(advancedDefaults())).toHaveLength(38);
   });
 
   it('两层没有重叠键', () => {

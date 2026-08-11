@@ -244,7 +244,7 @@ check('contextual 无预览源', previewSource(bySyntax.get('current-color')) ==
 
 // ── 6. 配置 ────────────────────────────────────────────────────
 console.log('\n=== 配置 ===');
-check('内置层 35 项默认值', Object.keys(advancedDefaults()).length === 35);
+check('内置层 38 项默认值', Object.keys(advancedDefaults()).length === 38);
 const resolvedAdvanced = resolveAdvanced({
   user: { 'output.hexCase': 'upper' },
   workspace: { 'scan.comments': false, precision: 3, 'bogus.key': 1 },

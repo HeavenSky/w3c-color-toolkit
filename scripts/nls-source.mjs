@@ -27,6 +27,12 @@ export const EN = {
     'Incremental overrides for built-in options. Keys are dotted paths, for example {"output.hexCase": "upper"}. Top-level settings must not appear here.',
 
   // 内置层
+  'advanced.disable.maxFileSizeMb':
+    'Hide the extension in documents longer than this, measured in MB of UTF-16 code units (1 MB = 1048576). 0 means no limit.',
+  'advanced.disable.fileNames':
+    'Hide the extension in files whose name matches one of these gitignore-style patterns. Matched against the file name only, so patterns must not contain "/". Later entries win and "!" re-enables.',
+  'advanced.disable.languageIds':
+    'Hide the extension in these language ids, written as gitignore-style patterns. Later entries win and "!" re-enables.',
   'advanced.highlight.markRuler': 'Show a marker in the overview ruler.',
   'advanced.highlight.matchWords':
     'Where to recognise color names: nowhere, CSS-like languages only, or every language.',
@@ -101,6 +107,12 @@ export const ZH_CN = {
   'config.advanced':
     '内置选项的增量覆盖。键为点分路径, 例如 `{"output.hexCase": "upper"}`。顶层设置不允许出现在这里。',
 
+  'advanced.disable.maxFileSizeMb':
+    '超过该长度的文档隐藏本扩展。单位 MB, 按 UTF-16 码元计 (1 MB = 1048576)。0 表示不限制。',
+  'advanced.disable.fileNames':
+    '文件名匹配这些 gitignore 语法模式时隐藏本扩展。只匹配文件名, 因此模式不能包含 "/"。后面的条目覆盖前面的, "!" 表示重新启用。',
+  'advanced.disable.languageIds':
+    '语言标识匹配这些 gitignore 语法模式时隐藏本扩展。后面的条目覆盖前面的, "!" 表示重新启用。',
   'advanced.highlight.markRuler': '在概览标尺中显示标记。',
   'advanced.highlight.matchWords': '在哪些语言中识别颜色名: 不识别、仅 CSS 系语言、全部语言。',
   'advanced.highlight.hexAlphaOrder': '八位 Hex 的解释方式: `#RRGGBBAA` 或 `#AARRGGBB`。',
