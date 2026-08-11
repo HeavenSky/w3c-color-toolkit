@@ -8,8 +8,9 @@ Notable changes to W3C Color Toolkit.
 
 - A disable mode that makes the extension go fully invisible in files you do not want it in. Three
   built-in options, any one of which is enough (they are OR-ed):
-  `advanced.disable.maxFileSizeMb` (number, default `2`, decimals allowed, `0` = no limit),
-  `advanced.disable.fileNames` and `advanced.disable.languageIds` (gitignore-style patterns).
+  `advanced.disable.maxFileSizeMb` (number, default `1`, decimals allowed, `0` = no limit),
+  `advanced.disable.fileNames` (default `["*.min.*", "*.map"]`) and
+  `advanced.disable.languageIds` (default `["log", "plaintext"]`), both gitignore-style patterns.
   A hidden file gets no highlighting, no overview-ruler marker, no inline swatch or native picker,
   no hover, and the conversion commands plus *Report unsupported syntax* do nothing; it is never
   scanned either, so the size limit really is a performance guard rather than work that is computed
@@ -31,10 +32,22 @@ Notable changes to W3C Color Toolkit.
   **Manage → Migrate legacy settings**.
 - **Breaking.** `advanced.scan.maxDocumentSizeKb` is replaced by `advanced.disable.maxFileSizeMb`.
   The old key only skipped indexing — hover still fell back to scanning the current line, so an
-  over-size document was not actually left alone. The new key hides the extension outright. The
-  default is unchanged in effect (`2` MB = the old `2048` KB), but note the unit is now MB of UTF-16
-  code units rather than bytes, so for non-ASCII text the effective limit is looser than the size on
-  disk.
+  over-size document was not actually left alone. The new key hides the extension outright. The unit
+  is now MB of UTF-16 code units rather than KB of bytes, so for non-ASCII text the effective limit
+  is looser than the size on disk.
+
+### Changed
+
+- **Defaults.** Several defaults now favour a quieter, faster out-of-the-box experience over
+  "highlight everything":
+  `w3cColorToolkit.precision` `5` → `3`;
+  `advanced.disable.maxFileSizeMb` effectively `2` → `1` (the old key's `2048` KB);
+  `advanced.highlight.maxMatchesPerDocument` `10000` → `1000`;
+  `advanced.disable.fileNames` `[]` → `["*.min.*", "*.map"]`;
+  `advanced.disable.languageIds` `[]` → `["log", "plaintext"]`.
+  Consequence: minified bundles, source maps, log files and plain text are now left alone unless you
+  opt back in, and documents with more than 1000 colours stop being highlighted part-way. Set the two
+  pattern lists to `[]` to restore the previous "never hide anything" behaviour.
 
 ### Fixed
 

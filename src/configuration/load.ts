@@ -133,7 +133,7 @@ export function loadConfiguration(scope?: vscode.ConfigurationScope): RuntimeCon
     highlightEnabled: markerType !== 'off',
     infoEnabled: config.get<boolean>('info', true),
     convertSyntax: config.get<RgbHslSyntax>('convertSyntax', 'legacy'),
-    precision: config.get<number>('precision', 5),
+    precision: config.get<number>('precision', 3),
     cssColor6: experimental.includes('cssColor6'),
     cssColorHdr: experimental.includes('cssColorHdr'),
 

@@ -251,7 +251,7 @@ Command id suffixes follow the format list: `hex`, `rgb`, `hsl`, `oklch`, `hwb`,
 | `w3cColorToolkit.highlight` | enum | `underline` | Marker style, or `off` |
 | `w3cColorToolkit.info` | boolean | `true` | Hover information |
 | `w3cColorToolkit.convertSyntax` | `modern` \| `legacy` | `legacy` | `rgb()` / `hsl()` output style |
-| `w3cColorToolkit.precision` | integer 1–10 | `5` | Significant digits in generated values |
+| `w3cColorToolkit.precision` | integer 1–10 | `3` | Significant digits in generated values |
 | `w3cColorToolkit.experimental` | string[] | `["cssColor6", "cssColorHdr"]` | Draft specs to enable; both on by default |
 | `w3cColorToolkit.advanced` | object | `{}` | Incremental overrides for the 37 built-in options |
 
@@ -297,9 +297,9 @@ and it is never scanned.
 
 | Key | Values | Default | Purpose |
 | --- | --- | --- | --- |
-| `disable.maxFileSizeMb` | number 0–1024 | `2` | Hide the extension in documents longer than this. Decimals are allowed (`1.5`). `0` means no limit. **The unit is MB of UTF-16 code units, not bytes on disk** — for CJK and other non-ASCII text one code unit is up to three UTF-8 bytes, so the effective limit is looser than the file size on disk. |
-| `disable.fileNames` | string[] | `[]` | gitignore-style patterns matched against **the file name only**, so a pattern must not contain `/` (one that does is ignored and reported in the output channel). Later entries win; `!` re-enables. Example: `["*.min.css", "!vendor.min.css"]` |
-| `disable.languageIds` | string[] | `[]` | The same syntax, matched against the language id. Catches files a name pattern cannot, such as `Dockerfile`, `Makefile` or anything whose language you switched by hand. Example: `["plaintext", "*script*"]` |
+| `disable.maxFileSizeMb` | number 0–1024 | `1` | Hide the extension in documents longer than this. Decimals are allowed (`1.5`). `0` means no limit. **The unit is MB of UTF-16 code units, not bytes on disk** — for CJK and other non-ASCII text one code unit is up to three UTF-8 bytes, so the effective limit is looser than the file size on disk. |
+| `disable.fileNames` | string[] | `["*.min.*", "*.map"]` | gitignore-style patterns matched against **the file name only**, so a pattern must not contain `/` (one that does is ignored and reported in the output channel). Later entries win; `!` re-enables — `["*.min.*", "*.map", "!theme.min.css"]` keeps one minified file in scope. Setting `[]` turns this dimension off. |
+| `disable.languageIds` | string[] | `["log", "plaintext"]` | The same syntax, matched against the language id. Catches files a name pattern cannot, such as `Dockerfile`, `Makefile` or anything whose language you switched by hand. Setting `[]` turns this dimension off. |
 
 `!` only applies within its own list: a negation in `disable.fileNames` cannot rescue a file that
 `disable.languageIds` already excluded. There is no cross-cutting override — narrow the list instead.
@@ -315,7 +315,7 @@ and it is never scanned.
 | `highlight.rgbWithoutFunctionLanguages` | string[] | `["*"]` | Languages for the bare RGB mode |
 | `highlight.matchHslWithoutFunction` | boolean | `false` | Recognise bare `30, 100%, 50%` as HSL |
 | `highlight.hslWithoutFunctionLanguages` | string[] | `["*"]` | Languages for the bare HSL mode |
-| `highlight.maxMatchesPerDocument` | integer 1–1000000 | `10000` | Stop highlighting after this many colors in one document |
+| `highlight.maxMatchesPerDocument` | integer 1–1000000 | `1000` | Stop highlighting after this many colors in one document |
 | `highlight.hdrToneMapping` | `none` \| `reinhard` \| `clip` | `reinhard` | Tone mapping used to preview HDR colors in sRGB |
 
 **Color picker**

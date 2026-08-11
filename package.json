@@ -93,7 +93,7 @@
           "type": "integer",
           "minimum": 1,
           "maximum": 10,
-          "default": 5,
+          "default": 3,
           "description": "%config.precision%",
           "scope": "resource"
         },
@@ -123,7 +123,7 @@
               "type": "number",
               "minimum": 0,
               "maximum": 1024,
-              "default": 2,
+              "default": 1,
               "description": "%advanced.disable.maxFileSizeMb%"
             },
             "disable.fileNames": {
@@ -131,7 +131,10 @@
               "items": {
                 "type": "string"
               },
-              "default": [],
+              "default": [
+                "*.min.*",
+                "*.map"
+              ],
               "description": "%advanced.disable.fileNames%"
             },
             "disable.languageIds": {
@@ -139,7 +142,10 @@
               "items": {
                 "type": "string"
               },
-              "default": [],
+              "default": [
+                "log",
+                "plaintext"
+              ],
               "description": "%advanced.disable.languageIds%"
             },
             "highlight.markRuler": {
@@ -200,7 +206,7 @@
               "type": "integer",
               "minimum": 1,
               "maximum": 1000000,
-              "default": 10000,
+              "default": 1000,
               "description": "%advanced.highlight.maxMatchesPerDocument%"
             },
             "highlight.hdrToneMapping": {
@@ -413,9 +419,15 @@
               "label": "All advanced options (with defaults)",
               "description": "Insert all 37 built-in options with their default values",
               "body": {
-                "disable.maxFileSizeMb": 2,
-                "disable.fileNames": [],
-                "disable.languageIds": [],
+                "disable.maxFileSizeMb": 1,
+                "disable.fileNames": [
+                  "*.min.*",
+                  "*.map"
+                ],
+                "disable.languageIds": [
+                  "log",
+                  "plaintext"
+                ],
                 "highlight.markRuler": true,
                 "highlight.matchWords": "css-like",
                 "highlight.hexAlphaOrder": "rgba",
@@ -427,7 +439,7 @@
                 "highlight.hslWithoutFunctionLanguages": [
                   "*"
                 ],
-                "highlight.maxMatchesPerDocument": 10000,
+                "highlight.maxMatchesPerDocument": 1000,
                 "highlight.hdrToneMapping": "reinhard",
                 "colorPicker.mode": "dedupe",
                 "fields.enabled": null,

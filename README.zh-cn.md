@@ -230,7 +230,7 @@ rgb(): rgb(240, 112, 63)
 | `w3cColorToolkit.highlight` | enum | `underline` | 标记样式, 或 `off` |
 | `w3cColorToolkit.info` | boolean | `true` | Hover 信息 |
 | `w3cColorToolkit.convertSyntax` | `modern` \| `legacy` | `legacy` | `rgb()` / `hsl()` 输出风格 |
-| `w3cColorToolkit.precision` | 整数 1–10 | `5` | 生成值的有效数字位数 |
+| `w3cColorToolkit.precision` | 整数 1–10 | `3` | 生成值的有效数字位数 |
 | `w3cColorToolkit.experimental` | string[] | `["cssColor6", "cssColorHdr"]` | 启用的草案规范; 两项默认都开启 |
 | `w3cColorToolkit.advanced` | object | `{}` | 37 项内置选项的增量覆盖 |
 
@@ -270,9 +270,9 @@ rgb(): rgb(240, 112, 63)
 
 | 键 | 取值 | 默认值 | 作用 |
 | --- | --- | --- | --- |
-| `disable.maxFileSizeMb` | number 0–1024 | `2` | 超过该长度的文档隐藏本扩展。允许小数 (`1.5`)。`0` 表示不限制。**单位是 MB 的 UTF-16 码元数, 不是磁盘字节数** —— 中日韩等非 ASCII 文本里一个码元最多对应三个 UTF-8 字节, 因此实际阈值比磁盘尺寸宽松。 |
-| `disable.fileNames` | string[] | `[]` | gitignore 语法模式, **只匹配文件名**, 因此模式不能包含 `/` (含 `/` 的模式会被忽略并记入输出面板)。后面的条目覆盖前面的, `!` 表示重新启用。例: `["*.min.css", "!vendor.min.css"]` |
-| `disable.languageIds` | string[] | `[]` | 同一套语法, 匹配 language id。用来拦住文件名模式拦不住的情况, 例如 `Dockerfile`, `Makefile`, 以及手动切换过语言模式的文件。例: `["plaintext", "*script*"]` |
+| `disable.maxFileSizeMb` | number 0–1024 | `1` | 超过该长度的文档隐藏本扩展。允许小数 (`1.5`)。`0` 表示不限制。**单位是 MB 的 UTF-16 码元数, 不是磁盘字节数** —— 中日韩等非 ASCII 文本里一个码元最多对应三个 UTF-8 字节, 因此实际阈值比磁盘尺寸宽松。 |
+| `disable.fileNames` | string[] | `["*.min.*", "*.map"]` | gitignore 语法模式, **只匹配文件名**, 因此模式不能包含 `/` (含 `/` 的模式会被忽略并记入输出面板)。后面的条目覆盖前面的, `!` 表示重新启用 —— `["*.min.*", "*.map", "!theme.min.css"]` 可以只放行其中一个压缩文件。填 `[]` 关闭该维度。 |
+| `disable.languageIds` | string[] | `["log", "plaintext"]` | 同一套语法, 匹配 language id。用来拦住文件名模式拦不住的情况, 例如 `Dockerfile`, `Makefile`, 以及手动切换过语言模式的文件。填 `[]` 关闭该维度。 |
 
 `!` 只在所在那一组内部生效: `disable.fileNames` 里的否定项救不回已经被 `disable.languageIds`
 排除的文件。没有跨维度的豁免开关 —— 需要放行就收窄对应那一组模式。
@@ -288,7 +288,7 @@ rgb(): rgb(240, 112, 63)
 | `highlight.rgbWithoutFunctionLanguages` | string[] | `["*"]` | 裸 RGB 模式生效的语言 |
 | `highlight.matchHslWithoutFunction` | boolean | `false` | 把裸 `30, 100%, 50%` 识别为 HSL |
 | `highlight.hslWithoutFunctionLanguages` | string[] | `["*"]` | 裸 HSL 模式生效的语言 |
-| `highlight.maxMatchesPerDocument` | 整数 1–1000000 | `10000` | 单文档超过该数量后停止高亮 |
+| `highlight.maxMatchesPerDocument` | 整数 1–1000000 | `1000` | 单文档超过该数量后停止高亮 |
 | `highlight.hdrToneMapping` | `none` \| `reinhard` \| `clip` | `reinhard` | 预览 HDR 颜色时使用的色调映射 |
 
 **取色器**

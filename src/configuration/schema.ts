@@ -69,7 +69,7 @@ export const EXPOSED_SETTINGS: readonly SettingDefinition[] = Object.freeze([
   {
     key: 'precision',
     type: 'integer',
-    default: 5,
+    default: 3,
     minimum: 1,
     maximum: 10,
     nlsKey: 'config.precision',
@@ -98,17 +98,24 @@ export const ADVANCED_SETTINGS: readonly SettingDefinition[] = Object.freeze([
   {
     key: 'disable.maxFileSizeMb',
     type: 'number',
-    // 2 MB 与改造前的 `scan.maxDocumentSizeKb: 2048` 等价, 因此默认行为不变。
-    default: 2,
+    // 1 MB: 取"编辑体验不卡"而不是"极端文件不崩"。注意单位是 UTF-16 码元,
+    // 纯中文文件的磁盘尺寸约为码元数的 3 倍, 因此实际能放过的中文文件更大。
+    default: 1,
     minimum: 0,
     maximum: 1024,
     nlsKey: 'advanced.disable.maxFileSizeMb',
   },
-  { key: 'disable.fileNames', type: 'string[]', default: [], nlsKey: 'advanced.disable.fileNames' },
+  // 默认值不是空数组: 压缩产物与 source map 里的颜色对人没有意义, 开箱就该躲开。
+  {
+    key: 'disable.fileNames',
+    type: 'string[]',
+    default: ['*.min.*', '*.map'],
+    nlsKey: 'advanced.disable.fileNames',
+  },
   {
     key: 'disable.languageIds',
     type: 'string[]',
-    default: [],
+    default: ['log', 'plaintext'],
     nlsKey: 'advanced.disable.languageIds',
   },
 
@@ -155,7 +162,7 @@ export const ADVANCED_SETTINGS: readonly SettingDefinition[] = Object.freeze([
   {
     key: 'highlight.maxMatchesPerDocument',
     type: 'integer',
-    default: 10000,
+    default: 1000,
     minimum: 1,
     maximum: 1000000,
     nlsKey: 'advanced.highlight.maxMatchesPerDocument',
