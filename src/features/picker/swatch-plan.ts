@@ -87,22 +87,34 @@ export interface SwatchPlan {
   readonly dropped: number;
 }
 
+/** 外层在前, 其嵌套紧随; 嵌套本身已是扁平的全部后代。 */
+function* flatten(matches: readonly ColorMatch[]): Generator<ColorMatch> {
+  for (const match of matches) {
+    yield match;
+    for (const nested of match.nested ?? []) yield nested;
+  }
+}
+
 export function planSwatches(
   matches: readonly ColorMatch[],
   options: SwatchPlanOptions,
 ): SwatchPlan {
   const kept: ColorMatch[] = [];
-  const seen = new Set<string>();
+  const seen = new Set<number>();
   let dropped = 0;
 
-  for (const match of matches) {
+  for (const match of flatten(matches)) {
     if (!options.allows(match.syntax)) continue;
     if (!options.hasPreview(match)) continue;
-    const key = rangeKey(match.range);
-    // 同一 range 只上报一次; 已被别人覆盖的也跳过。
-    if (seen.has(key)) continue;
-    if (options.covered?.has(key)) continue;
-    seen.add(key);
+
+    // 去重按**起点**: 色块画在 range 起点之前, 同起点必然叠在一起, 起点不同则天然错开。
+    // 这让 `var(--x, #def)` 的外层与内层各得一个色块。
+    if (seen.has(match.range.start)) continue;
+    // 覆盖判定仍按精确 range: `covered` 来自其他提供器上报的区间, 换成起点会把
+    // "别人覆盖了同起点的另一段" 误判成 "本段已被覆盖"。
+    if (options.covered?.has(rangeKey(match.range))) continue;
+    seen.add(match.range.start);
+
     if (kept.length >= options.limit) {
       dropped += 1;
       continue;

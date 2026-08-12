@@ -53,21 +53,47 @@ export function patchVariableMatches(
   context: VariableContext | undefined,
   options: PatchOptions,
 ): readonly ColorMatch[] {
-  // 没有变量 match 时不复制数组: 绝大多数文档都走这条路。
-  if (!matches.some((match) => isVariableMatch(match))) return matches;
+  // 没有任何待解析变量时不复制数组: 绝大多数文档都走这条路。
+  // 必须连 `nested` 一起看 —— 索引管理器会对已补丁过的快照再跑一次, 那时顶层变量
+  // 可能已经是 resolved 而嵌套里的还没解析, 只看顶层会让整棵嵌套永远得不到解析。
+  if (!matches.some(hasPendingVariable)) return matches;
 
   const out: ColorMatch[] = [];
   for (const match of matches) {
+    const nested = match.nested ? patchVariableMatches(match.nested, context, options) : undefined;
+
     if (!isVariableMatch(match)) {
-      out.push(match);
+      out.push(withNested(match, nested));
       continue;
     }
-    if (!context) continue;
 
-    const patched = resolveOne(match, context, options);
-    if (patched) out.push(patched);
+    const patched = context ? resolveOne(match, context, options) : undefined;
+    if (patched) {
+      out.push(withNested(patched, nested));
+      continue;
+    }
+    // 外层解析失败被移除, 但内层的实色不该跟着消失:
+    // `var(--missing, #ff8800)` 里的 fallback 正是 CSS 语义下真正生效的颜色。
+    if (nested) out.push(...nested);
   }
   return out;
+}
+
+/** 自身或任一后代是待解析的变量引用。 */
+function hasPendingVariable(match: ColorMatch): boolean {
+  if (isVariableMatch(match)) return true;
+  return match.nested?.some(hasPendingVariable) ?? false;
+}
+
+/** 空的 nested 置为 undefined, 避免留下 `nested: []` 这种噪音。 */
+function withNested(match: ColorMatch, nested: readonly ColorMatch[] | undefined): ColorMatch {
+  if (nested === match.nested) return match;
+  if (!nested || nested.length === 0) {
+    if (match.nested === undefined) return match;
+    const { nested: _dropped, ...rest } = match;
+    return rest;
+  }
+  return { ...match, nested };
 }
 
 function resolveOne(

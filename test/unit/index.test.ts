@@ -210,3 +210,70 @@ describe('变量解析在索引层的接入', () => {
     expect(index.accept(patched)).toBe(true);
   });
 });
+
+describe('嵌套 match 的查找', () => {
+  const SCSS: ScanOptions = { ...OPTIONS, cssLikeLanguage: true };
+  const parts = { documentVersion: 1, configDigest: 'a', variableContextVersion: 0 };
+  const TEXT_WITH_NESTED = 'a { color: var(--x, #123456); }';
+
+  /** `--x` 有唯一 :root 定义, 外层因此解析成功并保留其 nested。 */
+  const ROOT_CONTEXT: VariableContext = {
+    definitions: new Map([
+      [
+        '--x',
+        [
+          {
+            name: '--x',
+            kind: 'css-custom-property' as const,
+            rawValue: '#ff8800',
+            sourceUri: 'file:///a.css',
+            offset: 0,
+            selector: ':root',
+          },
+        ],
+      ],
+    ]),
+    colorProfileFallbacks: new Map(),
+    version: 0,
+    issues: [],
+  };
+
+  function indexed(): DocumentColorIndex {
+    const index = new DocumentColorIndex();
+    index.ensure(TEXT_WITH_NESTED, parts, SCSS, { context: ROOT_CONTEXT, maxResolveDepth: 20 });
+    return index;
+  }
+
+  it('外层解析成功后仍保留 nested', () => {
+    const outer = indexed().current?.matches[0];
+    expect(outer?.raw).toBe('var(--x, #123456)');
+    expect(outer?.resolvedVia).toEqual({ variable: '--x' });
+    expect(outer?.nested?.map((match) => match.raw)).toEqual(['#123456']);
+  });
+
+  it('落在内层时返回内层, 而不是包含它的外层', () => {
+    const index = indexed();
+    const inner = index.current?.matches[0].nested?.[0];
+    expect(inner?.raw).toBe('#123456');
+    expect(index.findAtOffset(inner!.range.start)?.raw).toBe('#123456');
+  });
+
+  it('落在外层但不在内层时返回外层', () => {
+    expect(indexed().findAtOffset(11)?.raw).toBe('var(--x, #123456)');
+  });
+
+  it('findInRange 同时给出外层与内层, 供精确 range 匹配挑选', () => {
+    const found = indexed()
+      .findInRange(0, TEXT_WITH_NESTED.length)
+      .map((match) => match.raw);
+    expect(found).toEqual(['var(--x, #123456)', '#123456']);
+  });
+
+  it('外层解析失败时内层上浮为顶层, 仍可被查到', () => {
+    const index = new DocumentColorIndex();
+    // 不传上下文: 外层变量被移除, 内层 hex 顶上来。
+    index.ensure(TEXT_WITH_NESTED, parts, SCSS);
+    expect(index.current?.matches.map((match) => match.raw)).toEqual(['#123456']);
+    expect(index.findAtOffset(20)?.raw).toBe('#123456');
+  });
+});

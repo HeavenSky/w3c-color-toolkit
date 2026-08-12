@@ -117,6 +117,16 @@ export interface ColorMatch {
    * 而消费方也只需要名字。
    */
   readonly resolvedVia?: { readonly variable: string };
+  /**
+   * 被本 match 包含而未进入主列表的嵌套颜色, 扁平存放全部后代, 各自带绝对 range。
+   *
+   * 只有行内色块消费它 —— 色块画在 range 起点之前, 起点不同就能错开排列, 因此
+   * `var(--abc, #def)` 可以外层与内层各给一个色块和一个取色器。高亮仍只画最外层,
+   * 否则内层那段会被画两遍。
+   *
+   * 扁平而非树形: 消费方只需遍历, 树形会把展开逻辑扩散到每个消费者。
+   */
+  readonly nested?: readonly ColorMatch[];
 }
 
 /** 色域映射策略。`css` 为规范兼容映射, `clip` 为逐通道裁剪。 */

@@ -254,3 +254,76 @@ describe('只读约束', () => {
     expect('resolved' in convertSource(hexMatch(0), POLICY)).toBe(true);
   });
 });
+
+describe('嵌套 match 的处理', () => {
+  const withNested = (outer: ColorMatch, nested: readonly ColorMatch[]): ColorMatch => ({
+    ...outer,
+    nested,
+  });
+
+  it('嵌套中的变量同样被解析并带 resolvedVia', () => {
+    const outer = withNested(variableMatch('$outer'), [variableMatch('$inner')]);
+    const [patched] = patchVariableMatches(
+      [outer],
+      context([definition({ name: '$outer' }), definition({ name: '$inner' })]),
+      OPTIONS,
+    );
+    expect(patched.resolvedVia).toEqual({ variable: '$outer' });
+    expect(patched.nested?.[0].resolvedVia).toEqual({ variable: '$inner' });
+  });
+
+  it('外层解析失败时嵌套上浮, 不跟着消失', () => {
+    const inner = hexMatch(45);
+    const outer = withNested(variableMatch('$missing'), [inner]);
+    const patched = patchVariableMatches([outer], context([]), OPTIONS);
+    // 外层被移除, 内层实色顶到顶层。
+    expect(patched).toEqual([inner]);
+  });
+
+  it('嵌套里解析不出来的变量被移除, 实色保留', () => {
+    const inner = hexMatch(45);
+    const outer = withNested(variableMatch('$outer'), [variableMatch('$missing'), inner]);
+    const [patched] = patchVariableMatches(
+      [outer],
+      context([definition({ name: '$outer' })]),
+      OPTIONS,
+    );
+    expect(patched.nested).toEqual([inner]);
+  });
+
+  it('嵌套全部被移除时 nested 置为 undefined', () => {
+    const outer = withNested(variableMatch('$outer'), [variableMatch('$missing')]);
+    const [patched] = patchVariableMatches(
+      [outer],
+      context([definition({ name: '$outer' })]),
+      OPTIONS,
+    );
+    expect(patched.nested).toBeUndefined();
+    expect('nested' in patched).toBe(false);
+  });
+
+  it('context 缺失时嵌套变量被移除而嵌套实色保留', () => {
+    const inner = hexMatch(45);
+    const outer = withNested(hexMatch(0), [variableMatch('$x'), inner]);
+    const [patched] = patchVariableMatches([outer], undefined, OPTIONS);
+    expect(patched.nested).toEqual([inner]);
+  });
+
+  it('顶层已解析但嵌套仍待解析时不被短路跳过', () => {
+    // 索引管理器会对已补丁过的快照再跑一次异步补丁, 这是那条路径的回归。
+    const resolvedOuter: ColorMatch = {
+      ...variableMatch('$outer'),
+      resolution: 'resolved',
+      resolved: resolvedOf('#ff8800'),
+      contextual: undefined,
+      resolvedVia: { variable: '$outer' },
+      nested: [variableMatch('$inner')],
+    };
+    const [patched] = patchVariableMatches(
+      [resolvedOuter],
+      context([definition({ name: '$inner' })]),
+      OPTIONS,
+    );
+    expect(patched.nested?.[0].resolvedVia).toEqual({ variable: '$inner' });
+  });
+});

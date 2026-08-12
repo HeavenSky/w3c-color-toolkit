@@ -8,6 +8,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { scanText, type ScanOptions } from '../../src/core/scanner.js';
+import type { ColorMatch } from '../../src/core/types.js';
 import { colorPresentationTexts } from '../../src/features/convert/presentations.js';
 import {
   DEFAULT_FIELDS,
@@ -292,9 +293,33 @@ describe('色块上报计划', () => {
     expect(plan.dropped).toBe(matches.length - 3);
   });
 
-  it('同一 range 只上报一次', () => {
+  it('同一起点只上报一次', () => {
     const duplicated = [...matches, ...matches];
     const plan = planSwatches(duplicated, ALLOW_ALL);
     expect(plan.matches).toHaveLength(matches.length);
+  });
+
+  it('起点相同但长度不同时也只上报一个', () => {
+    // 色块画在 range 起点之前, 同起点必然叠在一起。
+    const base = matches[0];
+    const longer: ColorMatch = {
+      ...base,
+      range: { start: base.range.start, end: base.range.end + 5 },
+    };
+    const plan = planSwatches([base, longer], ALLOW_ALL);
+    expect(plan.matches).toHaveLength(1);
+  });
+
+  it('带 nested 的 match 展开为多个色块', () => {
+    const outer = matches[0];
+    const nested: ColorMatch = {
+      ...matches[1],
+      range: { start: outer.range.end + 10, end: outer.range.end + 17 },
+    };
+    const plan = planSwatches([{ ...outer, nested: [nested] }], ALLOW_ALL);
+    expect(plan.matches.map((match) => match.range.start)).toEqual([
+      outer.range.start,
+      nested.range.start,
+    ]);
   });
 });

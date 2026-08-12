@@ -103,17 +103,46 @@ export class DocumentColorIndex {
     return true;
   }
 
+  /**
+   * 取该 offset 处**最内层**的 match。
+   *
+   * 主列表仍然互不重叠, 因此先走二分定位顶层项 (`findMatchAtOffset` 的前提不变);
+   * 命中项若带嵌套, 再在其中线性挑出范围最短的那个。
+   *
+   * 必须取最内层而不是外层: 取色器的 `provideColorPresentations` 拿到的是**内层色块**的
+   * range, 再用它反查 match; 若返回外层, 取色器给出的候选写法与要改的目标就不是同一段文本,
+   * 写回即改错位置。
+   */
   findAtOffset(offset: number): ColorMatch | undefined {
     if (!this.snapshot) return undefined;
-    return findMatchAtOffset(this.snapshot.matches, offset);
+    const outer = findMatchAtOffset(this.snapshot.matches, offset);
+    if (!outer?.nested) return outer;
+
+    let innermost = outer;
+    for (const nested of outer.nested) {
+      if (nested.range.start > offset || offset >= nested.range.end) continue;
+      if (nested.range.end - nested.range.start < innermost.range.end - innermost.range.start) {
+        innermost = nested;
+      }
+    }
+    return innermost;
   }
 
-  /** 与选区重叠的全部 match。 */
+  /** 与选区重叠的全部 match, 含嵌套 (转换命令要靠精确 range 匹配挑出内层)。 */
   findInRange(start: number, end: number): readonly ColorMatch[] {
     if (!this.snapshot) return [];
-    return this.snapshot.matches.filter(
-      (match) => match.range.start < end && start < match.range.end,
-    );
+    const overlaps = (match: ColorMatch): boolean =>
+      match.range.start < end && start < match.range.end;
+
+    const out: ColorMatch[] = [];
+    for (const match of this.snapshot.matches) {
+      if (!overlaps(match)) continue;
+      out.push(match);
+      for (const nested of match.nested ?? []) {
+        if (overlaps(nested)) out.push(nested);
+      }
+    }
+    return out;
   }
 
   invalidate(): void {

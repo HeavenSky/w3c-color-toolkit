@@ -244,14 +244,12 @@ function collectCandidates(
         // 非颜色值: 既不产生 match, 也不下降到内部关键字。
         continue;
       }
-      // `var(--brand)`: 整体作为变量候选, 不再下降到内部。
+      // `var(--brand)`: 整体成为变量候选, 但**继续下降** —— fallback 与嵌套的 var()
+      // 各自还要有色块。这里不 continue, 控制流会落到下面的 collectCandidates 递归。
       // 刻意不加进 functionWhitelist —— 那个白名单的语义是"颜色函数", var 不是。
       if (options.cssLikeLanguage && name === 'var') {
         const customProperty = customPropertyOfVarNode(node);
-        if (customProperty) {
-          out.push({ range, variable: customProperty });
-          continue;
-        }
+        if (customProperty) out.push({ range, variable: customProperty });
       }
       if (whitelist.has(name) || isExperimentalFunction(name)) {
         out.push({ node, range });
@@ -304,11 +302,16 @@ function dedupe(matches: readonly ColorMatch[]): ColorMatch[] {
 
   // 单次线性扫描: 因为已按起点排序, 只需与上一个保留项比较。
   // (早期实现对每个候选都遍历已保留列表, 在上万个 match 的文件上会退化为 O(n^2)。)
+  //
+  // 落选项不再直接丢弃: 被更大范围吞掉的就是嵌套颜色, 挂到胜出项的 `nested` 上供色块使用。
+  // 这里复用本算法已有的信息, 不需要另跑一趟包含关系判定。
   const kept: ColorMatch[] = [];
+  const swallowed: ColorMatch[][] = [];
   for (const match of sorted) {
     const last = kept[kept.length - 1];
     if (!last || last.range.end <= match.range.start) {
       kept.push(match);
+      swallowed.push([]);
       continue;
     }
     const lastLength = last.range.end - last.range.start;
@@ -316,9 +319,20 @@ function dedupe(matches: readonly ColorMatch[]): ColorMatch[] {
     const better =
       matchLength > lastLength ||
       (matchLength === lastLength && priority(match) > priority(last));
-    if (better) kept[kept.length - 1] = match;
+    if (better) {
+      // 部分重叠 (非包含) 才会走到这里; 颜色候选来自 component value 树, 实际不会出现。
+      // 仍定义行为: 旧末项连同它已收集的嵌套一起并入新胜出项, 不凭空丢失。
+      const previous = swallowed[swallowed.length - 1];
+      kept[kept.length - 1] = match;
+      swallowed[swallowed.length - 1] = [last, ...previous];
+      continue;
+    }
+    swallowed[swallowed.length - 1].push(match);
   }
-  return kept;
+
+  return kept.map((match, index) =>
+    swallowed[index].length > 0 ? { ...match, nested: swallowed[index] } : match,
+  );
 }
 
 /**

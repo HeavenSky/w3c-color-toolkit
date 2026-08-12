@@ -92,13 +92,15 @@ describe('嵌套与相邻', () => {
     expect(matches.map((match) => match.raw)).toEqual(['red', 'blue']);
   });
 
-  it('var() 整体成为变量引用, fallback 不再单独成 match', () => {
-    // 行为变更: `var()` 现在是变量引用候选, 其范围覆盖整个表达式;
-    // 内层 fallback 与它重叠且更短, 在去重时被更大的范围取代。
-    // fallback 的颜色不会丢 —— 变量解析阶段由 `expandVarChain` 参与求值。
-    const matches = scan('a { color: var(--x, #123456); }');
+  it('var() 整体成为变量引用, fallback 作为 nested 保留', () => {
+    // `var()` 是变量引用候选, 范围覆盖整个表达式; 内层 fallback 与它重叠且更短,
+    // 去重时落选, 但不再丢弃 —— 挂到 `nested` 上供行内色块单独渲染。
+    const text = 'a { color: var(--x, #123456); }';
+    const matches = scan(text);
     expect(matches.map((match) => match.raw)).toEqual(['var(--x, #123456)']);
     expect(matches[0].syntax).toBe('css-variable');
+    expect(matches[0].nested?.map((match) => match.raw)).toEqual(['#123456']);
+    assertRawMatchesRange(text, matches[0].nested ?? []);
   });
 });
 
@@ -320,5 +322,45 @@ describe('变量引用', () => {
 
   it('不含自定义属性的 var() 不产出变量 match', () => {
     expect(scan('a { color: var(); }')).toHaveLength(0);
+  });
+});
+
+describe('嵌套颜色', () => {
+  it('var() 的 fallback 与嵌套 var() 全部进入 nested', () => {
+    const text = 'a { color: var(--a, var(--b, #674), #def); }';
+    const matches = scan(text);
+    expect(matches).toHaveLength(1);
+    expect(matches[0].raw).toBe('var(--a, var(--b, #674), #def)');
+    expect(matches[0].nested?.map((match) => match.raw)).toEqual([
+      'var(--b, #674)',
+      '#674',
+      '#def',
+    ]);
+    // 扁平存放: 最内层的 `#674` 直接挂在最外层上, 不需要递归。
+    assertRawMatchesRange(text, matches[0].nested ?? []);
+  });
+
+  it('nested 的起点各不相同', () => {
+    const matches = scan('a { color: var(--a, var(--b, #674), #def); }');
+    const starts = [matches[0], ...(matches[0].nested ?? [])].map((match) => match.range.start);
+    expect(new Set(starts).size).toBe(starts.length);
+  });
+
+  it('颜色函数不下降, 内部颜色不进 nested', () => {
+    const matches = scan('a { color: color-mix(in oklch, #ff8800, blue); }');
+    expect(matches).toHaveLength(1);
+    expect(matches[0].nested).toBeUndefined();
+  });
+
+  it('没有嵌套时 nested 为 undefined 而不是空数组', () => {
+    expect(scan('a { color: var(--x); }')[0].nested).toBeUndefined();
+    expect(scan('a { color: #ff8800; }')[0].nested).toBeUndefined();
+  });
+
+  it('var() 首参不是自定义属性名时不产出变量 match', () => {
+    // `var()` 的第一个实参必须是 <custom-property-name>; 这种写法本身非法,
+    // 外层不成为候选, 内层仍各自被识别。
+    const matches = scan('a { color: var(var(--def, #674), #def); }');
+    expect(matches.map((match) => match.raw)).toEqual(['var(--def, #674)', '#def']);
   });
 });
