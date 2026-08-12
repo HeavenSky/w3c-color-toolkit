@@ -36,8 +36,8 @@ import {
   type ParsedColor,
   type ParseOptions,
 } from './parser.js';
-import type { ColorMatch, ColorRange, ResolveVariable } from './types.js';
-import { substituteVariables } from './variable-substitution.js';
+import type { ColorMatch, ColorRange, ContextualBranch, ResolveVariable } from './types.js';
+import { substituteVariables, type SubstitutionResult } from './variable-substitution.js';
 
 /** 颜色名的识别范围。 */
 export type MatchWords = 'off' | 'css-like' | 'all';
@@ -282,14 +282,19 @@ interface Evaluated {
 /**
  * 取值不唯一时的 contextual 形态。
  *
- * 候选此处先不落进 `branches` —— 把候选映射成分支 (并逐个解析成颜色) 是 Hover 展示的
- * 职责, 见方案 U4。这里只保证"有定义但不唯一"不会被静默丢掉。
+ * 候选进 `branches`: 它们是**枚举出来的事实**而不是猜测, 因此 Hover 可以逐条列出
+ * "这个变量可能是哪个值、来自哪里"; 高亮与色块仍然不显示 —— `assumed` 为空,
+ * 消费方 (`previewSource`) 因此拿不到可预览的颜色。
  */
-function contextualVariable(syntax: string, dependsOn: string): ParsedColor {
+function contextualVariable(
+  syntax: string,
+  dependsOn: string,
+  branches: ContextualBranch[] = [],
+): ParsedColor {
   const isPreprocessor = dependsOn.startsWith('$') || dependsOn.startsWith('@');
   const contextual = isPreprocessor
-    ? classifyPreprocessorVariable(dependsOn)
-    : classifyCssVariable(dependsOn);
+    ? classifyPreprocessorVariable(dependsOn, branches)
+    : classifyCssVariable(dependsOn, branches);
   return {
     resolution: 'contextual',
     syntax,
@@ -298,6 +303,31 @@ function contextualVariable(syntax: string, dependsOn: string): ParsedColor {
     contextual,
     diagnostics: [],
   };
+}
+
+/**
+ * 把每个候选代换回原表达式, 得到可展示的分支。
+ *
+ * 代换而不是直接展示候选值: `rgb(var(--t) / .4)` 的候选是通道三元组 `148 163 184`,
+ * 单独看不出是什么颜色; 代换回去得到 `rgb(148 163 184 / 0.4)`, 才能连颜色一起预览。
+ */
+function branchesFor(
+  raw: string,
+  substituted: SubstitutionResult,
+  candidate: Candidate,
+  options: ScanOptions,
+  resolve: ResolveVariable,
+): ContextualBranch[] {
+  const ambiguousName = substituted.ambiguousName;
+  if (!substituted.ambiguous || !ambiguousName) return [];
+
+  return substituted.ambiguous.map((value) => {
+    const forced: ResolveVariable = (name, atOffset) =>
+      name === ambiguousName ? { kind: 'resolved', rawValue: value.rawValue } : resolve(name, atOffset);
+    const text = substituteVariables(raw, forced, candidate.range.start, options.maxResolveDepth).text;
+    const color = text === undefined ? undefined : colorOfText(text, options);
+    return { label: value.origin, raw: text ?? value.rawValue, resolved: color?.resolved };
+  });
 }
 
 /** 代换后的文本必须真的是一个颜色; 否则该候选不产出 match。 */
@@ -321,7 +351,10 @@ function evaluateVariable(
   if (name.startsWith('--')) {
     const substituted = substituteVariables(raw, resolve, candidate.range.start, options.maxResolveDepth);
     if (substituted.text === undefined) {
-      return substituted.ambiguous ? { parsed: contextualVariable(syntax, name) } : undefined;
+      if (!substituted.ambiguous) return undefined;
+      return {
+        parsed: contextualVariable(syntax, name, branchesFor(raw, substituted, candidate, options, resolve)),
+      };
     }
     const color = colorOfText(substituted.text, options);
     if (!color) return undefined;
@@ -332,7 +365,14 @@ function evaluateVariable(
   // 预处理器变量没有 fallback 语法, 直接查表。
   const value = resolve(name, candidate.range.start);
   if (value.kind === 'unresolved') return undefined;
-  if (value.kind === 'ambiguous') return { parsed: contextualVariable(syntax, name) };
+  if (value.kind === 'ambiguous') {
+    const branches = value.candidates.map((item) => ({
+      label: item.origin,
+      raw: item.rawValue,
+      resolved: colorOfText(item.rawValue, options)?.resolved,
+    }));
+    return { parsed: contextualVariable(syntax, name, branches) };
+  }
   const color = colorOfText(value.rawValue, options);
   if (!color) return undefined;
   return { parsed: { ...color, syntax }, resolvedVia: { variable: name } };
@@ -349,7 +389,13 @@ function evaluateVariableFunction(
   const syntax = (candidate.node && functionName(candidate.node)) || 'css-variable';
   if (substituted.text === undefined) {
     if (!substituted.ambiguous) return undefined;
-    return { parsed: contextualVariable(syntax, substituted.names.join(', ')) };
+    return {
+      parsed: contextualVariable(
+        syntax,
+        substituted.names.join(', '),
+        branchesFor(raw, substituted, candidate, options, resolve),
+      ),
+    };
   }
   const color = colorOfText(substituted.text, options);
   if (!color) return undefined;

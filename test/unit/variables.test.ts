@@ -139,6 +139,30 @@ describe('取值不唯一', () => {
     expect(reference?.contextual?.assumed).toBeUndefined();
   });
 
+  it('候选逐条进入 branches, 并代换回原表达式以便预览', () => {
+    const matches = scan(
+      ':root { --a: #ffffff }\n@media (prefers-color-scheme: dark) { :root { --a: #000000 } }\n' +
+        'x { color: rgb(var(--a) / 0.4) }',
+    );
+    const fn = matches.find((match) => match.raw === 'rgb(var(--a) / 0.4)');
+    expect(fn?.resolution).toBe('contextual');
+    // 分支的 raw 是代换回去的整段表达式, 因此 Hover 能连颜色一起显示。
+    expect(fn?.contextual?.branches.map((branch) => [branch.label, branch.raw])).toEqual([
+      [':root', 'rgb(#ffffff / 0.4)'],
+      ['@media (prefers-color-scheme: dark) › :root', 'rgb(#000000 / 0.4)'],
+    ]);
+  });
+
+  it('候选本身是颜色时分支带上解析后的颜色', () => {
+    const matches = scan(
+      ':root { --a: #ffffff }\n@media (prefers-color-scheme: dark) { :root { --a: #000000 } }\nx { color: var(--a) }',
+    );
+    const reference = matches.find((match) => match.raw === 'var(--a)');
+    const branches = reference?.contextual?.branches ?? [];
+    expect(branches.map((branch) => branch.raw)).toEqual(['#ffffff', '#000000']);
+    expect(branches.every((branch) => branch.resolved !== undefined)).toBe(true);
+  });
+
   it('只有非 root 定义时同样保留为 contextual 而不是被丢弃', () => {
     const tokens: TextDocumentLike = {
       uri: 'file:///w/tokens.css',

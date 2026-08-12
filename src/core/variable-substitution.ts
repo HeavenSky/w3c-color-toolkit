@@ -37,6 +37,8 @@ export interface SubstitutionResult {
    * 它决定调用方给出 contextual 而不是静默移除: 候选是枚举出来的事实, 可以展示。
    */
   readonly ambiguous?: readonly VariableCandidateValue[];
+  /** 产生歧义的那个变量名; 调用方据此把每个候选代换回原表达式做预览。 */
+  readonly ambiguousName?: string;
 }
 
 interface VarReference {
@@ -118,6 +120,7 @@ export function substituteVariables(
     if (references.length === 0) return { text: current, names };
 
     let ambiguous: readonly VariableCandidateValue[] | undefined;
+    let ambiguousName: string | undefined;
     const replacements: { start: number; end: number; value: string }[] = [];
     for (const reference of references) {
       if (!names.includes(reference.name)) names.push(reference.name);
@@ -130,9 +133,12 @@ export function substituteVariables(
         replacements.push({ start: reference.start, end: reference.end, value: reference.fallback });
         continue;
       }
-      if (value.kind === 'ambiguous' && !ambiguous) ambiguous = value.candidates;
+      if (value.kind === 'ambiguous' && !ambiguous) {
+        ambiguous = value.candidates;
+        ambiguousName = reference.name;
+      }
     }
-    if (replacements.length === 0) return { names, ambiguous };
+    if (replacements.length === 0) return { names, ambiguous, ambiguousName };
 
     // 从右往左替换, 否则前面的替换会让后面的区间失效。
     for (const replacement of [...replacements].sort((a, b) => b.start - a.start)) {
