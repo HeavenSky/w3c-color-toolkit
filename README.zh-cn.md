@@ -143,6 +143,7 @@ rgb(): rgb(240, 112, 63)
 | 引用写法 | 生效范围 |
 | --- | --- |
 | `var(--brand)` | 任意 CSS 系语言 |
+| `rgb(var(--channels) / 0.4)` | 任意 CSS 系语言 —— 变量作为颜色函数的片段, 见下 |
 | `$brand` | `scss`、`sass` |
 | `@brand` | `less` |
 | Stylus 的裸标识符 `brand` | **不解析** —— `brand = …` 的定义仍会被收集, 供其他文件引用 |
@@ -163,6 +164,18 @@ rgb(): rgb(240, 112, 63)
 **引用内部的颜色各有自己的色块。** `var(--brand, #ff8800)` 会出现两个色块 —— 整个引用一个,
 fallback 一个 —— 因为色块画在各自 range 的起点之前, 起点不同就会并排错开。嵌套同理:
 `var(--a, var(--b, #674), #def)` 会出现四个。高亮仍然只标最外层, 因此下划线不会叠加。
+
+**变量作为颜色函数的片段同样解析。** `rgb(var(--channels) / 0.4)`、`rgba(var(--x), 0.4)`、
+`hsl(var(--h) 50% 50%)`、`color-mix(in srgb, var(--a), red)` 都会先把 `var()` 代换回原文本再解析,
+因此 Tailwind 风格的通道令牌 (`--channels: 148 163 184` 这种本身不是颜色的值) 可以正常显示。
+整段与内层引用各得一个色块; 已解析的结果同样只读。两条边界:
+
+- 预处理器变量作为片段 (`rgba($brand, 0.4)`、`rgba(@brand, 0.4)`) **整段不解析** ——
+  代换后是 SCSS/Less 自己的 `rgba(颜色, alpha)` 重载而不是 CSS 语法。内层的 `$brand`
+  仍然有自己的色块与取色器。
+- 展开仍要求每个引用可解析, 即"当前文件或经 `@import` 可达的文件里存在唯一 root 级定义"。
+  只定义在 `[data-theme="…"]`、`.dark` 这类选择器下的多主题令牌不满足这一条 (cascade 胜者
+  取决于具体元素), 落进上面的静默情形。
 
 **颜色可能迟一拍出现。** 当前文件里的定义是同步解析的; 跨 `@import` 需要读取那些文件,
 因此色块要等读取完成才出现。
@@ -284,7 +297,7 @@ fallback 一个 —— 因为色块画在各自 range 的起点之前, 起点不
 
 | 键 | 取值 | 默认值 | 作用 |
 | --- | --- | --- | --- |
-| `disable.maxFileSizeMb` | number 0–1024 | `1` | 超过该长度的文档隐藏本扩展。允许小数 (`1.5`)。`0` 表示不限制。**单位是 MB 的 UTF-16 码元数, 不是磁盘字节数** —— 中日韩等非 ASCII 文本里一个码元最多对应三个 UTF-8 字节, 因此实际阈值比磁盘尺寸宽松。 |
+| `disable.maxFileSizeMb` | number 0–1024 | `0.3` | 超过该长度的文档隐藏本扩展。允许小数 (`1.5`)。`0` 表示不限制。默认值 `0.3` 相当于 314573 个码元, 约 307 KiB。**单位是 MB 的 UTF-16 码元数, 不是磁盘字节数** —— 中日韩等非 ASCII 文本里一个码元最多对应三个 UTF-8 字节, 因此实际阈值比磁盘尺寸宽松。 |
 | `disable.fileNames` | string[] | `["*.min.*", "*.map"]` | gitignore 语法模式, **只匹配文件名**, 因此模式不能包含 `/` (含 `/` 的模式会被忽略并记入输出面板)。后面的条目覆盖前面的, `!` 表示重新启用 —— `["*.min.*", "*.map", "!theme.min.css"]` 可以只放行其中一个压缩文件。填 `[]` 关闭该维度。 |
 | `disable.languageIds` | string[] | `["log", "plaintext"]` | 同一套语法, 匹配 language id。用来拦住文件名模式拦不住的情况, 例如 `Dockerfile`, `Makefile`, 以及手动切换过语言模式的文件。填 `[]` 关闭该维度。 |
 
@@ -298,7 +311,7 @@ fallback 一个 —— 因为色块画在各自 range 的起点之前, 起点不
 | `highlight.markRuler` | boolean | `true` | 在概览标尺上显示标记 |
 | `highlight.matchWords` | `off` \| `css-like` \| `all` | `css-like` | 裸颜色名在哪里算颜色: 都不算、仅 CSS 系语言 (`css`、`scss`、`sass`、`less`、`stylus`、`postcss`)、或所有语言 |
 | `highlight.hexAlphaOrder` | `rgba` \| `argb` | `rgba` | 八位 hex 的解读: `#RRGGBBAA` 还是 `#AARRGGBB` |
-| `highlight.maxMatchesPerDocument` | 整数 1–1000000 | `1000` | 单文档超过该数量后停止高亮 |
+| `highlight.maxMatchesPerDocument` | 整数 1–1000000 | `600` | 单文档超过该数量后停止高亮。嵌套颜色各占一个名额, 因此 `var(--a, #fff)` 与 `rgb(var(--x) / .4)` 各消耗两个 |
 | `highlight.hdrToneMapping` | `none` \| `reinhard` \| `clip` | `reinhard` | 预览 HDR 颜色时使用的色调映射 |
 
 **取色器**
@@ -446,7 +459,9 @@ fallback 一个 —— 因为色块画在各自 range 的起点之前, 起点不
 放宽相应策略, 或换一个目标格式。
 
 **变量引用什么都不显示。** 所有无法解析的情形都是这个结果, 所以先看日志: **管理 → 打开日志**
-会告诉你原因。然后检查 `advanced.variables.resolve`, 把样式根目录加入
+会告诉你原因。有两种常见写法是刻意落进这一类的: 令牌文件只经 JS/TS 的 `import` 引入而没有
+CSS 的 `@import`; 以及令牌只定义在 `[data-theme="…"]`、`.dark` 这类选择器下而不是 `:root`。
+然后检查 `advanced.variables.resolve`, 把样式根目录加入
 `advanced.variables.includePaths`, 并注意未受信任的工作区不读取被导入的文件。
 导入遍历受 `variables.maxImportDepth` / `maxImportFiles` / `maxResolveDepth` 限制。
 用运算、SCSS map、`@each` 或 `darken()` 这类函数构造的值不在本扩展的求值范围内。

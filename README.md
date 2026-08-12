@@ -157,6 +157,7 @@ Output style: `w3cColorToolkit.convertSyntax` (`legacy` commas vs `modern` space
 | Reference | Where it resolves |
 | --- | --- |
 | `var(--brand)` | any CSS-like language |
+| `rgb(var(--channels) / 0.4)` | any CSS-like language — a variable used as a fragment of a color function, see below |
 | `$brand` | `scss`, `sass` |
 | `@brand` | `less` |
 | bare `brand` (Stylus) | **not resolved** — `brand = …` definitions are still collected for other files to reference |
@@ -182,6 +183,20 @@ for the whole reference and one for the fallback — because a swatch is drawn i
 so different starting points line up side by side. Nesting works the same way:
 `var(--a, var(--b, #674), #def)` shows four. Highlighting still marks only the outermost range, so
 underlines never double up.
+
+**A variable used as a fragment of a color function resolves too.** `rgb(var(--channels) / 0.4)`,
+`rgba(var(--x), 0.4)`, `hsl(var(--h) 50% 50%)` and `color-mix(in srgb, var(--a), red)` substitute
+`var()` back into the text before parsing, so Tailwind-style channel tokens (`--channels: 148 163 184`,
+a value that is not a color on its own) show up. The whole expression and the inner reference each get
+a swatch, and the result is read only like any other resolved reference. Two boundaries:
+
+- A preprocessor variable used as a fragment (`rgba($brand, 0.4)`, `rgba(@brand, 0.4)`) is **not**
+  resolved as a whole — substituting it yields SCSS/Less's own `rgba(color, alpha)` overload rather
+  than CSS syntax. The inner `$brand` still gets its own swatch and picker.
+- Substitution still requires every reference to be resolvable, that is a single root-level
+  definition in the current file or in a file reachable through `@import`. Multi-theme tokens defined
+  only under selectors like `[data-theme="…"]` or `.dark` do not qualify (the cascade winner depends
+  on the element) and fall into the silent case above.
 
 **The color may appear a beat late.** Definitions in the current file resolve synchronously;
 resolving across `@import` needs to read those files, so the swatch appears once that finishes.
@@ -315,7 +330,7 @@ and it is never scanned.
 
 | Key | Values | Default | Purpose |
 | --- | --- | --- | --- |
-| `disable.maxFileSizeMb` | number 0–1024 | `1` | Hide the extension in documents longer than this. Decimals are allowed (`1.5`). `0` means no limit. **The unit is MB of UTF-16 code units, not bytes on disk** — for CJK and other non-ASCII text one code unit is up to three UTF-8 bytes, so the effective limit is looser than the file size on disk. |
+| `disable.maxFileSizeMb` | number 0–1024 | `0.3` | Hide the extension in documents longer than this. Decimals are allowed (`1.5`). `0` means no limit. The default `0.3` is 314,573 code units, roughly 307 KiB. **The unit is MB of UTF-16 code units, not bytes on disk** — for CJK and other non-ASCII text one code unit is up to three UTF-8 bytes, so the effective limit is looser than the file size on disk. |
 | `disable.fileNames` | string[] | `["*.min.*", "*.map"]` | gitignore-style patterns matched against **the file name only**, so a pattern must not contain `/` (one that does is ignored and reported in the output channel). Later entries win; `!` re-enables — `["*.min.*", "*.map", "!theme.min.css"]` keeps one minified file in scope. Setting `[]` turns this dimension off. |
 | `disable.languageIds` | string[] | `["log", "plaintext"]` | The same syntax, matched against the language id. Catches files a name pattern cannot, such as `Dockerfile`, `Makefile` or anything whose language you switched by hand. Setting `[]` turns this dimension off. |
 
@@ -329,7 +344,7 @@ and it is never scanned.
 | `highlight.markRuler` | boolean | `true` | Show a marker in the overview ruler |
 | `highlight.matchWords` | `off` \| `css-like` \| `all` | `css-like` | Where bare color names count: nowhere, CSS-like languages only (`css`, `scss`, `sass`, `less`, `stylus`, `postcss`), or everywhere |
 | `highlight.hexAlphaOrder` | `rgba` \| `argb` | `rgba` | Reading of 8-digit hex: `#RRGGBBAA` or `#AARRGGBB` |
-| `highlight.maxMatchesPerDocument` | integer 1–1000000 | `1000` | Stop highlighting after this many colors in one document |
+| `highlight.maxMatchesPerDocument` | integer 1–1000000 | `600` | Stop highlighting after this many colors in one document. Nested colors count separately, so `var(--a, #fff)` and `rgb(var(--x) / .4)` each use two |
 | `highlight.hdrToneMapping` | `none` \| `reinhard` \| `clip` | `reinhard` | Tone mapping used to preview HDR colors in sRGB |
 
 **Color picker**
@@ -490,7 +505,10 @@ Loosen the relevant policy, or pick a different target.
 **A variable reference shows nothing at all.** That is the designed outcome for every unresolvable
 case, so start from the log: **Manage → Open log** names the reason. Then check
 `advanced.variables.resolve`, add the stylesheet root to `advanced.variables.includePaths`, and note
-that untrusted workspaces do not read imported files. The import walk is bounded by
+that untrusted workspaces do not read imported files. Two common shapes fall into this case on
+purpose: a token file reached only through a JS/TS `import` rather than a CSS `@import`, and a token
+defined only under `[data-theme="…"]` / `.dark` selectors instead of `:root`. The import walk is
+bounded by
 `variables.maxImportDepth` / `maxImportFiles` / `maxResolveDepth`. Values built with arithmetic,
 SCSS maps, `@each` or functions like `darken()` are outside what this extension evaluates. Bare
 Stylus identifiers are not treated as references at all.

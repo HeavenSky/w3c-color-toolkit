@@ -134,7 +134,7 @@
               "type": "number",
               "minimum": 0,
               "maximum": 1024,
-              "default": 1,
+              "default": 0.3,
               "description": "%advanced.disable.maxFileSizeMb%"
             },
             "disable.fileNames": {
@@ -187,7 +187,7 @@
               "type": "integer",
               "minimum": 1,
               "maximum": 1000000,
-              "default": 1000,
+              "default": 600,
               "description": "%advanced.highlight.maxMatchesPerDocument%"
             },
             "highlight.hdrToneMapping": {
@@ -400,7 +400,7 @@
               "label": "All advanced options (with defaults)",
               "description": "Insert all 33 built-in options with their default values",
               "body": {
-                "disable.maxFileSizeMb": 1,
+                "disable.maxFileSizeMb": 0.3,
                 "disable.fileNames": [
                   "*.min.*",
                   "*.map"
@@ -412,7 +412,7 @@
                 "highlight.markRuler": true,
                 "highlight.matchWords": "css-like",
                 "highlight.hexAlphaOrder": "rgba",
-                "highlight.maxMatchesPerDocument": 1000,
+                "highlight.maxMatchesPerDocument": 600,
                 "highlight.hdrToneMapping": "reinhard",
                 "colorPicker.mode": "dedupe",
                 "fields.enabled": null,

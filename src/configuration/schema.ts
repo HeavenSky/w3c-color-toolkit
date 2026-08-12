@@ -98,9 +98,10 @@ export const ADVANCED_SETTINGS: readonly SettingDefinition[] = Object.freeze([
   {
     key: 'disable.maxFileSizeMb',
     type: 'number',
-    // 1 MB: 取"编辑体验不卡"而不是"极端文件不崩"。注意单位是 UTF-16 码元,
-    // 纯中文文件的磁盘尺寸约为码元数的 3 倍, 因此实际能放过的中文文件更大。
-    default: 1,
+    // 0.3 MB (= 314573 码元 ≈ 307 KiB): 取"编辑体验不卡"而不是"极端文件不崩"。
+    // 注意单位是 UTF-16 码元, 纯中文文件的磁盘尺寸约为码元数的 3 倍,
+    // 因此实际能放过的中文文件更大。
+    default: 0.3,
     minimum: 0,
     maximum: 1024,
     nlsKey: 'advanced.disable.maxFileSizeMb',
@@ -138,7 +139,7 @@ export const ADVANCED_SETTINGS: readonly SettingDefinition[] = Object.freeze([
   {
     key: 'highlight.maxMatchesPerDocument',
     type: 'integer',
-    default: 1000,
+    default: 600,
     minimum: 1,
     maximum: 1000000,
     nlsKey: 'advanced.highlight.maxMatchesPerDocument',

@@ -20,8 +20,24 @@ Notable changes to W3C Color Toolkit.
   Highlighting still marks only the outermost range, so underlines never double up.
 - Hover, `Convert Color` and the picker all act on the **innermost** color at the cursor, so working
   on a nested value edits that value and not the expression around it.
+- **A variable used as a fragment of a color function now resolves.** `rgb(var(--channels) / 0.4)`,
+  `rgba(var(--x), 0.4)`, `hsl(var(--h) 50% 50%)` and `color-mix(in srgb, var(--a), red)` used to show
+  nothing at all: the whole function failed to parse statically, and the scanner did not descend into
+  a color function, so the inner reference never got a swatch either. `var()` is now substituted back
+  into the text before parsing, which makes Tailwind-style channel tokens
+  (`--channels: 148 163 184` — a value that is not a color on its own) work. The whole expression and
+  the inner reference each get a swatch, and the result is read only like any other resolved
+  reference. Preprocessor variables used the same way (`rgba($brand, 0.4)`) still do not resolve as a
+  whole — substituting them yields SCSS/Less's `rgba(color, alpha)` overload rather than CSS syntax —
+  but the inner `$brand` now gets its own swatch.
 
 ### Changed
+
+- **Two defaults are lower.** `advanced.disable.maxFileSizeMb` `1` → `0.3` (314,573 UTF-16 code
+  units, roughly 307 KiB) and `advanced.highlight.maxMatchesPerDocument` `1000` → `600`. Documents
+  between the old and new thresholds now go unhighlighted by default; the allowed ranges are
+  unchanged, so raising either key restores the previous behaviour. Anyone who already set these keys
+  explicitly is unaffected.
 
 - **An unresolvable variable reference now shows nothing at all** — no highlight, no swatch, no
   hover. This covers a missing definition, a custom property with several `:root` definitions (the
@@ -40,6 +56,15 @@ Notable changes to W3C Color Toolkit.
 - Bare Stylus identifiers (`color: brand`) are **not** treated as references — without consulting the
   definitions they are indistinguishable from any other word, and the definitions only arrive
   asynchronously. `brand = …` definitions are still collected for other files to reference.
+
+### Fixed
+
+- **A `:root` block preceded by a comment was not recognised as `:root`.** The selector of a
+  declaration is found by scanning back to the previous `{` / `}` / `;`, which swept up any comment
+  sitting between the two — so a perfectly ordinary
+  `@layer base { /* … */ :root { --border: … } }` was classified as a non-root definition and refused.
+  Comments are now stripped from the selector text. This affected every custom property whose `:root`
+  block happened to be introduced by a comment, which is most real stylesheets.
 
 ### Removed
 
