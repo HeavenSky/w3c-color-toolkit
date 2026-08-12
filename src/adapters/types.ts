@@ -25,6 +25,20 @@ export interface VariableDefinition {
   readonly offset: number;
   /** CSS 自定义属性所在选择器; `:root`/`:host` 之外的定义视为局部。 */
   readonly selector?: string;
+  /**
+   * 由外到内的祖先链, 例如 `['@layer base', ':root']`。
+   *
+   * 供歧义候选展示"这个值来自哪里"。旧的正则适配器不产出该字段,
+   * 因此暂为可选; 旧适配器在方案 U3 删除后收紧为必填。
+   */
+  readonly ancestorChain?: readonly string[];
+  /** 定义处于 `@media` / `@supports` / `@container` 内, 取值依赖运行环境。 */
+  readonly conditional?: boolean;
+  /**
+   * 该定义是否**无条件生效**: 自定义属性要求落在 root 级选择器上,
+   * 预处理器变量要求是顶层声明; 两者都要求不在条件 at-rule 内。
+   */
+  readonly isRoot?: boolean;
 }
 
 export interface VariableContext {

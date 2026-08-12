@@ -75,13 +75,24 @@ describe('package.json 基本声明', () => {
     expect(pkg.activationEvents).toEqual(['onStartupFinished']);
   });
 
-  it('运行时依赖只有 CSSTools 三个包与 colorjs.io', () => {
+  it('运行时依赖只有 CSSTools 三个包、colorjs.io 与 PostCSS 三个包', () => {
+    // 这条是白名单守卫: 新增运行时依赖必须显式登记在这里。
+    // PostCSS 系负责变量定义的 AST 收集 —— 值层仍由 CSSTools 处理, 两者职责不重叠。
     expect(Object.keys(pkg.dependencies as object).sort()).toEqual([
       '@csstools/css-color-parser',
       '@csstools/css-parser-algorithms',
       '@csstools/css-tokenizer',
       'colorjs.io',
+      'postcss',
+      'postcss-less',
+      'postcss-scss',
     ]);
+  });
+
+  it('依赖全部锁定为精确版本', () => {
+    for (const [name, range] of Object.entries(pkg.dependencies as Record<string, string>)) {
+      expect(range, `${name} 应为精确版本`).toMatch(/^\d+\.\d+\.\d+$/);
+    }
   });
 });
 
