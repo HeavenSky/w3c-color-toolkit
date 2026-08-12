@@ -8,7 +8,11 @@ import {
 import { collectLessVariables } from '../../src/adapters/less-variables.js';
 import { collectScssVariables, isSimpleValue, resolvePreprocessorVariable } from '../../src/adapters/scss-variables.js';
 import { collectStylusVariables } from '../../src/adapters/stylus-variables.js';
-import { collectVariableContext, resolveVariable } from '../../src/adapters/variable-context.js';
+import {
+  collectLocalVariableContext,
+  collectVariableContext,
+  resolveVariable,
+} from '../../src/adapters/variable-context.js';
 import type { FileReader, TextDocumentLike, VariableContext, VariableDefinition } from '../../src/adapters/types.js';
 
 import { DEFAULT_PARSE_OPTIONS } from './helpers.js';
@@ -280,5 +284,32 @@ describe('变量上下文收集', () => {
       kind: 'resolved',
       rawValue: '#ff8800',
     });
+  });
+});
+
+describe('同文档上下文 (同步)', () => {
+  it('收集当前文档的定义, 不读取导入', () => {
+    const context = collectLocalVariableContext(
+      doc('@import "vars";\n$brand: #ff8800;', 'scss', 'file:///w/a.scss'),
+      DEFAULT_PARSE_OPTIONS,
+    );
+    expect(context.definitions.get('$brand')?.[0].rawValue).toBe('#ff8800');
+    // 导入里的定义不在这一步出现 —— 那要等异步收集。
+    expect(context.issues).toEqual([]);
+  });
+
+  it('同样收集 @color-profile 的 fallback', () => {
+    const context = collectLocalVariableContext(
+      doc('@color-profile --my { fallback: #ff8800; }'),
+      DEFAULT_PARSE_OPTIONS,
+    );
+    expect(context.colorProfileFallbacks.has('--my')).toBe(true);
+  });
+
+  it('version 恒为 0: 索引失效键由管理器自己的计数器提供', () => {
+    const first = collectLocalVariableContext(doc(':root { --a: red; }'), DEFAULT_PARSE_OPTIONS);
+    const second = collectLocalVariableContext(doc(':root { --a: red; }'), DEFAULT_PARSE_OPTIONS);
+    expect(first.version).toBe(0);
+    expect(second.version).toBe(0);
   });
 });

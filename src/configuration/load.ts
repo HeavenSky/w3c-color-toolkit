@@ -193,6 +193,11 @@ export function configurationDigest(config: RuntimeConfiguration): string {
     config.contextualPreview,
     config.hdrAssumedHeadroom,
     config.variablesResolve,
+    // 变量解析的其余参数同样改变扫描结果: 搜索路径变了, 能解析到的定义就变了。
+    config.variablesIncludePaths,
+    config.maxImportDepth,
+    config.maxImportFiles,
+    config.maxResolveDepth,
     config.maxMatchesPerDocument,
   ]);
 }

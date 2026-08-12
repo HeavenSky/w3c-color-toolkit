@@ -85,6 +85,28 @@ function importSpecifiers(text: string): string[] {
   return specifiers;
 }
 
+/**
+ * 只收集当前文档的定义与 `@color-profile`, 不跨文件。
+ *
+ * 存在的意义是**同步**: 跨文件收集必须 await 文件读取, 而索引层的 `ensure()` 与高亮渲染
+ * 都在同步路径上。先用本文档的定义解析一遍, 跨文件的部分再由异步补丁补上, 用户就不必等
+ * 一轮 I/O 才看到同一文件内定义的变量。
+ *
+ * `version` 恒为 0: 索引失效键由 `DocumentIndexManager` 自己的计数器提供, 这里的版本号
+ * 不参与任何判定 (模块级的 `contextVersion` 每次调用即自增, 拿它当键会导致
+ * "收集 → 键变 → 重扫 → 再收集" 永不收敛)。
+ */
+export function collectLocalVariableContext(
+  document: TextDocumentLike,
+  parseOptions: ParseOptions,
+): VariableContext {
+  const definitions = new Map<string, VariableDefinition[]>();
+  const colorProfileFallbacks = new Map<string, ResolvedColor>();
+  collectDefinitions(document, definitions);
+  collectColorProfiles(document, parseOptions, colorProfileFallbacks);
+  return { definitions, colorProfileFallbacks, version: 0, issues: [] };
+}
+
 /** 收集变量上下文。 */
 export async function collectVariableContext(
   document: TextDocumentLike,
