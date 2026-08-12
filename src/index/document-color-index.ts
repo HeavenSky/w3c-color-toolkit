@@ -4,29 +4,14 @@
  * 保证:
  * - 同一 `(documentVersion, configDigest, variableContextVersion)` 只扫描一次;
  * - 旧版本的扫描结果不会被写入 (`accept()` 会拒绝过期结果);
- * - 高亮、Hover 与转换消费同一份 match 列表, 因此三者结论必然一致。
+ * - 高亮、Hover 与转换消费同一份 match 列表, 因此三者结论必然一致;
+ * - 变量在扫描期同步解析 (取值回调由 `ScanOptions.resolveVariable` 注入), 因此索引层
+ *   不再有"先产出占位、再异步补丁"的第二阶段。
  *
  * 本层不引用 vscode API, 便于在单元测试中直接驱动。
  */
-import type { VariableContext } from '../adapters/types.js';
 import { findMatchAtOffset, scanText, type ScanOptions } from '../core/scanner.js';
 import type { ColorMatch } from '../core/types.js';
-
-import { patchVariableMatches } from './variable-patch.js';
-
-/** 与 `advanced.variables.maxResolveDepth` 的默认值一致。 */
-const DEFAULT_MAX_RESOLVE_DEPTH = 20;
-
-/**
- * 变量解析的输入。
- *
- * 做成对象而不是裸 `VariableContext`: 补丁还需要 `maxResolveDepth`, 而它是解析层参数,
- * 不该塞进 `ScanOptions` 污染核心扫描选项。
- */
-export interface VariableResolutionInput {
-  readonly context: VariableContext;
-  readonly maxResolveDepth: number;
-}
 
 export interface IndexKeyParts {
   readonly documentVersion: number;
@@ -70,22 +55,14 @@ export class DocumentColorIndex {
   /**
    * 按需扫描。已是最新时直接返回缓存, 不重复扫描。
    */
-  ensure(
-    text: string,
-    parts: IndexKeyParts,
-    options: ScanOptions,
-    variables?: VariableResolutionInput,
-  ): IndexSnapshot {
+  ensure(text: string, parts: IndexKeyParts, options: ScanOptions): IndexSnapshot {
     if (this.isFresh(parts)) return this.snapshot as IndexSnapshot;
+    // 变量在扫描期就地解析 (`options.resolveVariable`), 因此这里没有第二阶段补丁。
     const result = scanText(text, options);
     this.scanCount += 1;
     const snapshot: IndexSnapshot = {
       ...parts,
-      // 变量引用在这里被解析或整条移除; 不传上下文即全部移除 (静默)。
-      matches: patchVariableMatches(result.matches, variables?.context, {
-        parseOptions: options,
-        maxResolveDepth: variables?.maxResolveDepth ?? DEFAULT_MAX_RESOLVE_DEPTH,
-      }),
+      matches: result.matches,
       truncated: result.truncated,
     };
     this.snapshot = snapshot;

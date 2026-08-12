@@ -30,6 +30,12 @@ const LANGUAGE_BY_EXTENSION: ReadonlyMap<string, string> = new Map([
 /** 单文件长度上限 (UTF-16 码元); 超过即跳过, 避免一个巨型产物拖垮索引。 */
 export const DEFAULT_MAX_FILE_LENGTH = 512 * 1024;
 
+/** 默认发现范围; 方案 U5 会把它做成 `advanced.variables.lookupGlobs`。 */
+export const DEFAULT_LOOKUP_GLOBS: readonly string[] = ['**/*.{css,scss,sass,less}'];
+
+/** 默认索引文件数上限; 方案 U5 会把它做成 `advanced.variables.maxIndexedFiles`。 */
+export const DEFAULT_MAX_INDEXED_FILES = 2000;
+
 /** `@import` 补充路径的展开轮数上限; 每轮把上一轮新发现文件的导入再解析一次。 */
 const MAX_IMPORT_ROUNDS = 8;
 

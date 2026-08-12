@@ -10,13 +10,13 @@ import * as vscode from 'vscode';
 
 import type { FileReader, StyleFileEvent, StyleFileSource } from './types.js';
 
-const ALLOWED_EXTENSIONS: readonly string[] = Object.freeze([
-  '.css',
-  '.scss',
-  '.sass',
-  '.less',
-  '.styl',
-]);
+/**
+ * 允许读取的样式扩展名。
+ *
+ * 不含 `.styl`: Stylus 不解析变量 (方案 D3), 因此没有可索引的定义 —— `.styl` 文件里的
+ * 颜色本身照旧识别, 那走的是扫描而不是这里的文件读取。
+ */
+const ALLOWED_EXTENSIONS: readonly string[] = Object.freeze(['.css', '.scss', '.sass', '.less']);
 
 function hasAllowedExtension(path: string): boolean {
   const lower = path.toLowerCase();

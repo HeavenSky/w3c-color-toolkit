@@ -6,7 +6,12 @@
  */
 import * as vscode from 'vscode';
 
-import type { FileReader } from './adapters/types.js';
+import type { StyleFileSource } from './adapters/types.js';
+import {
+  DEFAULT_LOOKUP_GLOBS,
+  DEFAULT_MAX_INDEXED_FILES,
+  WorkspaceVariableIndex,
+} from './adapters/workspace-variable-index.js';
 import { registerCommands, syncHdrContextKey } from './commands/register.js';
 import { invalidPatterns } from './configuration/disable-filter.js';
 import { disableRulesOf, isDocumentHidden } from './configuration/disable-gate.js';
@@ -17,7 +22,7 @@ import { ConvertController } from './features/convert/convert-controller.js';
 import { HighlightController } from './features/highlight/highlight-controller.js';
 import { ColorHoverProvider } from './features/info/hover-provider.js';
 import { ColorSwatchProvider } from './features/picker/color-provider.js';
-import { isCssLikeLanguage } from './core/scanner.js';
+import { isVariableLanguage } from './core/scanner.js';
 import { ChangeCoalescer } from './index/change-coalescer.js';
 import { DocumentIndexManager } from './index/document-index-manager.js';
 import { Logger } from './logging/output-channel.js';
@@ -26,8 +31,8 @@ import { Logger } from './logging/output-channel.js';
 const VARIABLE_CONTEXT_KEY = 'variable-context';
 
 export interface ActivateOptions {
-  /** 基于 `workspace.fs` 的实现由 `extension.ts` 注入; 测试可替换。 */
-  readonly createFileReader: () => FileReader;
+  /** 基于 `workspace.fs` 与 `findFiles` 的实现由 `extension.ts` 注入; 测试可替换。 */
+  readonly createStyleFileSource: () => StyleFileSource;
   readonly hostKind: 'node' | 'web';
 }
 
@@ -51,14 +56,24 @@ export function activateShared(
   logger.info(`activated on ${options.hostKind} extension host`);
   reportAdvancedIssues(initial, logger);
 
-  // FileReader 以注入方式传入: 它是唯一与宿主能力相关的接缝, 保留注入点让单元测试
-  // 可以替换成内存实现。变量解析的跨文件读取全部经由它。
-  const fileReader = options.createFileReader();
+  // 样式文件来源以注入方式传入: 它是唯一与宿主能力相关的接缝 (glob 发现、读取、监听),
+  // 保留注入点让单元测试可以替换成内存实现。
+  const variableIndex = new WorkspaceVariableIndex(options.createStyleFileSource(), {
+    lookupGlobs: DEFAULT_LOOKUP_GLOBS,
+    maxIndexedFiles: DEFAULT_MAX_INDEXED_FILES,
+  });
+  context.subscriptions.push({ dispose: () => variableIndex.dispose() });
 
-  const manager = new DocumentIndexManager((document) => configFor(document), logger, fileReader);
+  // 变量查表是同步的: 扫描期直接问符号表, 因此没有"先占位再异步补丁"的第二阶段。
+  const manager = new DocumentIndexManager(
+    (document) => configFor(document),
+    logger,
+    () => variableIndex.symbols(),
+  );
   context.subscriptions.push(manager);
 
-  // 变量文件被编辑时要让引用它的其他文档也重扫; 单独一个合并窗口, 不借用管理器的私有实例。
+  // 符号表变化 (建索引完成、令牌文件被改) 时让全部文档失效; 单独一个合并窗口,
+  // 避免一次批量文件事件触发多轮重扫。
   const variableContextCoalescer = new ChangeCoalescer();
   context.subscriptions.push(variableContextCoalescer);
 
@@ -108,16 +123,14 @@ export function activateShared(
         return;
       }
       manager.scheduleRefresh(event.document);
-      // 被编辑的可能是别的文件正在引用的变量文件。这里只处理已打开的文件:
-      // 外部改动 (切分支等) 由"重扫当前文档"与"清除索引缓存"两个命令兜底。
-      if (isCssLikeLanguage(event.document.languageId)) {
-        // 必须合并: 直接在事件里重扫全部可见文档等于每次按键重扫一遍,
-        // 而 500KB 文件的一次扫描 p95 已达 7 秒。
-        variableContextCoalescer.schedule(VARIABLE_CONTEXT_KEY, () => {
-          manager.bumpVariableContext();
-          manager.invalidateAll();
-          highlight.renderVisible();
-        });
+      // 被编辑的可能是别的文件正在引用的令牌文件。用编辑器里的内容直接更新索引,
+      // 因此定义不必等保存就生效; 外部改动 (切分支等) 由 watcher 与两个维护命令兜底。
+      if (isVariableLanguage(event.document.languageId)) {
+        variableIndex.upsert(
+          event.document.uri.toString(),
+          event.document.languageId,
+          event.document.getText(),
+        );
       }
     }),
     vscode.workspace.onDidOpenTextDocument((document) => {
@@ -150,6 +163,42 @@ export function activateShared(
   );
 
   highlight.renderVisible();
+
+  // 索引变化 → 全量失效并重渲染。合并窗口是必须的: 一次 build 会触发多次通知,
+  // 而 500KB 文件的一次扫描 p95 已达 7 秒。
+  variableIndex.onDidChange(() => {
+    variableContextCoalescer.schedule(VARIABLE_CONTEXT_KEY, () => {
+      manager.bumpVariableContext();
+      manager.invalidateAll();
+      highlight.renderVisible();
+    });
+  });
+  context.subscriptions.push({ dispose: variableIndex.startWatching() });
+
+  // 建索引不阻塞激活: 就绪后靠上面的通知触发一次重扫。
+  void variableIndex
+    .build()
+    .then(() => {
+      const stats = variableIndex.stats;
+      logger.info(
+        `variable index ready: ${stats.files} files, ${stats.definitions} definitions`,
+      );
+      if (stats.truncated) {
+        logger.warnOnce(
+          'variable-index-truncated',
+          `variable index stopped at ${DEFAULT_MAX_INDEXED_FILES} files; some definitions are not indexed`,
+        );
+      }
+      for (const uri of stats.failed) {
+        logger.warnOnce(`variable-index-parse-failed:${uri}`, `stylesheet could not be parsed: ${uri}`);
+      }
+      for (const uri of stats.skipped) {
+        logger.warnOnce(`variable-index-skipped:${uri}`, `stylesheet is too large to index: ${uri}`);
+      }
+    })
+    .catch((error: unknown) => {
+      logger.warnOnce('variable-index-failed', `variable index build failed: ${String(error)}`);
+    });
 
   void maybeNotifyCoexistence(context.workspaceState, initial.coexistenceNotify);
 }

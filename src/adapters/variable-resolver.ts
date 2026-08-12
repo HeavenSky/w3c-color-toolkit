@@ -16,6 +16,8 @@
  * (`rgb(var(--c) / .4)`) 与变量自身的值 (`--a: var(--b)`) 是同一个替换动作,
  * 由 core 的值层统一负责 (方案 U3-1), 避免两层各写一遍递归与循环检测。
  */
+import type { VariableValue } from '../core/types.js';
+
 import type {
   LookupSite,
   VariableCandidate,
@@ -118,4 +120,27 @@ export function lookupVariable(
 /** 空符号表; 索引尚未就绪时使用。 */
 export function emptySymbols(version = 0): VariableSymbols {
   return { definitions: new Map(), colorProfileFallbacks: new Map(), version };
+}
+
+/**
+ * 查表结果 → core 的取值形状。
+ *
+ * core 不反向依赖 adapters, 因此两边各有一个等价类型, 由这里做一次映射;
+ * 映射只丢掉 `sourceUri` 这类 core 用不到的信息。
+ */
+export function toVariableValue(lookup: VariableLookup): VariableValue {
+  switch (lookup.kind) {
+    case 'resolved':
+      return { kind: 'resolved', rawValue: lookup.rawValue };
+    case 'ambiguous':
+      return {
+        kind: 'ambiguous',
+        candidates: lookup.candidates.map((candidate) => ({
+          rawValue: candidate.rawValue,
+          origin: candidate.origin,
+        })),
+      };
+    default:
+      return { kind: 'unresolved' };
+  }
 }

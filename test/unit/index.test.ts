@@ -2,8 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { ChangeCoalescer } from '../../src/index/change-coalescer.js';
 import { DocumentColorIndex } from '../../src/index/document-color-index.js';
-import type { VariableContext } from '../../src/adapters/types.js';
+import { collectStylesheet } from '../../src/adapters/variable-definitions.js';
+import { lookupVariable, toVariableValue } from '../../src/adapters/variable-resolver.js';
+import type { VariableDefinition, VariableSymbols } from '../../src/adapters/types.js';
 import type { ScanOptions } from '../../src/core/scanner.js';
+import type { ResolveVariable } from '../../src/core/types.js';
 
 import { DEFAULT_PARSE_OPTIONS } from './helpers.js';
 
@@ -158,56 +161,62 @@ describe('ChangeCoalescer', () => {
   });
 });
 
+/** 把一段文本收集成符号表, 与索引层的组装方式一致。 */
+function symbolsOf(text: string, languageId: string, uri: string): VariableSymbols {
+  const definitions = new Map<string, VariableDefinition[]>();
+  for (const definition of collectStylesheet({ uri, languageId, getText: () => text }).definitions) {
+    const list = definitions.get(definition.name) ?? [];
+    list.push(definition);
+    definitions.set(definition.name, list);
+  }
+  return { definitions, colorProfileFallbacks: new Map(), version: 1 };
+}
+
+function resolverFor(text: string, languageId: string, uri: string): ResolveVariable {
+  const symbols = symbolsOf(text, languageId, uri);
+  return (name, atOffset) => toVariableValue(lookupVariable(name, { fromUri: uri, atOffset }, symbols));
+}
+
 describe('变量解析在索引层的接入', () => {
+  const URI = 'file:///a.scss';
   const VARS = '$brand: #ff8800; a { color: $brand; }';
   const SCSS: ScanOptions = { ...OPTIONS, cssLikeLanguage: true };
   const parts = { documentVersion: 1, configDigest: 'a', variableContextVersion: 0 };
 
-  function contextWith(name: string, rawValue: string): VariableContext {
-    return {
-      definitions: new Map([
-        [name, [{ name, kind: 'scss', rawValue, sourceUri: 'file:///a.scss', offset: 0 }]],
-      ]),
-      colorProfileFallbacks: new Map(),
-      version: 0,
-      issues: [],
-    };
-  }
-
-  it('不传变量上下文时变量引用被静默移除', () => {
+  it('没有取值回调时变量引用被静默移除', () => {
     const index = new DocumentColorIndex();
     const snapshot = index.ensure(VARS, parts, SCSS);
     // 只剩定义处那个 hex; `color: $brand` 的引用不产生任何输出。
     expect(snapshot.matches.map((match) => match.raw)).toEqual(['#ff8800']);
   });
 
-  it('传入上下文后变量引用被解析并标记只读', () => {
+  it('接上回调后变量引用在扫描期就地解析并标记只读', () => {
     const index = new DocumentColorIndex();
-    const snapshot = index.ensure(VARS, parts, SCSS, {
-      context: contextWith('$brand', '#ff8800'),
-      maxResolveDepth: 20,
+    const snapshot = index.ensure(VARS, parts, {
+      ...SCSS,
+      resolveVariable: resolverFor(VARS, 'scss', URI),
     });
     const variable = snapshot.matches.find((match) => match.raw === '$brand');
     expect(variable?.resolution).toBe('resolved');
     expect(variable?.resolvedVia).toEqual({ variable: '$brand' });
   });
 
-  it('解析不出来的变量仍被移除', () => {
+  it('查不到定义的变量仍被移除', () => {
     const index = new DocumentColorIndex();
-    const snapshot = index.ensure(VARS, parts, SCSS, {
-      context: contextWith('$other', '#ff8800'),
-      maxResolveDepth: 20,
+    const snapshot = index.ensure(VARS, parts, {
+      ...SCSS,
+      resolveVariable: resolverFor('$other: #ff8800;', 'scss', URI),
     });
     expect(snapshot.matches.map((match) => match.raw)).toEqual(['#ff8800']);
   });
 
-  it('异步补丁的结果经 accept 写回, 过期版本被拒绝', () => {
+  it('异步结果经 accept 写回, 过期版本被拒绝', () => {
+    // 变量已改为同步解析, 但 accept 仍是索引的通用写回闸门 (命令与后台刷新会用到)。
     const index = new DocumentColorIndex();
     const snapshot = index.ensure(VARS, { ...parts, documentVersion: 5 }, SCSS);
-    const patched = { ...snapshot, matches: [] };
-    // 文档已经改到版本 6, 补丁基于版本 5 的结果, 但 accept 只挡更旧的版本。
-    expect(index.accept({ ...patched, documentVersion: 4 })).toBe(false);
-    expect(index.accept(patched)).toBe(true);
+    const replaced = { ...snapshot, matches: [] };
+    expect(index.accept({ ...replaced, documentVersion: 4 })).toBe(false);
+    expect(index.accept(replaced)).toBe(true);
   });
 });
 
@@ -217,30 +226,11 @@ describe('嵌套 match 的查找', () => {
   const TEXT_WITH_NESTED = 'a { color: var(--x, #123456); }';
 
   /** `--x` 有唯一 :root 定义, 外层因此解析成功并保留其 nested。 */
-  const ROOT_CONTEXT: VariableContext = {
-    definitions: new Map([
-      [
-        '--x',
-        [
-          {
-            name: '--x',
-            kind: 'css-custom-property' as const,
-            rawValue: '#ff8800',
-            sourceUri: 'file:///a.css',
-            offset: 0,
-            selector: ':root',
-          },
-        ],
-      ],
-    ]),
-    colorProfileFallbacks: new Map(),
-    version: 0,
-    issues: [],
-  };
+  const RESOLVE = resolverFor(':root { --x: #ff8800 }', 'css', 'file:///a.css');
 
   function indexed(): DocumentColorIndex {
     const index = new DocumentColorIndex();
-    index.ensure(TEXT_WITH_NESTED, parts, SCSS, { context: ROOT_CONTEXT, maxResolveDepth: 20 });
+    index.ensure(TEXT_WITH_NESTED, parts, { ...SCSS, resolveVariable: RESOLVE });
     return index;
   }
 

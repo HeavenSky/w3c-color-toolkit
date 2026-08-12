@@ -29,13 +29,15 @@ import {
   lookupSystemColor,
   TRANSPARENT_KEYWORD,
 } from './keywords.js';
+import { classifyCssVariable, classifyPreprocessorVariable } from './contextual.js';
 import {
+  parseColorText,
   parseComponentValueColor,
-  parseVariableFunctionReference,
-  parseVariableReference,
+  type ParsedColor,
   type ParseOptions,
 } from './parser.js';
-import type { ColorMatch, ColorRange } from './types.js';
+import type { ColorMatch, ColorRange, ResolveVariable } from './types.js';
+import { substituteVariables } from './variable-substitution.js';
 
 /** 颜色名的识别范围。 */
 export type MatchWords = 'off' | 'css-like' | 'all';
@@ -48,6 +50,26 @@ export interface ScanOptions extends ParseOptions {
   readonly scanStrings: boolean;
   /** 超过该数量后停止扫描, 由调用方决定如何提示。 */
   readonly maxMatches: number;
+  /**
+   * 是否识别变量引用 (`var()`、`$name`、`@name`)。
+   *
+   * 与 `cssLikeLanguage` 分开: 后者决定的是"裸颜色名在哪些语言里算颜色", 两件事共用一个
+   * 开关会让 `tailwindcss` 这类语言连变量都识别不了。缺省时回落到 `cssLikeLanguage`。
+   */
+  readonly variableSyntax?: boolean;
+  /**
+   * 变量取值回调; 由 adapters 侧的符号索引注入。
+   *
+   * 不提供时变量引用一律解析不出来, 于是不产出 match (静默) —— 与关闭变量解析等效。
+   */
+  readonly resolveVariable?: ResolveVariable;
+  /** `var()` 代换的轮数上限; 对应 `advanced.variables.maxResolveDepth`。 */
+  readonly maxResolveDepth?: number;
+}
+
+/** 是否识别变量引用。 */
+function variablesEnabled(options: ScanOptions): boolean {
+  return options.variableSyntax ?? options.cssLikeLanguage;
 }
 
 export interface ScanResult {
@@ -67,6 +89,27 @@ const CSS_LIKE_LANGUAGES: ReadonlySet<string> = new Set([
 
 export function isCssLikeLanguage(languageId: string): boolean {
   return CSS_LIKE_LANGUAGES.has(languageId);
+}
+
+/**
+ * 识别变量引用的语言。
+ *
+ * 与 `CSS_LIKE_LANGUAGES` 分开的两处差异都是刻意的:
+ * - 含 `tailwindcss` —— Tailwind CSS IntelliSense 注册了这个语言, 用它打开的 CSS 文件
+ *   若不在表内会连 `var()` 都识别不了;
+ * - 不含 `stylus` —— Stylus 不解析变量 (方案 D3), 它的颜色识别不受影响。
+ */
+const VARIABLE_LANGUAGES: ReadonlySet<string> = new Set([
+  'css',
+  'scss',
+  'sass',
+  'less',
+  'postcss',
+  'tailwindcss',
+]);
+
+export function isVariableLanguage(languageId: string): boolean {
+  return VARIABLE_LANGUAGES.has(languageId);
 }
 
 /** 由裸标识符构成的语法, 需要额外做属性名位置检查。 */
@@ -122,12 +165,12 @@ interface Candidate {
   /** 变量引用候选; 值为含前缀的变量名, 例如 `--brand` / `$brand` / `@brand`。 */
   readonly variable?: string;
   /**
-   * 实参里含 `var()` 的颜色函数; 值为其中引用到的自定义属性名。
+   * 实参里含 `var()` 的颜色函数。
    *
    * 与 `variable` 的区别: 那个的解析输入是"一个变量名", 这个是"整段原文本" ——
-   * `rgb(var(--c) / 0.4)` 里 `--c` 只是函数的一个片段, 必须先文本代换再解析。
+   * `rgb(var(--c) / 0.4)` 里 `--c` 只是函数的一个片段, 必须先代换再解析。
    */
-  readonly variableFunction?: readonly string[];
+  readonly hasVariables?: boolean;
 }
 
 /**
@@ -223,6 +266,109 @@ function isValidHexLength(value: string): boolean {
   );
 }
 
+/** 变量引用自身的 syntax; 它的源语法确实是"一个引用", 因此不取代换后的语法。 */
+function variableSyntaxOf(name: string): string {
+  if (name.startsWith('--')) return 'css-variable';
+  if (name.startsWith('$')) return 'scss-variable';
+  return 'less-variable';
+}
+
+interface Evaluated {
+  readonly parsed: ParsedColor;
+  /** 由变量解析而来 → 只读; 值为被依赖的变量名。 */
+  readonly resolvedVia?: { readonly variable: string };
+}
+
+/**
+ * 取值不唯一时的 contextual 形态。
+ *
+ * 候选此处先不落进 `branches` —— 把候选映射成分支 (并逐个解析成颜色) 是 Hover 展示的
+ * 职责, 见方案 U4。这里只保证"有定义但不唯一"不会被静默丢掉。
+ */
+function contextualVariable(syntax: string, dependsOn: string): ParsedColor {
+  const isPreprocessor = dependsOn.startsWith('$') || dependsOn.startsWith('@');
+  const contextual = isPreprocessor
+    ? classifyPreprocessorVariable(dependsOn)
+    : classifyCssVariable(dependsOn);
+  return {
+    resolution: 'contextual',
+    syntax,
+    specLevel: 'color-4',
+    experimental: false,
+    contextual,
+    diagnostics: [],
+  };
+}
+
+/** 代换后的文本必须真的是一个颜色; 否则该候选不产出 match。 */
+function colorOfText(css: string, options: ScanOptions): ParsedColor | undefined {
+  const parsed = parseColorText(css, options);
+  return parsed?.resolved ? parsed : undefined;
+}
+
+/** `var(--brand)` / `$brand` / `@brand` 这类整体引用。 */
+function evaluateVariable(
+  name: string,
+  candidate: Candidate,
+  raw: string,
+  options: ScanOptions,
+  resolve: ResolveVariable,
+): Evaluated | undefined {
+  const syntax = variableSyntaxOf(name);
+
+  // `var()` 引用走整段代换而不是"查一次表": 它可能带 fallback (取不到值时 fallback 才是
+  // CSS 语义下真正生效的那个), 值本身也可能还含 var()。两件事都由代换统一处理。
+  if (name.startsWith('--')) {
+    const substituted = substituteVariables(raw, resolve, candidate.range.start, options.maxResolveDepth);
+    if (substituted.text === undefined) {
+      return substituted.ambiguous ? { parsed: contextualVariable(syntax, name) } : undefined;
+    }
+    const color = colorOfText(substituted.text, options);
+    if (!color) return undefined;
+    // syntax 保持引用形态, 其余取解析结果。
+    return { parsed: { ...color, syntax }, resolvedVia: { variable: name } };
+  }
+
+  // 预处理器变量没有 fallback 语法, 直接查表。
+  const value = resolve(name, candidate.range.start);
+  if (value.kind === 'unresolved') return undefined;
+  if (value.kind === 'ambiguous') return { parsed: contextualVariable(syntax, name) };
+  const color = colorOfText(value.rawValue, options);
+  if (!color) return undefined;
+  return { parsed: { ...color, syntax }, resolvedVia: { variable: name } };
+}
+
+/** `rgb(var(--c) / 0.4)` 这类"变量只是函数一个片段"的写法。 */
+function evaluateVariableFunction(
+  candidate: Candidate,
+  raw: string,
+  options: ScanOptions,
+  resolve: ResolveVariable,
+): Evaluated | undefined {
+  const substituted = substituteVariables(raw, resolve, candidate.range.start, options.maxResolveDepth);
+  const syntax = (candidate.node && functionName(candidate.node)) || 'css-variable';
+  if (substituted.text === undefined) {
+    if (!substituted.ambiguous) return undefined;
+    return { parsed: contextualVariable(syntax, substituted.names.join(', ')) };
+  }
+  const color = colorOfText(substituted.text, options);
+  if (!color) return undefined;
+  return { parsed: color, resolvedVia: { variable: substituted.names.join(', ') } };
+}
+
+/** 求值一个候选; 返回 undefined 表示不产出 match (静默)。 */
+function evaluateCandidate(candidate: Candidate, raw: string, options: ScanOptions): Evaluated | undefined {
+  const resolve = options.resolveVariable;
+  if (candidate.variable !== undefined) {
+    // 没有取值回调时变量一律解析不出来, 与关闭变量解析等效。
+    return resolve ? evaluateVariable(candidate.variable, candidate, raw, options, resolve) : undefined;
+  }
+  if (candidate.hasVariables && resolve) {
+    return evaluateVariableFunction(candidate, raw, options, resolve);
+  }
+  return { parsed: parseComponentValueColor(candidate.node as ComponentValue, options) };
+}
+
 /** 收集候选节点, 只走最外层; 外层解析失败时再下降一层。 */
 function collectCandidates(
   nodes: readonly ComponentValue[],
@@ -239,7 +385,7 @@ function collectCandidates(
     if (!range) continue;
 
     // `$brand`: delim + ident 两个 token, 合并成一个候选。
-    if (options.cssLikeLanguage && isDollarDelim(node)) {
+    if (variablesEnabled(options) && isDollarDelim(node)) {
       const next = nodes[index + 1];
       const name = next ? identOfNode(next) : undefined;
       const nextRange = next ? nodeRange(next, offset) : undefined;
@@ -251,7 +397,7 @@ function collectCandidates(
     }
 
     // `@brand`: 单个 at-keyword, 但要挡住 at-rule。
-    if (options.cssLikeLanguage) {
+    if (variablesEnabled(options)) {
       const atKeyword = atKeywordOfNode(node);
       if (atKeyword !== undefined) {
         if (!AT_RULE_KEYWORDS.has(atKeyword.toLowerCase())) {
@@ -270,7 +416,7 @@ function collectCandidates(
       // `var(--brand)`: 整体成为变量候选, 但**继续下降** —— fallback 与嵌套的 var()
       // 各自还要有色块。
       // 刻意不加进 functionWhitelist —— 那个白名单的语义是"颜色函数", var 不是。
-      if (options.cssLikeLanguage && name === 'var') {
+      if (variablesEnabled(options) && name === 'var') {
         const customProperty = customPropertyOfVarNode(node);
         if (customProperty) out.push({ range, variable: customProperty });
         // fallback 里的实色始终按全量收集, 这样 `rgb(var(--a, #fff) / .4)` 的 `#fff`
@@ -285,15 +431,15 @@ function collectCandidates(
           continue;
         }
         // 实参含 `var()` 时整个函数无法静态求值 —— CSSTools 判 invalid, 主循环会把它整条丢掉,
-        // 而展开变量之后它是可解析的。因此产出一个待展开的占位, 并继续下降,
+        // 而代换变量之后它是可解析的。因此标记为"含变量", 求值时先代换; 同时继续下降,
         // 让内层引用各自也有色块 (与上面 `var()` 分支的取舍一致)。
         const inner: Candidate[] = [];
         collectCandidates(node.value, offset, options, inner, inDynamicRangeLimit, whitelist, 'variables');
-        const references = inner
-          .map((candidate) => candidate.variable)
-          .filter((variable): variable is string => variable !== undefined && variable.startsWith('--'));
+        const hasVariables = inner.some(
+          (candidate) => candidate.variable !== undefined && candidate.variable.startsWith('--'),
+        );
         // 先压外层: 命中 `maxMatches` 时该保留的是范围更大的那个。
-        out.push(references.length > 0 ? { node, range, variableFunction: references } : { node, range });
+        out.push(hasVariables ? { node, range, hasVariables } : { node, range });
         out.push(...inner);
         continue;
       }
@@ -433,11 +579,12 @@ export function scanText(text: string, options: ScanOptions): ScanResult {
         break;
       }
       const raw = text.slice(candidate.range.start, candidate.range.end);
-      const parsed = candidate.variableFunction
-        ? parseVariableFunctionReference(candidate.variableFunction)
-        : candidate.variable
-          ? parseVariableReference(candidate.variable)
-          : parseComponentValueColor(candidate.node as ComponentValue, options);
+      // Less 的 `@brand: …` 定义位置与引用位置同型; 先挡掉再求值, 省掉一次无用解析。
+      if (candidate.variable?.startsWith('@') && isPropertyPosition(text, candidate.range)) continue;
+
+      const evaluated = evaluateCandidate(candidate, raw, options);
+      if (!evaluated) continue;
+      const parsed = evaluated.parsed;
 
       // hex 与颜色名需要标识符边界检查。
       const needsBoundary = parsed.syntax === 'hex' || parsed.syntax === 'named-color';
@@ -462,6 +609,7 @@ export function scanText(text: string, options: ScanOptions): ScanResult {
         resolved: parsed.resolved,
         contextual: parsed.contextual,
         diagnostics: parsed.diagnostics,
+        ...(evaluated.resolvedVia ? { resolvedVia: evaluated.resolvedVia } : {}),
       });
     }
     if (truncated) break;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { findMatchAtOffset, scanText, type ScanOptions } from '../../src/core/scanner.js';
-import type { ColorMatch } from '../../src/core/types.js';
+import type { ColorMatch, ResolveVariable } from '../../src/core/types.js';
 
 import { DEFAULT_PARSE_OPTIONS } from './helpers.js';
 
@@ -16,6 +16,29 @@ const BASE: ScanOptions = {
 
 function scan(text: string, overrides: Partial<ScanOptions> = {}): readonly ColorMatch[] {
   return scanText(text, { ...BASE, ...overrides }).matches;
+}
+
+/**
+ * 变量取值替身。
+ *
+ * 扫描器不认识符号表, 只认一个回调, 因此这里用最小替身覆盖三态。没有回调时变量引用
+ * 一律解析不出来 —— 那正是"关闭变量解析"与"非变量语言"的行为, 多数用例照旧不传。
+ */
+function resolver(values: Record<string, string> = {}, ambiguous: readonly string[] = []): ResolveVariable {
+  return (name) => {
+    const value = values[name];
+    if (value !== undefined) return { kind: 'resolved', rawValue: value };
+    if (ambiguous.includes(name)) {
+      return {
+        kind: 'ambiguous',
+        candidates: [
+          { rawValue: '#ffffff', origin: ':root' },
+          { rawValue: '#000000', origin: '@media (prefers-color-scheme: dark) › :root' },
+        ],
+      };
+    }
+    return { kind: 'unresolved' };
+  };
 }
 
 /** raw 必须与用 range 从原文切出来的文本完全相等 (方案 §7.2 约束)。 */
@@ -96,7 +119,7 @@ describe('嵌套与相邻', () => {
     // `var()` 是变量引用候选, 范围覆盖整个表达式; 内层 fallback 与它重叠且更短,
     // 去重时落选, 但不再丢弃 —— 挂到 `nested` 上供行内色块单独渲染。
     const text = 'a { color: var(--x, #123456); }';
-    const matches = scan(text);
+    const matches = scan(text, { resolveVariable: resolver({ '--x': '#ff8800' }) });
     expect(matches.map((match) => match.raw)).toEqual(['var(--x, #123456)']);
     expect(matches[0].syntax).toBe('css-variable');
     expect(matches[0].nested?.map((match) => match.raw)).toEqual(['#123456']);
@@ -177,6 +200,28 @@ describe('matchWords 与语言', () => {
   it('currentColor 与系统色不受 matchWords 影响', () => {
     expect(scan('a { color: currentColor; }', { matchWords: 'off' })).toHaveLength(1);
     expect(scan('a { color: Canvas; }', { matchWords: 'off' })).toHaveLength(1);
+  });
+});
+
+describe('变量识别范围与颜色识别范围分开', () => {
+  it('Stylus: 颜色照旧识别, 变量引用不识别', () => {
+    // `.styl` 文件的 languageId 属于 CSS 系 (颜色名照旧), 但不在变量语言表内。
+    const options = { cssLikeLanguage: true, variableSyntax: false } as const;
+    expect(scan('.a\n  color: #ff8800\n', options).map((m) => m.raw)).toEqual(['#ff8800']);
+    expect(scan('.a\n  color: red\n', options).map((m) => m.raw)).toEqual(['red']);
+    expect(
+      scan('$brand = #ff8800\n.a\n  color: $brand\n', options).map((m) => m.raw),
+    ).toEqual(['#ff8800']);
+  });
+
+  it('变量语言但不识别颜色名时, 变量仍然识别', () => {
+    // 两个开关互不影响: matchWords 关掉颜色名, 变量引用照旧。
+    const matches = scan('a { color: var(--brand); }', {
+      matchWords: 'off',
+      variableSyntax: true,
+      resolveVariable: resolver({ '--brand': '#ff8800' }),
+    });
+    expect(matches.map((m) => m.raw)).toEqual(['var(--brand)']);
   });
 });
 
@@ -269,23 +314,31 @@ describe('上下文与实验语法在扫描层的表现', () => {
 
 describe('变量引用', () => {
   it('三种写法各产出一个覆盖整个引用的 match', () => {
+    const resolveAll = resolver({ '--brand': '#ff8800', $brand: '#ff8800', '@brand': '#ff8800' });
     for (const [text, syntax, variable] of [
       ['a { color: var(--brand); }', 'css-variable', '--brand'],
       ['a { color: $brand; }', 'scss-variable', '$brand'],
       ['a { color: @brand; }', 'less-variable', '@brand'],
     ] as const) {
-      const matches = scan(text);
+      const matches = scan(text, { resolveVariable: resolveAll });
       expect(matches, text).toHaveLength(1);
+      // syntax 保持引用形态; 取值来自变量因此标记只读。
       expect(matches[0].syntax).toBe(syntax);
-      expect(matches[0].resolution).toBe('contextual');
-      expect(matches[0].contextual?.dependsOn).toBe(variable);
+      expect(matches[0].resolution).toBe('resolved');
+      expect(matches[0].resolvedVia).toEqual({ variable });
       assertRawMatchesRange(text, matches);
     }
   });
 
-  it('自定义属性与预处理器变量的 contextual reason 不同', () => {
-    expect(scan('a { color: var(--brand); }')[0].contextual?.reason).toBe('css-variable');
-    expect(scan('a { color: $brand; }')[0].contextual?.reason).toBe('preprocessor-variable');
+  it('取值不唯一时的 contextual reason 区分自定义属性与预处理器变量', () => {
+    const resolveAmbiguous = resolver({}, ['--brand', '$brand']);
+    const custom = scan('a { color: var(--brand); }', { resolveVariable: resolveAmbiguous })[0];
+    const preprocessor = scan('a { color: $brand; }', { resolveVariable: resolveAmbiguous })[0];
+    expect(custom.resolution).toBe('contextual');
+    expect(custom.contextual?.reason).toBe('css-variable');
+    expect(preprocessor.contextual?.reason).toBe('preprocessor-variable');
+    // 没有 assumed 值 → 高亮与色块都不会显示它们。
+    expect(custom.contextual?.assumed).toBeUndefined();
   });
 
   it('at-rule 不被误判为 Less 变量', () => {
@@ -302,7 +355,9 @@ describe('变量引用', () => {
 
   it('Less 变量的定义位置不算引用', () => {
     // `@brand: #ff8800;` 里的 `@brand` 在属性名位置, 只有末尾那个引用才算。
-    const matches = scan('@brand: #ff8800; a { color: @brand; }');
+    const matches = scan('@brand: #ff8800; a { color: @brand; }', {
+      resolveVariable: resolver({ '@brand': '#ff8800' }),
+    });
     expect(matches.filter((m) => m.syntax === 'less-variable')).toHaveLength(1);
     expect(matches.some((m) => m.syntax === 'hex')).toBe(true);
   });
@@ -314,7 +369,7 @@ describe('变量引用', () => {
 
   it('var() 的 fallback 不再单独成 match (整体范围更大, 去重时胜出)', () => {
     const text = 'a { color: var(--x, #ff8800); }';
-    const matches = scan(text);
+    const matches = scan(text, { resolveVariable: resolver({ '--x': '#0000ff' }) });
     expect(matches).toHaveLength(1);
     expect(matches[0].raw).toBe('var(--x, #ff8800)');
     assertRawMatchesRange(text, matches);
@@ -328,7 +383,8 @@ describe('变量引用', () => {
 describe('嵌套颜色', () => {
   it('var() 的 fallback 与嵌套 var() 全部进入 nested', () => {
     const text = 'a { color: var(--a, var(--b, #674), #def); }';
-    const matches = scan(text);
+    // `--a` 有值 → 外层解析成功; `--b` 没有值 → 内层靠 fallback `#674` 成立。
+    const matches = scan(text, { resolveVariable: resolver({ '--a': '#111111' }) });
     expect(matches).toHaveLength(1);
     expect(matches[0].raw).toBe('var(--a, var(--b, #674), #def)');
     expect(matches[0].nested?.map((match) => match.raw)).toEqual([
@@ -341,7 +397,9 @@ describe('嵌套颜色', () => {
   });
 
   it('nested 的起点各不相同', () => {
-    const matches = scan('a { color: var(--a, var(--b, #674), #def); }');
+    const matches = scan('a { color: var(--a, var(--b, #674), #def); }', {
+      resolveVariable: resolver({ '--a': '#111111' }),
+    });
     const starts = [matches[0], ...(matches[0].nested ?? [])].map((match) => match.range.start);
     expect(new Set(starts).size).toBe(starts.length);
   });
@@ -353,67 +411,91 @@ describe('嵌套颜色', () => {
   });
 
   it('没有嵌套时 nested 为 undefined 而不是空数组', () => {
-    expect(scan('a { color: var(--x); }')[0].nested).toBeUndefined();
+    expect(
+      scan('a { color: var(--x); }', { resolveVariable: resolver({ '--x': '#ff8800' }) })[0].nested,
+    ).toBeUndefined();
     expect(scan('a { color: #ff8800; }')[0].nested).toBeUndefined();
   });
 
   it('var() 首参不是自定义属性名时不产出变量 match', () => {
     // `var()` 的第一个实参必须是 <custom-property-name>; 这种写法本身非法,
     // 外层不成为候选, 内层仍各自被识别。
-    const matches = scan('a { color: var(var(--def, #674), #def); }');
+    const matches = scan('a { color: var(var(--def, #674), #def); }', {
+      resolveVariable: resolver(),
+    });
     expect(matches.map((match) => match.raw)).toEqual(['var(--def, #674)', '#def']);
   });
 });
 
 describe('颜色函数实参里的变量', () => {
-  it('rgb(var(--x) / a) 产出待展开的占位, 内层引用进 nested', () => {
-    // Tailwind 风格的通道令牌: `--x: 148 163 184` 不是一个完整颜色, 只有把文本代换回
-    // `rgb(148 163 184 / 0.4)` 才能解析, 因此这里只标出占位, 求值交给变量补丁。
+  it('通道令牌代换回 rgb() 后解析成真实颜色', () => {
+    // Tailwind 风格的令牌: `--text-tertiary: 148 163 184` 单独不是颜色, 只有代换回
+    // `rgb(148 163 184 / 0.4)` 才成立。因此这里的 syntax 取代换后的真实语法。
     const text = 'a { background-color: rgb(var(--text-tertiary) / 0.4); }';
-    const matches = scan(text);
+    const matches = scan(text, {
+      resolveVariable: resolver({ '--text-tertiary': '148 163 184' }),
+    });
     expect(matches).toHaveLength(1);
     expect(matches[0].raw).toBe('rgb(var(--text-tertiary) / 0.4)');
-    expect(matches[0].syntax).toBe('variable-function');
-    expect(matches[0].resolution).toBe('contextual');
-    expect(matches[0].contextual?.dependsOn).toBe('--text-tertiary');
-    expect(matches[0].nested?.map((match) => match.raw)).toEqual(['var(--text-tertiary)']);
-    expect(matches[0].nested?.[0].syntax).toBe('css-variable');
+    expect(matches[0].syntax).toBe('srgb');
+    expect(matches[0].resolution).toBe('resolved');
+    expect(matches[0].resolved?.alpha).toBeCloseTo(0.4, 4);
+    expect(matches[0].resolvedVia).toEqual({ variable: '--text-tertiary' });
+    // 内层 `var(--text-tertiary)` 自身取值是通道三元组而不是颜色, 因此不留空色块。
+    expect(matches[0].nested).toBeUndefined();
     assertRawMatchesRange(text, matches);
-    assertRawMatchesRange(text, matches[0].nested ?? []);
+  });
+
+  it('取值不唯一时整段保留为 contextual, 而不是被丢掉', () => {
+    const matches = scan('a { background-color: rgb(var(--t) / 0.4); }', {
+      resolveVariable: resolver({}, ['--t']),
+    });
+    expect(matches).toHaveLength(1);
+    expect(matches[0].resolution).toBe('contextual');
+    expect(matches[0].contextual?.dependsOn).toBe('--t');
+    expect(matches[0].resolved).toBeUndefined();
   });
 
   it('legacy 逗号写法与其他颜色函数同样生效', () => {
-    for (const text of [
-      'a { color: rgba(var(--x), 0.4); }',
-      'a { color: hsl(var(--h) 50% 50%); }',
-      'a { color: color-mix(in srgb, var(--a), red); }',
-    ]) {
-      const matches = scan(text);
+    const resolveAll = resolver({ '--x': '255, 0, 0', '--h': '210', '--a': '#ff8800' });
+    for (const [text, syntax] of [
+      ['a { color: rgba(var(--x), 0.4); }', 'legacy-rgb'],
+      ['a { color: hsl(var(--h) 50% 50%); }', 'hsl'],
+      ['a { color: color-mix(in srgb, var(--a), red); }', 'color-mix'],
+    ] as const) {
+      const matches = scan(text, { resolveVariable: resolveAll });
       expect(matches, text).toHaveLength(1);
-      expect(matches[0].syntax, text).toBe('variable-function');
+      expect(matches[0].resolution, text).toBe('resolved');
+      expect(matches[0].syntax, text).toBe(syntax);
     }
   });
 
-  it('多个引用全部记入 dependsOn', () => {
-    const matches = scan('a { color: rgb(var(--r) var(--g) var(--b)); }');
-    expect(matches[0].contextual?.dependsOn).toBe('--r, --g, --b');
-    expect(matches[0].nested?.map((match) => match.raw)).toEqual([
-      'var(--r)',
-      'var(--g)',
-      'var(--b)',
-    ]);
+  it('多个引用全部记入 resolvedVia', () => {
+    const matches = scan('a { color: rgb(var(--r) var(--g) var(--b)); }', {
+      resolveVariable: resolver({ '--r': '1', '--g': '2', '--b': '3' }),
+    });
+    expect(matches).toHaveLength(1);
+    expect(matches[0].resolution).toBe('resolved');
+    expect(matches[0].resolvedVia).toEqual({ variable: '--r, --g, --b' });
   });
 
-  it('实参里的 var() 带 fallback 时, fallback 的实色仍有自己的候选', () => {
-    const matches = scan('a { color: rgb(var(--x, 1 2 3) / 0.4); }');
-    expect(matches[0].syntax).toBe('variable-function');
-    expect(matches[0].nested?.map((match) => match.raw)).toEqual(['var(--x, 1 2 3)']);
+  it('实参里的 var() 取不到值时用 fallback', () => {
+    const matches = scan('a { color: rgb(var(--x, 1 2 3) / 0.4); }', { resolveVariable: resolver() });
+    expect(matches).toHaveLength(1);
+    expect(matches[0].syntax).toBe('srgb');
+    expect(matches[0].resolution).toBe('resolved');
   });
 
-  it('预处理器变量作为实参: 顶层不占位, 内层引用仍有候选', () => {
-    // `rgba($brand, .4)` 展开后是 SCSS 的 `rgba(color, alpha)` 重载而不是 CSS 语法,
-    // 因此顶层不产出占位; 但内层 `$brand` 该有自己的色块。
-    const matches = scan('a { color: rgba($brand, 0.4); }');
+  it('一个引用取不到值时整段不产出 match', () => {
+    expect(scan('a { color: rgb(var(--missing) / 0.4); }', { resolveVariable: resolver() })).toEqual([]);
+  });
+
+  it('预处理器变量作为实参: 顶层不解析, 内层引用仍有自己的 match', () => {
+    // `rgba($brand, .4)` 代换后是 SCSS 的 `rgba(颜色, alpha)` 重载而不是 CSS 语法,
+    // 因此顶层不解析; 但内层 `$brand` 该有自己的色块。
+    const matches = scan('a { color: rgba($brand, 0.4); }', {
+      resolveVariable: resolver({ $brand: '#ff8800' }),
+    });
     expect(matches.map((match) => match.raw)).toEqual(['$brand']);
     expect(matches[0].syntax).toBe('scss-variable');
   });

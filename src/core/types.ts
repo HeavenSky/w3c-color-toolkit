@@ -129,6 +129,32 @@ export interface ColorMatch {
   readonly nested?: readonly ColorMatch[];
 }
 
+/**
+ * 一个变量引用的取值结果。
+ *
+ * core 不反向依赖 adapters, 因此这里定义形状, 由 adapters 侧的符号索引把它的查表结果
+ * 映射成本类型注入进来 (`ScanOptions.resolveVariable`)。三态的中间那一项是关键:
+ * "有定义但取值取决于元素或环境"与"根本没有定义"必须区分, 前者要能把候选带出来。
+ */
+export type VariableValue =
+  | { readonly kind: 'resolved'; readonly rawValue: string }
+  | { readonly kind: 'ambiguous'; readonly candidates: readonly VariableCandidateValue[] }
+  | { readonly kind: 'unresolved' };
+
+export interface VariableCandidateValue {
+  readonly rawValue: string;
+  /** 该候选来自哪里, 例如 `:root`、`[data-theme="warm"]`、`@media (…) › :root`。 */
+  readonly origin: string;
+}
+
+/**
+ * 变量取值回调。
+ *
+ * `atOffset` 供预处理器变量的顺序求值使用 (`$a` 取引用位置之前的最后一个定义);
+ * 自定义属性与位置无关。
+ */
+export type ResolveVariable = (name: string, atOffset: number) => VariableValue;
+
 /** 色域映射策略。`css` 为规范兼容映射, `clip` 为逐通道裁剪。 */
 export type GamutMapping = 'css' | 'clip' | 'none';
 

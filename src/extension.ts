@@ -8,7 +8,7 @@
 import type * as vscode from 'vscode';
 
 import { activateShared, deactivateShared } from './activate.js';
-import { createWorkspaceFileReader } from './adapters/workspace-file-reader.js';
+import { createStyleFileSource } from './adapters/workspace-file-reader.js';
 
 /** 只用于日志: Web Extension Host 里没有 `process`。 */
 const hostKind: 'node' | 'web' =
@@ -16,7 +16,7 @@ const hostKind: 'node' | 'web' =
 
 export function activate(context: vscode.ExtensionContext): void {
   activateShared(context, {
-    createFileReader: createWorkspaceFileReader,
+    createStyleFileSource,
     hostKind,
   });
 }

@@ -7,9 +7,11 @@
  */
 import * as vscode from 'vscode';
 
-import type { CollectOptions, FileReader, TextDocumentLike, VariableContext } from '../adapters/types.js';
-import { collectLocalVariableContext, collectVariableContext } from '../adapters/variable-context.js';
-import { isCssLikeLanguage, type ScanOptions } from '../core/scanner.js';
+import { lookupVariable, toVariableValue } from '../adapters/variable-resolver.js';
+import type { VariableSymbols } from '../adapters/types.js';
+import { isVariableLanguage, isCssLikeLanguage, type ScanOptions } from '../core/scanner.js';
+import { parseColorText } from '../core/parser.js';
+import type { ResolvedColor, ResolveVariable } from '../core/types.js';
 import { hiddenReason } from '../configuration/disable-gate.js';
 import type { RuntimeConfiguration } from '../configuration/load.js';
 import { configurationDigest } from '../configuration/load.js';
@@ -17,35 +19,41 @@ import type { Logger } from '../logging/output-channel.js';
 
 import { ChangeCoalescer } from './change-coalescer.js';
 import { DocumentColorIndex, type IndexSnapshot } from './document-color-index.js';
-import { isVariableMatch, patchVariableMatches } from './variable-patch.js';
 
 export const MAX_CACHED_HIDDEN_DOCUMENTS = 20;
-
-/** 变量上下文缓存的文档数上限; 与隐藏文档索引上限同量级。 */
-export const MAX_CACHED_VARIABLE_CONTEXTS = 50;
 
 export interface IndexUpdate {
   readonly document: vscode.TextDocument;
   readonly snapshot: IndexSnapshot;
 }
 
+export interface VariableAccess {
+  /** 变量取值回调; 缺省表示该文档不解析变量。 */
+  readonly resolveVariable?: ResolveVariable;
+  /** `@color-profile` 名称 → fallback 颜色。 */
+  readonly colorProfileFallbacks?: ReadonlyMap<string, ResolvedColor>;
+}
+
 export function scanOptionsFor(
   config: RuntimeConfiguration,
   languageId: string,
-  variableContext?: VariableContext,
+  variables: VariableAccess = {},
 ): ScanOptions {
   return {
     cssColor6: config.cssColor6,
     cssColorHdr: config.cssColorHdr,
     contextualPreview: config.contextualPreview,
     hdrAssumedHeadroom: config.hdrAssumedHeadroom,
-    // `@color-profile` 的 fallback 由变量收集顺带产出, 接上即可让自定义色彩空间可预览。
-    colorProfileFallbacks: variableContext?.colorProfileFallbacks,
+    // `@color-profile` 的 fallback 由变量索引顺带产出, 接上即可让自定义色彩空间可预览。
+    colorProfileFallbacks: variables.colorProfileFallbacks,
     matchWords: config.matchWords,
     cssLikeLanguage: isCssLikeLanguage(languageId),
     scanComments: config.scanComments,
     scanStrings: config.scanStrings,
     maxMatches: config.maxMatchesPerDocument,
+    variableSyntax: config.variablesResolve && isVariableLanguage(languageId),
+    resolveVariable: config.variablesResolve ? variables.resolveVariable : undefined,
+    maxResolveDepth: config.maxResolveDepth,
   };
 }
 
@@ -56,25 +64,25 @@ export class DocumentIndexManager implements vscode.Disposable {
   private readonly coalescer = new ChangeCoalescer();
   private readonly emitter = new vscode.EventEmitter<IndexUpdate>();
   private variableContextVersion = 0;
-  /** 含导入的完整变量上下文, 按 uri 缓存并携带文档版本。 */
-  private readonly contextCache = new Map<
-    string,
-    { readonly version: number; readonly context: VariableContext }
-  >();
-  /** 进行中的收集; 防止同一文档并发发起多轮跨文件读取。 */
-  private readonly pendingContexts = new Map<string, Promise<VariableContext>>();
+  /** `@color-profile` fallback 的解析缓存, 按符号表版本失效。 */
+  private profileCache: { readonly version: number; readonly map: ReadonlyMap<string, ResolvedColor> } | undefined;
 
   readonly onDidUpdate = this.emitter.event;
 
+  /**
+   * `getSymbols` 返回工作区变量符号表; 查询是同步的, 因此扫描一次即得最终结果。
+   * 索引尚未就绪时返回空表即可 —— 就绪后由 `bumpVariableContext()` 触发重扫。
+   */
   constructor(
     private readonly getConfig: (document: vscode.TextDocument) => RuntimeConfiguration,
     private readonly logger: Logger,
-    private readonly fileReader: FileReader,
+    private readonly getSymbols: () => VariableSymbols,
   ) {}
 
-  /** 变量上下文变化 (例如导入的变量文件被修改) 时提升版本以整体失效。 */
+  /** 变量符号表变化 (例如令牌文件被修改) 时提升版本以整体失效。 */
   bumpVariableContext(): void {
     this.variableContextVersion += 1;
+    this.profileCache = undefined;
   }
 
   private touch(key: string): void {
@@ -129,8 +137,6 @@ export class DocumentIndexManager implements vscode.Disposable {
     }
 
     const index = this.indexFor(document);
-    // 先用本文档的定义解析一遍 (同步); 跨文件的定义由异步补丁补上。
-    const localContext = this.localContextFor(document, config);
     const snapshot = index.ensure(
       document.getText(),
       {
@@ -138,8 +144,7 @@ export class DocumentIndexManager implements vscode.Disposable {
         configDigest: configurationDigest(config),
         variableContextVersion: this.variableContextVersion,
       },
-      scanOptionsFor(config, document.languageId, localContext),
-      localContext && { context: localContext, maxResolveDepth: config.maxResolveDepth },
+      scanOptionsFor(config, document.languageId, this.variableAccessFor(document)),
     );
 
     if (snapshot.truncated) {
@@ -148,128 +153,38 @@ export class DocumentIndexManager implements vscode.Disposable {
         `document has more than ${config.maxMatchesPerDocument} colors; highlighting truncated`,
       );
     }
-
-    // 同步这一遍解决不了跨文件定义; 还有变量没解析出来时才去读导入。
-    if (localContext && snapshot.matches.some((match) => isVariableMatch(match))) {
-      this.schedulePatch(document, config);
-    }
     return snapshot;
   }
 
   /**
-   * 写入上下文缓存, 每个 uri 只保留一条 (新版本覆盖旧版本)。
+   * 该文档的变量取值入口。
    *
-   * 先删后插使已存在的 uri 移到插入顺序末尾, 超出上限时淘汰的才是真正最旧的那一条。
-   * 提供器没有文档关闭事件可挂, 只能靠上限兜住增长。
+   * 回调闭住 `fromUri`: 预处理器变量是顺序求值的, 查表需要知道"从哪个文件的哪个位置问"。
    */
-  private rememberContext(uri: string, version: number, context: VariableContext): void {
-    this.contextCache.delete(uri);
-    this.contextCache.set(uri, { version, context });
-    while (this.contextCache.size > MAX_CACHED_VARIABLE_CONTEXTS) {
-      const oldest = this.contextCache.keys().next();
-      if (oldest.done) break;
-      this.contextCache.delete(oldest.value);
-    }
-  }
-
-  /** `TextDocumentLike` 要求 uri 为字符串, 而 `vscode.TextDocument.uri` 是对象。 */
-  private documentLike(document: vscode.TextDocument): TextDocumentLike {
+  private variableAccessFor(document: vscode.TextDocument): VariableAccess {
+    const fromUri = document.uri.toString();
     return {
-      uri: document.uri.toString(),
-      languageId: document.languageId,
-      // `ensure()` 本来就取过一次全文, 这里不引入新的实体化开销。
-      getText: () => document.getText(),
+      resolveVariable: (name, atOffset) =>
+        toVariableValue(lookupVariable(name, { fromUri, atOffset }, this.getSymbols())),
+      colorProfileFallbacks: this.colorProfileFallbacks(document),
     };
   }
 
-  private collectOptionsFor(config: RuntimeConfiguration): CollectOptions {
-    return {
-      resolveVariables: config.variablesResolve,
-      includePaths: config.variablesIncludePaths,
-      maxImportDepth: config.maxImportDepth,
-      maxImportFiles: config.maxImportFiles,
-      maxResolveDepth: config.maxResolveDepth,
-    };
-  }
+  /** `@color-profile` 的 fallback 文本解析成颜色; 按符号表版本缓存, 避免每次扫描重复解析。 */
+  private colorProfileFallbacks(document: vscode.TextDocument): ReadonlyMap<string, ResolvedColor> {
+    const symbols = this.getSymbols();
+    if (this.profileCache?.version === symbols.version) return this.profileCache.map;
 
-  /** 本文档定义构成的同步上下文; 关闭变量解析或非 CSS 系语言时返回 undefined。 */
-  private localContextFor(
-    document: vscode.TextDocument,
-    config: RuntimeConfiguration,
-  ): VariableContext | undefined {
-    if (!config.variablesResolve) return undefined;
-    if (!isCssLikeLanguage(document.languageId)) return undefined;
-    return collectLocalVariableContext(
-      this.documentLike(document),
-      scanOptionsFor(config, document.languageId),
-    );
-  }
-
-  /**
-   * 跨文件补丁: 收集含导入的完整上下文, 重新解析变量 match 后写回。
-   *
-   * 三条约束缺一不可:
-   * - **在途去重**: `ensure()` 是同步且被渲染路径高频调用, 没有这层保护会对同一文档
-   *   并发发起多次收集, 每次最坏读 `maxImportFiles` 个文件;
-   * - **写回前重新校验**: `await` 期间索引可能已被隐身分支 `release()` 掉, 或文档已改版本。
-   *   `accept()` 只挡得住"版本更旧", 挡不住"索引已被释放";
-   * - **失败不放大**: 收集抛错时只记一条日志并放弃本次补丁, 保持同步快照 (变量静默)。
-   */
-  private schedulePatch(document: vscode.TextDocument, config: RuntimeConfiguration): void {
-    const key = document.uri.toString();
-    if (this.pendingContexts.has(key)) return;
-
-    const version = document.version;
-    const cached = this.contextCache.get(key);
-    if (cached && cached.version === version) {
-      this.applyPatch(document, config, cached.context, version);
-      return;
+    const map = new Map<string, ResolvedColor>();
+    if (symbols.colorProfileFallbacks.size > 0) {
+      const parseOptions = scanOptionsFor(this.getConfig(document), document.languageId);
+      for (const [name, rawValue] of symbols.colorProfileFallbacks) {
+        const parsed = parseColorText(rawValue, parseOptions);
+        if (parsed?.resolved) map.set(name, parsed.resolved);
+      }
     }
-
-    const run = collectVariableContext(
-      this.documentLike(document),
-      this.collectOptionsFor(config),
-      this.fileReader,
-      scanOptionsFor(config, document.languageId),
-    );
-    this.pendingContexts.set(key, run);
-    void run
-      .then((context) => {
-        this.rememberContext(key, version, context);
-        this.applyPatch(document, config, context, version);
-      })
-      .catch((error: unknown) => {
-        this.logger.warnOnce(
-          `variable-context-failed:${key}`,
-          `variable context collection failed: ${String(error)}`,
-        );
-      })
-      .finally(() => {
-        this.pendingContexts.delete(key);
-      });
-  }
-
-  private applyPatch(
-    document: vscode.TextDocument,
-    config: RuntimeConfiguration,
-    context: VariableContext,
-    version: number,
-  ): void {
-    // 索引可能已被隐身分支释放, 或文档已经改了版本。
-    const index = this.indexes.get(document.uri.toString());
-    const snapshot = index?.current;
-    if (!index || !snapshot || document.isClosed) return;
-    if (snapshot.documentVersion !== version || document.version !== version) return;
-
-    const matches = patchVariableMatches(snapshot.matches, context, {
-      parseOptions: scanOptionsFor(config, document.languageId, context),
-      maxResolveDepth: config.maxResolveDepth,
-    });
-    if (matches === snapshot.matches) return;
-
-    if (index.accept({ ...snapshot, matches })) {
-      this.emitter.fire({ document, snapshot: { ...snapshot, matches } });
-    }
+    this.profileCache = { version: symbols.version, map };
+    return map;
   }
 
   /** 合并窗口内的重复变更后刷新, 并广播更新。 */
