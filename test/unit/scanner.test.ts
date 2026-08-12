@@ -92,9 +92,13 @@ describe('嵌套与相邻', () => {
     expect(matches.map((match) => match.raw)).toEqual(['red', 'blue']);
   });
 
-  it('var() 内部的 fallback 颜色可被识别', () => {
+  it('var() 整体成为变量引用, fallback 不再单独成 match', () => {
+    // 行为变更: `var()` 现在是变量引用候选, 其范围覆盖整个表达式;
+    // 内层 fallback 与它重叠且更短, 在去重时被更大的范围取代。
+    // fallback 的颜色不会丢 —— 变量解析阶段由 `expandVarChain` 参与求值。
     const matches = scan('a { color: var(--x, #123456); }');
-    expect(matches.map((match) => match.raw)).toEqual(['#123456']);
+    expect(matches.map((match) => match.raw)).toEqual(['var(--x, #123456)']);
+    expect(matches[0].syntax).toBe('css-variable');
   });
 });
 
@@ -258,5 +262,63 @@ describe('上下文与实验语法在扫描层的表现', () => {
     const matches = scan('a { color: ictcp(0.5 0 0); }', { cssColorHdr: true });
     expect(matches[0].resolution).toBe('resolved');
     expect(matches[0].specLevel).toBe('color-hdr-1');
+  });
+});
+
+describe('变量引用', () => {
+  it('三种写法各产出一个覆盖整个引用的 match', () => {
+    for (const [text, syntax, variable] of [
+      ['a { color: var(--brand); }', 'css-variable', '--brand'],
+      ['a { color: $brand; }', 'scss-variable', '$brand'],
+      ['a { color: @brand; }', 'less-variable', '@brand'],
+    ] as const) {
+      const matches = scan(text);
+      expect(matches, text).toHaveLength(1);
+      expect(matches[0].syntax).toBe(syntax);
+      expect(matches[0].resolution).toBe('contextual');
+      expect(matches[0].contextual?.dependsOn).toBe(variable);
+      assertRawMatchesRange(text, matches);
+    }
+  });
+
+  it('自定义属性与预处理器变量的 contextual reason 不同', () => {
+    expect(scan('a { color: var(--brand); }')[0].contextual?.reason).toBe('css-variable');
+    expect(scan('a { color: $brand; }')[0].contextual?.reason).toBe('preprocessor-variable');
+  });
+
+  it('at-rule 不被误判为 Less 变量', () => {
+    expect(scan('@media screen { a { color: red; } }').every((m) => m.syntax !== 'less-variable')).toBe(
+      true,
+    );
+    expect(scan('@import "x"; a { color: #ff8800; }').every((m) => m.syntax !== 'less-variable')).toBe(
+      true,
+    );
+    expect(scan('@supports (color: red) { a { color: red; } }').every((m) => m.syntax !== 'less-variable')).toBe(
+      true,
+    );
+  });
+
+  it('Less 变量的定义位置不算引用', () => {
+    // `@brand: #ff8800;` 里的 `@brand` 在属性名位置, 只有末尾那个引用才算。
+    const matches = scan('@brand: #ff8800; a { color: @brand; }');
+    expect(matches.filter((m) => m.syntax === 'less-variable')).toHaveLength(1);
+    expect(matches.some((m) => m.syntax === 'hex')).toBe(true);
+  });
+
+  it('非 CSS 系语言中不识别变量引用', () => {
+    expect(scan('a { color: $brand; }', { cssLikeLanguage: false })).toHaveLength(0);
+    expect(scan('a { color: @brand; }', { cssLikeLanguage: false })).toHaveLength(0);
+  });
+
+  it('var() 的 fallback 不再单独成 match (整体范围更大, 去重时胜出)', () => {
+    const text = 'a { color: var(--x, #ff8800); }';
+    const matches = scan(text);
+    expect(matches).toHaveLength(1);
+    expect(matches[0].raw).toBe('var(--x, #ff8800)');
+    assertRawMatchesRange(text, matches);
+  });
+
+  it('不含自定义属性的 var() 不产出变量 match', () => {
+    expect(scan('a { color: var(); }')).toHaveLength(0);
   });
 });

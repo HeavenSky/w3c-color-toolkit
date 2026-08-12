@@ -344,6 +344,38 @@ function parseGroup(group: readonly ComponentValue[], options: ParseOptions): Pa
   return parseComponentValueColor(group[0], options);
 }
 
+/**
+ * 变量引用的分类。
+ *
+ * 单独成一个入口而不是走 `parseComponentValueColor`: `$brand` 在 token 流里是
+ * `delim` + `ident` 两个节点, `@brand` 是 at-keyword, 都没有可以交给主入口的单一节点,
+ * 扫描器已经把它们合并成"变量名"这一个事实。
+ *
+ * 这里只负责标出"这是一个尚未解析的变量引用"; 真正的取值由
+ * `src/index/variable-patch.ts` 在拿到变量上下文后完成。拿不到上下文或解析失败时,
+ * 该 match 会被整条移除 (不留没有颜色的占位)。
+ */
+export function parseVariableReference(variable: string): ParsedColor {
+  const isCustomProperty = variable.startsWith('--');
+  const syntax = isCustomProperty
+    ? 'css-variable'
+    : variable.startsWith('$')
+      ? 'scss-variable'
+      : 'less-variable';
+  return {
+    resolution: 'contextual',
+    syntax,
+    specLevel: 'color-4',
+    experimental: false,
+    contextual: {
+      reason: isCustomProperty ? 'css-variable' : 'preprocessor-variable',
+      dependsOn: variable,
+      branches: [],
+    },
+    diagnostics: [],
+  };
+}
+
 /** 主入口: 解析单个 component value。 */
 export function parseComponentValueColor(
   node: ComponentValue,

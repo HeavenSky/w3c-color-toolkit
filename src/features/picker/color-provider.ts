@@ -166,10 +166,10 @@ export class ColorSwatchProvider implements vscode.DocumentColorProvider {
     const original = this.matchAt(context.document, context.range);
     if (!original) return undefined;
 
-    // contextual 与只读语法只看不改: 取色器一旦写回就会把整个表达式压成字面值,
+    // contextual, 变量引用与只读语法只看不改: 取色器一旦写回就会把整个表达式压成字面值,
     // 与"contextual 不允许转换"的既有策略一致。需要改色请用"转换颜色"命令。
     const target = targetForSyntax(original.syntax);
-    if (original.resolution === 'contextual' || !target) return [];
+    if (original.resolution === 'contextual' || original.resolvedVia || !target) return [];
 
     // 取色器给出的是新的 sRGB 值, 与原 match 的色彩空间无关。
     const picked = buildResolved({

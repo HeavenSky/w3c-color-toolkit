@@ -106,6 +106,17 @@ export interface ColorMatch {
   readonly resolved?: ResolvedColor;
   readonly contextual?: ContextualColor;
   readonly diagnostics: readonly ColorDiagnostic[];
+  /**
+   * 该颜色由变量解析而来, 值为被依赖的变量名 (含 `--` / `$` / `@` 前缀)。
+   *
+   * 存在即表示**只读**: 把 `var(--brand)` 改写成 `#ff8800` 会销毁设计令牌,
+   * 因此取色器只展示不可调, 转换命令拒绝。判据不能用 `resolution`——
+   * 解析成功后它已经是 `resolved`, 与普通颜色无从区分。
+   *
+   * 只存变量名不存种类: core 不能反向依赖 adapters (adapters 已依赖 core),
+   * 而消费方也只需要名字。
+   */
+  readonly resolvedVia?: { readonly variable: string };
 }
 
 /** 色域映射策略。`css` 为规范兼容映射, `clip` 为逐通道裁剪。 */

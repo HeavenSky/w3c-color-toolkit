@@ -28,7 +28,7 @@ import {
   lookupSystemColor,
   TRANSPARENT_KEYWORD,
 } from './keywords.js';
-import { parseComponentValueColor, type ParseOptions } from './parser.js';
+import { parseComponentValueColor, parseVariableReference, type ParseOptions } from './parser.js';
 import type { ColorMatch, ColorRange } from './types.js';
 
 /** 颜色名的识别范围。 */
@@ -70,6 +70,9 @@ const IDENT_SYNTAXES: ReadonlySet<string> = new Set([
   'current-color',
   'system-color',
   'deprecated-system-color',
+  // Less 的 `@brand: #ff8800;` 定义位置与 `color: @brand` 引用位置同型,
+  // 借这里的属性名位置检查把定义那一侧挡掉。
+  'less-variable',
 ]);
 
 /** 词/标识符边界: 前后不能是标识符字符, 也不能是 `-`、`_` 或 `#`。 */
@@ -107,8 +110,62 @@ function nodeRange(node: ComponentValue, offset: number): ColorRange | undefined
 }
 
 interface Candidate {
-  readonly node: ComponentValue;
+  /** 变量候选没有单一节点 (`$brand` 是 delim + ident 两个 token), 因此可缺省。 */
+  readonly node?: ComponentValue;
   readonly range: ColorRange;
+  /** 变量引用候选; 值为含前缀的变量名, 例如 `--brand` / `$brand` / `@brand`。 */
+  readonly variable?: string;
+}
+
+/**
+ * Less 里 `@name` 与 at-rule 同型, 必须排除后者。
+ *
+ * 这里只挡住"看起来像 at-rule"的名字; `@brand: …` 这种定义位置的引用由主循环的
+ * 属性名位置检查 (`IDENT_SYNTAXES` 含 `less-variable`) 兜住。
+ */
+const AT_RULE_KEYWORDS: ReadonlySet<string> = new Set([
+  'media',
+  'supports',
+  'import',
+  'use',
+  'forward',
+  'keyframes',
+  'font-face',
+  'charset',
+  'layer',
+  'container',
+  'page',
+  'namespace',
+  'property',
+  'scope',
+  'starting-style',
+  'counter-style',
+  'font-feature-values',
+  'color-profile',
+]);
+
+/** `$brand` 的第一个 token: `$` delim。 */
+function isDollarDelim(node: ComponentValue): boolean {
+  if (!isTokenNode(node)) return false;
+  const token = node.value;
+  return token[0] === 'delim-token' && (token[4] as { value: string }).value === '$';
+}
+
+/** `@brand` 的 at-keyword; 返回不含 `@` 的名字。 */
+function atKeywordOfNode(node: ComponentValue): string | undefined {
+  if (!isTokenNode(node)) return undefined;
+  const token = node.value;
+  if (token[0] !== 'at-keyword-token') return undefined;
+  return (token[4] as { value: string }).value;
+}
+
+/** `var(--brand)` 的第一个自定义属性实参。 */
+function customPropertyOfVarNode(node: ComponentValue): string | undefined {
+  for (const inner of node.value as ComponentValue[]) {
+    const ident = identOfNode(inner);
+    if (ident?.startsWith('--')) return ident;
+  }
+  return undefined;
 }
 
 /** 判断标识符是否值得尝试解析为颜色。 */
@@ -153,15 +210,48 @@ function collectCandidates(
   inDynamicRangeLimit: boolean,
   whitelist: ReadonlySet<string>,
 ): void {
-  for (const node of nodes) {
+  for (let index = 0; index < nodes.length; index += 1) {
+    const node = nodes[index];
     const range = nodeRange(node, offset);
     if (!range) continue;
+
+    // `$brand`: delim + ident 两个 token, 合并成一个候选。
+    if (options.cssLikeLanguage && isDollarDelim(node)) {
+      const next = nodes[index + 1];
+      const name = next ? identOfNode(next) : undefined;
+      const nextRange = next ? nodeRange(next, offset) : undefined;
+      if (name && nextRange && nextRange.start === range.end) {
+        out.push({ range: { start: range.start, end: nextRange.end }, variable: `$${name}` });
+        index += 1;
+        continue;
+      }
+    }
+
+    // `@brand`: 单个 at-keyword, 但要挡住 at-rule。
+    if (options.cssLikeLanguage) {
+      const atKeyword = atKeywordOfNode(node);
+      if (atKeyword !== undefined) {
+        if (!AT_RULE_KEYWORDS.has(atKeyword.toLowerCase())) {
+          out.push({ range, variable: `@${atKeyword}` });
+        }
+        continue;
+      }
+    }
 
     if (isFunctionNode(node)) {
       const name = functionName(node) ?? '';
       if (isDynamicRangeLimitFunction(name)) {
         // 非颜色值: 既不产生 match, 也不下降到内部关键字。
         continue;
+      }
+      // `var(--brand)`: 整体作为变量候选, 不再下降到内部。
+      // 刻意不加进 functionWhitelist —— 那个白名单的语义是"颜色函数", var 不是。
+      if (options.cssLikeLanguage && name === 'var') {
+        const customProperty = customPropertyOfVarNode(node);
+        if (customProperty) {
+          out.push({ range, variable: customProperty });
+          continue;
+        }
       }
       if (whitelist.has(name) || isExperimentalFunction(name)) {
         out.push({ node, range });
@@ -285,7 +375,9 @@ export function scanText(text: string, options: ScanOptions): ScanResult {
         break;
       }
       const raw = text.slice(candidate.range.start, candidate.range.end);
-      const parsed = parseComponentValueColor(candidate.node, options);
+      const parsed = candidate.variable
+        ? parseVariableReference(candidate.variable)
+        : parseComponentValueColor(candidate.node as ComponentValue, options);
 
       // hex 与颜色名需要标识符边界检查。
       const needsBoundary = parsed.syntax === 'hex' || parsed.syntax === 'named-color';

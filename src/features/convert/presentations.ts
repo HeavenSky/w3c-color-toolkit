@@ -32,6 +32,11 @@ export function convertSource(
   match: ColorMatch,
   policy: ConvertPolicy,
 ): { readonly resolved: ResolvedColor } | { readonly rejection: ConvertRejection } {
+  // 变量引用只读: 把 `var(--brand)` 改写成 `#ff8800` 会销毁设计令牌。
+  // 必须排在 resolved 分支之前 —— 解析成功后它与普通颜色已无从区分。
+  if (match.resolvedVia) {
+    return { rejection: { kind: 'contextual', detail: match.resolvedVia.variable } };
+  }
   if (match.resolution === 'resolved' && match.resolved) return { resolved: match.resolved };
   if (match.resolution === 'contextual') {
     const assumed = match.contextual?.assumed?.resolved;
