@@ -22,6 +22,17 @@ const SELECTOR_BLOCK = /([^{}]+)\{/g;
 
 const ROOT_SELECTORS = new Set([':root', ':host', 'html', ':where(:root)']);
 
+/**
+ * 选择器文本里夹着的注释必须去掉。
+ *
+ * 回溯只到上一个 `{` / `}` / `;` 为止, 因此 `@layer base {` 与 `:root {` 之间的那行注释
+ * 会被算进选择器 —— 而"注释 + 换行 + :root"匹配不上 `ROOT_SELECTORS`, 一个正常的
+ * `/* … *\/\n:root { --x: … }` 就会被判成非 root 而拒绝解析。
+ */
+function stripComments(text: string): string {
+  return text.replace(/\/\*[\s\S]*?\*\//g, ' ');
+}
+
 function isRootSelector(selector: string): boolean {
   return selector
     .split(',')
@@ -48,7 +59,7 @@ function selectorRanges(text: string): SelectorRange[] {
       // 回溯找出这个 `{` 之前的选择器文本。
       let begin = index - 1;
       while (begin >= 0 && text[begin] !== '}' && text[begin] !== '{' && text[begin] !== ';') begin -= 1;
-      const selector = text.slice(begin + 1, index).trim();
+      const selector = stripComments(text.slice(begin + 1, index)).trim();
       stack.push({ selector, start: index + 1 });
     } else if (char === '}') {
       const open = stack.pop();
@@ -117,6 +128,52 @@ export function resolveCssCustomProperty(
 
   // 没有 root 定义, 只有局部定义: 缺少元素上下文, 不猜测 cascade 胜者。
   return { kind: 'contextual', reason: 'multiple-definitions' };
+}
+
+/** 单个 `var()` 调用; 与 `expandVarChain` 同形, 但这里要用 `index` 做定位替换。 */
+const VAR_CALL = /var\(\s*(--[A-Za-z0-9_-]+)\s*(?:,\s*([^()]*(?:\([^()]*\)[^()]*)*))?\)/;
+
+/**
+ * 展开一段文本里的**全部** `var()` 引用; 有任何一处展开不出来就返回 `undefined`。
+ *
+ * 用途是"变量只是颜色函数的一个片段": `rgb(var(--c) / 0.4)` 里 `--c` 的值是通道三元组
+ * `148 163 184`, 单独解析它得不到颜色, 必须先代换回原文本再交给颜色解析器。
+ *
+ * 不直接复用 `expandVarChain`: 那里的 `seen` 是全局累积的, 对"单个变量的取值链"是正确的
+ * 循环检测, 但用在含多个引用的文本上会把 `rgb(var(--x) var(--x))` 的第二次出现误判成循环。
+ * 这里改成每个引用各带自己的 `seen` 分支, 循环检测语义不变。
+ *
+ * 终止性: 替换位置单向前进, 且替换次数以 `maxDepth` 为上限。
+ */
+export function expandVarReferences(
+  text: string,
+  context: VariableContext,
+  maxDepth: number,
+): string | undefined {
+  let out = text;
+  let searchFrom = 0;
+  let budget = maxDepth;
+
+  for (;;) {
+    const match = VAR_CALL.exec(out.slice(searchFrom));
+    // 已展开的段落之后没有引用了; 之前若仍残留 `var(` 就是解析不出来的那种, 整段作废。
+    if (!match) return out.includes('var(') ? undefined : out;
+    if (budget <= 0) return undefined;
+    budget -= 1;
+
+    const name = match[1];
+    const fallback = match[2]?.trim();
+    const resolution = resolveCssCustomProperty(name, context);
+    const replacement =
+      resolution.kind === 'resolved' ? resolution.rawValue : fallback !== undefined ? fallback : undefined;
+    if (replacement === undefined) return undefined;
+
+    const expanded = expandVarChain(replacement, context, maxDepth, new Set([name])).text;
+    const start = searchFrom + match.index;
+    out = out.slice(0, start) + expanded + out.slice(start + match[0].length);
+    // 从替换段之后继续: 该分支已经展开完, 里面若仍残留 `var()` 就不再重试。
+    searchFrom = start + expanded.length;
+  }
 }
 
 /** 展开 `var(--a, fallback)` 链; 返回最终可解析的原始文本。 */

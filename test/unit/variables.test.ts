@@ -9,6 +9,8 @@
 import { describe, expect, it } from 'vitest';
 
 import type { VariableContext, VariableDefinition } from '../../src/adapters/types.js';
+import { collectLocalVariableContext } from '../../src/adapters/variable-context.js';
+import { scanText, type ScanOptions } from '../../src/core/scanner.js';
 import { convertSource, type ConvertPolicy } from '../../src/features/convert/presentations.js';
 import {
   isVariableMatch,
@@ -325,5 +327,66 @@ describe('嵌套 match 的处理', () => {
       OPTIONS,
     );
     expect(patched.nested?.[0].resolvedVia).toEqual({ variable: '$inner' });
+  });
+});
+
+describe('颜色函数实参里的变量 (扫描 → 补丁)', () => {
+  const SCAN_OPTIONS: ScanOptions = {
+    ...DEFAULT_PARSE_OPTIONS,
+    matchWords: 'css-like',
+    cssLikeLanguage: true,
+    scanComments: true,
+    scanStrings: true,
+    maxMatches: 1000,
+  };
+
+  /** 走完整链路: 扫描 → 本文档变量上下文 → 补丁, 与索引层的同步路径一致。 */
+  function patched(text: string): readonly ColorMatch[] {
+    const document = { uri: 'file:///a.css', languageId: 'css', getText: () => text };
+    const localContext = collectLocalVariableContext(document, DEFAULT_PARSE_OPTIONS);
+    return patchVariableMatches(scanText(text, SCAN_OPTIONS).matches, localContext, OPTIONS);
+  }
+
+  it('通道令牌被代换回颜色函数后解析成功, 且保持只读', () => {
+    const matches = patched(
+      ':root { --c: 148 163 184; }\na { background-color: rgb(var(--c) / 0.4); }',
+    );
+    expect(matches).toHaveLength(1);
+    expect(matches[0].raw).toBe('rgb(var(--c) / 0.4)');
+    // syntax 取展开后的真实语法, 这样 fields 过滤与 Hover 的"原始语法"行都按 rgb() 处理。
+    expect(matches[0].syntax).toBe('srgb');
+    expect(matches[0].resolution).toBe('resolved');
+    expect(matches[0].resolved?.alpha).toBeCloseTo(0.4, 4);
+    expect(matches[0].resolvedVia).toEqual({ variable: '--c' });
+    expect(matches[0].contextual).toBeUndefined();
+    // 内层引用自身解析不出颜色 (`148 163 184` 不是颜色), 因此不留没有颜色的嵌套。
+    expect(matches[0].nested).toBeUndefined();
+  });
+
+  it('变量无定义时整条移除, 不留没有颜色的占位', () => {
+    expect(patched('a { background-color: rgb(var(--missing) / 0.4); }')).toEqual([]);
+  });
+
+  it('引用不可解析但有 fallback 时按 fallback 解析', () => {
+    const matches = patched('a { color: rgb(var(--missing, 148 163 184) / 0.4); }');
+    expect(matches).toHaveLength(1);
+    expect(matches[0].resolution).toBe('resolved');
+    expect(matches[0].resolvedVia).toEqual({ variable: '--missing' });
+  });
+
+  it('同一变量在实参里重复出现仍可解析', () => {
+    const matches = patched(':root { --n: 10; }\na { color: rgb(var(--n) var(--n) var(--n)); }');
+    expect(matches).toHaveLength(1);
+    expect(matches[0].resolution).toBe('resolved');
+    expect(matches[0].resolvedVia).toEqual({ variable: '--n, --n, --n' });
+  });
+
+  it('值本身是完整颜色的变量: 内层引用有色块, 外层函数解析不出来就移除', () => {
+    // `rgb(#ff8800)` 不是合法 CSS, 因此外层作废; 但内层 `var(--brand)` 是一个真颜色, 该留下。
+    // 第一项是定义处 `--brand: #ff8800` 里的那个 hex, 它本来就是一个独立 match。
+    const matches = patched(':root { --brand: #ff8800; }\na { color: rgb(var(--brand)); }');
+    expect(matches.map((match) => match.raw)).toEqual(['#ff8800', 'var(--brand)']);
+    expect(matches[1].resolution).toBe('resolved');
+    expect(matches[1].resolvedVia).toEqual({ variable: '--brand' });
   });
 });

@@ -3,7 +3,8 @@
  *
  * 规则要点:
  * - 使用 CSS token 流与 component value 树, 不用单个大正则解析颜色函数;
- * - 嵌套表达式默认只返回最外层成功解析的颜色;
+ * - 嵌套表达式默认只返回最外层成功解析的颜色, 例外是变量引用: `var()` 与颜色函数实参里的
+ *   变量各自也成为候选, 因为它们各自要有色块;
  * - hex 与颜色名做标识符边界检查, 避免 URL fragment、UUID、类名片段误报;
  * - `dynamic-range-limit` 上下文中的关键字与 `dynamic-range-limit-mix()` 不产生颜色 match;
  * - 结果稳定排序并去重, 重叠时按固定优先级取舍。
@@ -28,7 +29,12 @@ import {
   lookupSystemColor,
   TRANSPARENT_KEYWORD,
 } from './keywords.js';
-import { parseComponentValueColor, parseVariableReference, type ParseOptions } from './parser.js';
+import {
+  parseComponentValueColor,
+  parseVariableFunctionReference,
+  parseVariableReference,
+  type ParseOptions,
+} from './parser.js';
 import type { ColorMatch, ColorRange } from './types.js';
 
 /** 颜色名的识别范围。 */
@@ -115,7 +121,23 @@ interface Candidate {
   readonly range: ColorRange;
   /** 变量引用候选; 值为含前缀的变量名, 例如 `--brand` / `$brand` / `@brand`。 */
   readonly variable?: string;
+  /**
+   * 实参里含 `var()` 的颜色函数; 值为其中引用到的自定义属性名。
+   *
+   * 与 `variable` 的区别: 那个的解析输入是"一个变量名", 这个是"整段原文本" ——
+   * `rgb(var(--c) / 0.4)` 里 `--c` 只是函数的一个片段, 必须先文本代换再解析。
+   */
+  readonly variableFunction?: readonly string[];
 }
+
+/**
+ * 收集范围。
+ *
+ * - `all`: 默认, 收集全部颜色候选;
+ * - `variables`: 只收集变量引用, 用于白名单颜色函数的内部。不收 hex、颜色名与嵌套颜色函数,
+ *   因为那会改变本文件开头声明的"嵌套表达式默认只返回最外层"。
+ */
+type CollectMode = 'all' | 'variables';
 
 /**
  * Less 里 `@name` 与 at-rule 同型, 必须排除后者。
@@ -209,6 +231,7 @@ function collectCandidates(
   out: Candidate[],
   inDynamicRangeLimit: boolean,
   whitelist: ReadonlySet<string>,
+  mode: CollectMode = 'all',
 ): void {
   for (let index = 0; index < nodes.length; index += 1) {
     const node = nodes[index];
@@ -245,20 +268,41 @@ function collectCandidates(
         continue;
       }
       // `var(--brand)`: 整体成为变量候选, 但**继续下降** —— fallback 与嵌套的 var()
-      // 各自还要有色块。这里不 continue, 控制流会落到下面的 collectCandidates 递归。
+      // 各自还要有色块。
       // 刻意不加进 functionWhitelist —— 那个白名单的语义是"颜色函数", var 不是。
       if (options.cssLikeLanguage && name === 'var') {
         const customProperty = customPropertyOfVarNode(node);
         if (customProperty) out.push({ range, variable: customProperty });
-      }
-      if (whitelist.has(name) || isExperimentalFunction(name)) {
-        out.push({ node, range });
+        // fallback 里的实色始终按全量收集, 这样 `rgb(var(--a, #fff) / .4)` 的 `#fff`
+        // 与 `var(--a, #fff)` 单独出现时得到同样的色块。
+        collectCandidates(node.value, offset, options, out, inDynamicRangeLimit, whitelist);
         continue;
       }
-      // 非颜色函数 (如 `var()`、`linear-gradient()`) 继续检查内部独立颜色。
-      collectCandidates(node.value, offset, options, out, inDynamicRangeLimit, whitelist);
+      if (whitelist.has(name) || isExperimentalFunction(name)) {
+        if (mode === 'variables') {
+          // 仅变量模式下内层颜色函数自己不产出候选, 只继续往里找变量引用。
+          collectCandidates(node.value, offset, options, out, inDynamicRangeLimit, whitelist, mode);
+          continue;
+        }
+        // 实参含 `var()` 时整个函数无法静态求值 —— CSSTools 判 invalid, 主循环会把它整条丢掉,
+        // 而展开变量之后它是可解析的。因此产出一个待展开的占位, 并继续下降,
+        // 让内层引用各自也有色块 (与上面 `var()` 分支的取舍一致)。
+        const inner: Candidate[] = [];
+        collectCandidates(node.value, offset, options, inner, inDynamicRangeLimit, whitelist, 'variables');
+        const references = inner
+          .map((candidate) => candidate.variable)
+          .filter((variable): variable is string => variable !== undefined && variable.startsWith('--'));
+        // 先压外层: 命中 `maxMatches` 时该保留的是范围更大的那个。
+        out.push(references.length > 0 ? { node, range, variableFunction: references } : { node, range });
+        out.push(...inner);
+        continue;
+      }
+      // 非颜色函数 (如 `linear-gradient()`) 继续检查内部独立颜色。
+      collectCandidates(node.value, offset, options, out, inDynamicRangeLimit, whitelist, mode);
       continue;
     }
+
+    if (mode === 'variables') continue;
 
     const hash = hashOfNode(node);
     if (hash !== undefined) {
@@ -389,9 +433,11 @@ export function scanText(text: string, options: ScanOptions): ScanResult {
         break;
       }
       const raw = text.slice(candidate.range.start, candidate.range.end);
-      const parsed = candidate.variable
-        ? parseVariableReference(candidate.variable)
-        : parseComponentValueColor(candidate.node as ComponentValue, options);
+      const parsed = candidate.variableFunction
+        ? parseVariableFunctionReference(candidate.variableFunction)
+        : candidate.variable
+          ? parseVariableReference(candidate.variable)
+          : parseComponentValueColor(candidate.node as ComponentValue, options);
 
       // hex 与颜色名需要标识符边界检查。
       const needsBoundary = parsed.syntax === 'hex' || parsed.syntax === 'named-color';

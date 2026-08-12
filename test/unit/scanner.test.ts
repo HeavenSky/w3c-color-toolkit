@@ -364,3 +364,65 @@ describe('嵌套颜色', () => {
     expect(matches.map((match) => match.raw)).toEqual(['var(--def, #674)', '#def']);
   });
 });
+
+describe('颜色函数实参里的变量', () => {
+  it('rgb(var(--x) / a) 产出待展开的占位, 内层引用进 nested', () => {
+    // Tailwind 风格的通道令牌: `--x: 148 163 184` 不是一个完整颜色, 只有把文本代换回
+    // `rgb(148 163 184 / 0.4)` 才能解析, 因此这里只标出占位, 求值交给变量补丁。
+    const text = 'a { background-color: rgb(var(--text-tertiary) / 0.4); }';
+    const matches = scan(text);
+    expect(matches).toHaveLength(1);
+    expect(matches[0].raw).toBe('rgb(var(--text-tertiary) / 0.4)');
+    expect(matches[0].syntax).toBe('variable-function');
+    expect(matches[0].resolution).toBe('contextual');
+    expect(matches[0].contextual?.dependsOn).toBe('--text-tertiary');
+    expect(matches[0].nested?.map((match) => match.raw)).toEqual(['var(--text-tertiary)']);
+    expect(matches[0].nested?.[0].syntax).toBe('css-variable');
+    assertRawMatchesRange(text, matches);
+    assertRawMatchesRange(text, matches[0].nested ?? []);
+  });
+
+  it('legacy 逗号写法与其他颜色函数同样生效', () => {
+    for (const text of [
+      'a { color: rgba(var(--x), 0.4); }',
+      'a { color: hsl(var(--h) 50% 50%); }',
+      'a { color: color-mix(in srgb, var(--a), red); }',
+    ]) {
+      const matches = scan(text);
+      expect(matches, text).toHaveLength(1);
+      expect(matches[0].syntax, text).toBe('variable-function');
+    }
+  });
+
+  it('多个引用全部记入 dependsOn', () => {
+    const matches = scan('a { color: rgb(var(--r) var(--g) var(--b)); }');
+    expect(matches[0].contextual?.dependsOn).toBe('--r, --g, --b');
+    expect(matches[0].nested?.map((match) => match.raw)).toEqual([
+      'var(--r)',
+      'var(--g)',
+      'var(--b)',
+    ]);
+  });
+
+  it('实参里的 var() 带 fallback 时, fallback 的实色仍有自己的候选', () => {
+    const matches = scan('a { color: rgb(var(--x, 1 2 3) / 0.4); }');
+    expect(matches[0].syntax).toBe('variable-function');
+    expect(matches[0].nested?.map((match) => match.raw)).toEqual(['var(--x, 1 2 3)']);
+  });
+
+  it('预处理器变量作为实参: 顶层不占位, 内层引用仍有候选', () => {
+    // `rgba($brand, .4)` 展开后是 SCSS 的 `rgba(color, alpha)` 重载而不是 CSS 语法,
+    // 因此顶层不产出占位; 但内层 `$brand` 该有自己的色块。
+    const matches = scan('a { color: rgba($brand, 0.4); }');
+    expect(matches.map((match) => match.raw)).toEqual(['$brand']);
+    expect(matches[0].syntax).toBe('scss-variable');
+  });
+
+  it('不含变量的颜色函数行为不变', () => {
+    const matches = scan('a { color: rgb(1 2 3 / 0.4); }');
+    expect(matches).toHaveLength(1);
+    expect(matches[0].syntax).toBe('srgb');
+    expect(matches[0].resolution).toBe('resolved');
+    expect(matches[0].nested).toBeUndefined();
+  });
+});

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   collectCssCustomProperties,
   expandVarChain,
+  expandVarReferences,
   resolveCssCustomProperty,
 } from '../../src/adapters/css-custom-properties.js';
 import { collectLessVariables } from '../../src/adapters/less-variables.js';
@@ -78,6 +79,21 @@ describe('CSS 自定义属性', () => {
     expect(resolveCssCustomProperty('--brand', contextFrom(definitions)).kind).toBe('contextual');
   });
 
+  it(':root 前有注释时仍认成 root', () => {
+    // 选择器回溯只到上一个 `{` 为止, 因此 `@layer base {` 与 `:root {` 之间的注释会被
+    // 算进选择器文本; 不剥掉注释就会把一个正常的 :root 判成非 root 而拒绝解析。
+    const definitions = new Map<string, VariableDefinition[]>();
+    collectCssCustomProperties(
+      doc('@layer base {\n  /* shadcn fallbacks */\n  :root {\n    --border: 214.3 31.8% 91.4%;\n  }\n}'),
+      definitions,
+    );
+    expect(definitions.get('--border')?.[0].selector).toBe(':root');
+    expect(resolveCssCustomProperty('--border', contextFrom(definitions))).toEqual({
+      kind: 'resolved',
+      rawValue: '214.3 31.8% 91.4%',
+    });
+  });
+
   it('root 与局部同名时仍取 root', () => {
     const definitions = new Map<string, VariableDefinition[]>();
     collectCssCustomProperties(doc(':root { --brand: red; }\n.card { --brand: blue; }'), definitions);
@@ -113,6 +129,50 @@ describe('var() 链展开', () => {
     collectCssCustomProperties(doc(':root { --a: var(--b); --b: var(--c); --c: red; }'), definitions);
     const expanded = expandVarChain('var(--a)', contextFrom(definitions), 1);
     expect(expanded.issues.some((issue) => issue.kind === 'max-depth')).toBe(true);
+  });
+});
+
+describe('表达式片段里的 var() 展开', () => {
+  /** Tailwind 风格的通道令牌: 变量的值不是完整颜色, 只有代换回原文本才成立。 */
+  function channelContext(): VariableContext {
+    const definitions = new Map<string, VariableDefinition[]>();
+    collectCssCustomProperties(doc(':root { --c: 148 163 184; }'), definitions);
+    return contextFrom(definitions);
+  }
+
+  it('展开颜色函数实参里的引用', () => {
+    expect(expandVarReferences('rgb(var(--c) / 0.4)', channelContext(), 20)).toBe(
+      'rgb(148 163 184 / 0.4)',
+    );
+  });
+
+  it('同一变量重复出现不被误判为循环引用', () => {
+    // expandVarChain 的 seen 是全局累积的, 直接拿它展开整段会在第二次出现时中止。
+    const definitions = new Map<string, VariableDefinition[]>();
+    collectCssCustomProperties(doc(':root { --n: 10; }'), definitions);
+    expect(expandVarReferences('rgb(var(--n) var(--n) var(--n))', contextFrom(definitions), 20)).toBe(
+      'rgb(10 10 10)',
+    );
+  });
+
+  it('引用不可解析且无 fallback 时整段作废', () => {
+    expect(expandVarReferences('rgb(var(--missing) / 0.4)', contextFrom(new Map()), 20)).toBeUndefined();
+  });
+
+  it('引用不可解析但有 fallback 时用 fallback', () => {
+    expect(expandVarReferences('rgb(var(--missing, 1 2 3) / 0.4)', contextFrom(new Map()), 20)).toBe(
+      'rgb(1 2 3 / 0.4)',
+    );
+  });
+
+  it('引用数超过预算时整段作废', () => {
+    const definitions = new Map<string, VariableDefinition[]>();
+    collectCssCustomProperties(doc(':root { --n: 10; }'), definitions);
+    expect(expandVarReferences('rgb(var(--n) var(--n) var(--n))', contextFrom(definitions), 2)).toBeUndefined();
+  });
+
+  it('不含引用的文本原样返回', () => {
+    expect(expandVarReferences('rgb(1 2 3)', contextFrom(new Map()), 20)).toBe('rgb(1 2 3)');
   });
 });
 

@@ -376,6 +376,31 @@ export function parseVariableReference(variable: string): ParsedColor {
   };
 }
 
+/**
+ * 含 `var()` 的颜色函数的占位。
+ *
+ * `rgb(var(--c) / 0.4)` 整体无法静态求值 (CSSTools 判 invalid), 但把 `--c` 的文本代换回去
+ * 之后是可解析的。这里只标出"这是一段待展开的颜色函数", 真正的展开与求值由
+ * `src/index/variable-patch.ts` 在拿到变量上下文后完成; 展开失败时该 match 会被整条移除。
+ *
+ * 不与 `parseVariableReference` 合并: 那一条的解析输入是"一个变量名", 这一条是"整段原文本",
+ * 两条走的是不同的解析路径。
+ */
+export function parseVariableFunctionReference(variables: readonly string[]): ParsedColor {
+  return {
+    resolution: 'contextual',
+    syntax: 'variable-function',
+    specLevel: 'color-4',
+    experimental: false,
+    contextual: {
+      reason: 'css-variable',
+      dependsOn: variables.join(', '),
+      branches: [],
+    },
+    diagnostics: [],
+  };
+}
+
 /** 主入口: 解析单个 component value。 */
 export function parseComponentValueColor(
   node: ComponentValue,

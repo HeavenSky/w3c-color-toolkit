@@ -7,7 +7,12 @@
 import { parseColorText, type ParseOptions } from '../core/parser.js';
 import type { ResolvedColor } from '../core/types.js';
 
-import { collectCssCustomProperties, expandVarChain, resolveCssCustomProperty } from './css-custom-properties.js';
+import {
+  collectCssCustomProperties,
+  expandVarChain,
+  expandVarReferences,
+  resolveCssCustomProperty,
+} from './css-custom-properties.js';
 import { collectLessVariables } from './less-variables.js';
 import { collectScssVariables, resolvePreprocessorVariable } from './scss-variables.js';
 import { collectStylusVariables } from './stylus-variables.js';
@@ -196,4 +201,4 @@ export function resolveVariable(
   return resolvePreprocessorVariable(name, atOffset, context, maxResolveDepth);
 }
 
-export { expandVarChain };
+export { expandVarChain, expandVarReferences };

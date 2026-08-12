@@ -13,16 +13,20 @@
  *
  * 本文件不引用 vscode API, 便于在单元测试中直接驱动。
  */
-import { resolveVariable } from '../adapters/variable-context.js';
+import { expandVarReferences, resolveVariable } from '../adapters/variable-context.js';
 import type { VariableContext } from '../adapters/types.js';
 import { parseColorText, type ParseOptions } from '../core/parser.js';
 import type { ColorMatch } from '../core/types.js';
 
-/** 扫描器为变量引用产出的三种 syntax。 */
+/** 含 `var()` 的颜色函数; 解析输入是整段原文本而不是一个变量名。 */
+const VARIABLE_FUNCTION_SYNTAX = 'variable-function';
+
+/** 扫描器为变量引用产出的四种 syntax。 */
 const VARIABLE_SYNTAXES: ReadonlySet<string> = new Set([
   'css-variable',
   'scss-variable',
   'less-variable',
+  VARIABLE_FUNCTION_SYNTAX,
 ]);
 
 export interface PatchOptions {
@@ -104,6 +108,8 @@ function resolveOne(
   const variable = match.contextual?.dependsOn;
   if (!variable) return undefined;
 
+  if (match.syntax === VARIABLE_FUNCTION_SYNTAX) return expandFunction(match, variable, context, options);
+
   const resolution = resolveVariable(variable, match.range.start, context, options.maxResolveDepth);
   if (resolution.kind !== 'resolved') return undefined;
 
@@ -120,6 +126,42 @@ function resolveOne(
     // contextual 必须清掉: 它描述的是"未解析"状态, 留着会让 Hover 同时显示两种结论。
     contextual: undefined,
     diagnostics: parsed.diagnostics,
+    resolvedVia: { variable },
+  };
+}
+
+/**
+ * 含 `var()` 的颜色函数: 先把整段文本里的引用展开, 再当作普通颜色解析。
+ *
+ * 不能走上面那条路 —— `rgb(var(--c) / 0.4)` 里 `--c` 的值可能是通道三元组 `148 163 184`,
+ * 单独解析它得不到颜色, 只有代换回原文本才成立。`match.raw` 与文档原文逐字符相等
+ * (见 `src/core/types.ts` 的跨层契约), 因此可以直接作为展开输入。
+ */
+function expandFunction(
+  match: ColorMatch,
+  variable: string,
+  context: VariableContext,
+  options: PatchOptions,
+): ColorMatch | undefined {
+  const expanded = expandVarReferences(match.raw, context, options.maxResolveDepth);
+  if (expanded === undefined) return undefined;
+
+  const parsed = parseColorText(expanded, options.parseOptions);
+  if (!parsed?.resolved) return undefined;
+
+  return {
+    ...match,
+    // syntax 取展开后的真实语法: 这段文本的源语法确实是 `rgb()`, 因此
+    // `fields.excluded` 关掉 `rgb` 时它该一起停止高亮, Hover 的"原始语法"行也该显示 `rgb`。
+    syntax: parsed.syntax,
+    specLevel: parsed.specLevel,
+    experimental: parsed.experimental,
+    resolution: 'resolved',
+    resolved: parsed.resolved,
+    sourceSpace: parsed.sourceSpace,
+    contextual: undefined,
+    diagnostics: parsed.diagnostics,
+    // 仍然只读: 把 `rgb(var(--c) / 0.4)` 改写成字面量会销毁设计令牌。
     resolvedVia: { variable },
   };
 }
