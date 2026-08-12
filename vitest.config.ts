@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config';
+import { defineConfig } from "vitest/config";
 
 /**
  * 测试只覆盖不依赖 vscode 运行时的纯逻辑, 因此不需要 VS Code 集成测试 harness;
@@ -12,9 +12,9 @@ import { defineConfig } from 'vitest/config';
  * 反过来 tsc 不收录 `.mjs`, 所以用 `.mjs` 写这类测试两边都干净。
  */
 export default defineConfig({
-  test: {
-    include: ['test/**/*.test.{ts,mjs}'],
-    exclude: ['test/performance/**'],
-    environment: 'node',
-  },
+	test: {
+		include: ["test/**/*.test.{ts,mjs}"],
+		exclude: ["test/performance/**"],
+		environment: "node",
+	},
 });

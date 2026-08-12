@@ -31,11 +31,16 @@ jobs:
       - uses: actions/checkout@v7
 
       # node 版本取 .nvmrc, 与本地开发保持同一个来源.
+      # cache: npm 拿 package-lock.json 的 hash 当缓存键, 没有 lockfile 时这一步就直接失败.
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: npm
 
+      # 必须是 ci 而不是 install: 前者要求 lockfile 存在且与 package.json 一致, 否则报错退出,
+      # 不会像 install 那样按 semver range 重新解析. 打标签即发布到市场, 依赖版本一旦浮动,
+      # 发出去的 vsix 就不是本地验证过的那一份; lockfile 的 integrity 同时是抵御镜像投毒的
+      # 唯一凭据. 所以 package-lock.json 必须入库 —— .gitignore 末尾专门有一行把它取消忽略.
       - name: Install dependencies
         run: npm ci
 

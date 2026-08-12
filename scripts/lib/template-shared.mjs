@@ -42,7 +42,6 @@ export const SHARED_FILES = [
   '.nvmrc',
   '.vscode/launch.json',
   '.vscode/tasks.json',
-  '.vscodeignore',
   'build.mjs',
   'scripts/changelog-section.mjs',
   'scripts/check-template.mjs',

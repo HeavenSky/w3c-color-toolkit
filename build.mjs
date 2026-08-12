@@ -9,38 +9,38 @@
  *
  * 用法: node build.mjs [--production] [--watch]
  */
-import { readFileSync } from 'node:fs';
+import { readFileSync } from "node:fs";
 
-import * as esbuild from 'esbuild';
+import * as esbuild from "esbuild";
 
-const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
+const pkg = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8"));
 
-const production = process.argv.includes('--production');
-const watch = process.argv.includes('--watch');
+const production = process.argv.includes("--production");
+const watch = process.argv.includes("--watch");
 
 const browser = Boolean(pkg.browser);
-const outfile = pkg.main.replace(/^\.\//, '');
+const outfile = pkg.main.replace(/^\.\//, "");
 
 /** @type {import('esbuild').BuildOptions} */
 const options = {
-  entryPoints: ['src/extension.ts'],
-  outfile,
-  bundle: true,
-  format: 'cjs',
-  platform: browser ? 'browser' : 'node',
-  target: browser ? 'es2022' : 'node22',
-  external: ['vscode'],
-  minify: production,
-  sourcemap: production ? false : 'linked',
-  legalComments: 'none',
-  logLevel: 'info',
-  ...(browser ? { define: { global: 'globalThis' } } : {}),
+	entryPoints: ["src/extension.ts"],
+	outfile,
+	bundle: true,
+	format: "cjs",
+	platform: browser ? "browser" : "node",
+	target: browser ? "es2022" : "node22",
+	external: ["vscode"],
+	minify: production,
+	sourcemap: production ? false : "linked",
+	legalComments: "none",
+	logLevel: "info",
+	...browser ? { define: { global: "globalThis" } } : {},
 };
 
 if (watch) {
-  const context = await esbuild.context(options);
-  await context.watch();
-  console.log(`watching… → ${outfile}`);
+	const context = await esbuild.context(options);
+	await context.watch();
+	console.log(`watching… → ${outfile}`);
 } else {
-  await esbuild.build(options);
+	await esbuild.build(options);
 }
