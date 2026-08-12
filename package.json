@@ -340,27 +340,33 @@
               "default": true,
               "description": "%advanced.variables.resolve%"
             },
-            "variables.includePaths": {
+            "variables.lookupGlobs": {
               "type": "array",
               "items": {
                 "type": "string"
               },
-              "default": [],
-              "description": "%advanced.variables.includePaths%"
+              "default": [
+                "**/*.{css,scss,sass,less}"
+              ],
+              "description": "%advanced.variables.lookupGlobs%"
             },
-            "variables.maxImportDepth": {
+            "variables.maxIndexedFiles": {
               "type": "integer",
               "minimum": 0,
-              "maximum": 100,
-              "default": 20,
-              "description": "%advanced.variables.maxImportDepth%"
+              "maximum": 100000,
+              "default": 2000,
+              "description": "%advanced.variables.maxIndexedFiles%"
             },
-            "variables.maxImportFiles": {
-              "type": "integer",
-              "minimum": 0,
-              "maximum": 10000,
-              "default": 200,
-              "description": "%advanced.variables.maxImportFiles%"
+            "variables.languageIds": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              },
+              "default": null,
+              "description": "%advanced.variables.languageIds%"
             },
             "variables.maxResolveDepth": {
               "type": "integer",
@@ -432,9 +438,11 @@
                 "scan.strings": true,
                 "contextualPreview": "auto",
                 "variables.resolve": true,
-                "variables.includePaths": [],
-                "variables.maxImportDepth": 20,
-                "variables.maxImportFiles": 200,
+                "variables.lookupGlobs": [
+                  "**/*.{css,scss,sass,less}"
+                ],
+                "variables.maxIndexedFiles": 2000,
+                "variables.languageIds": null,
                 "variables.maxResolveDepth": 20,
                 "experimental.hdrAssumedHeadroom": 0,
                 "coexistence.notify": true,

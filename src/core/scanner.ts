@@ -108,7 +108,8 @@ const VARIABLE_LANGUAGES: ReadonlySet<string> = new Set([
   'tailwindcss',
 ]);
 
-export function isVariableLanguage(languageId: string): boolean {
+export function isVariableLanguage(languageId: string, override?: readonly string[] | null): boolean {
+  if (override) return override.includes(languageId);
   return VARIABLE_LANGUAGES.has(languageId);
 }
 

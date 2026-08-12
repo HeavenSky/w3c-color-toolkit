@@ -59,9 +59,11 @@ export const EN = {
   'advanced.contextualPreview':
     'Color scheme assumed when previewing context dependent colors such as light-dark(). "auto" follows the editor theme. Results are marked as assumed.',
   'advanced.variables.resolve': 'Resolve CSS custom properties and preprocessor variables.',
-  'advanced.variables.includePaths': 'Extra workspace relative search paths for imports.',
-  'advanced.variables.maxImportDepth': 'Maximum import depth.',
-  'advanced.variables.maxImportFiles': 'Maximum number of imported files.',
+  'advanced.variables.lookupGlobs':
+    'Where to look for variable definitions, as workspace relative glob patterns. node_modules, dist, out, build and similar directories are always excluded. Definitions are found by this list, not by following @import, because stylesheets are often combined by a JS bundler instead.',
+  'advanced.variables.maxIndexedFiles': 'Maximum number of stylesheets to index for variable definitions.',
+  'advanced.variables.languageIds':
+    'Language ids in which variable references are recognised. null uses the built-in list (css, scss, sass, less, postcss, tailwindcss). This is separate from highlight.matchWords, which only decides where bare color names count.',
   'advanced.variables.maxResolveDepth': 'Maximum variable resolution depth.',
   'advanced.experimental.hdrAssumedHeadroom':
     'Assumed display HDR headroom used to preview hdr-color(). 0 disables the preview.',
@@ -131,9 +133,11 @@ export const ZH_CN = {
   'advanced.contextualPreview':
     '预览 `light-dark()` 等上下文相关颜色时假设的配色方案。`auto` 跟随编辑器主题。结果会标注为假设值。',
   'advanced.variables.resolve': '解析 CSS 自定义属性与预处理器变量。',
-  'advanced.variables.includePaths': '导入解析时额外的工作区相对搜索路径。',
-  'advanced.variables.maxImportDepth': '导入深度上限。',
-  'advanced.variables.maxImportFiles': '导入文件数上限。',
+  'advanced.variables.lookupGlobs':
+    '到哪里查找变量定义, 写成工作区相对的 glob 模式。node_modules、dist、out、build 等目录始终排除。定义靠这份列表发现而不是跟随 `@import` —— 样式文件常常由 JS 打包器合并, 没有任何 CSS 层面的导入。',
+  'advanced.variables.maxIndexedFiles': '为变量定义建立索引的样式文件数上限。',
+  'advanced.variables.languageIds':
+    '在哪些语言标识中识别变量引用。null 表示使用内置列表 (css、scss、sass、less、postcss、tailwindcss)。它与 `highlight.matchWords` 分开 —— 后者只决定裸颜色名在哪里算颜色。',
   'advanced.variables.maxResolveDepth': '变量解析深度上限。',
   'advanced.experimental.hdrAssumedHeadroom': '预览 `hdr-color()` 时假设的显示器 HDR headroom。0 表示不预览。',
   'advanced.coexistence.notify': '同时安装了原三个颜色扩展时给出提示。',

@@ -73,9 +73,10 @@ export interface RuntimeConfiguration {
   readonly scanStrings: boolean;
   readonly contextualPreview: 'off' | 'light' | 'dark';
   readonly variablesResolve: boolean;
-  readonly variablesIncludePaths: readonly string[];
-  readonly maxImportDepth: number;
-  readonly maxImportFiles: number;
+  readonly variablesLookupGlobs: readonly string[];
+  readonly maxIndexedFiles: number;
+  /** null 表示用内置默认语言表。 */
+  readonly variablesLanguageIds: readonly string[] | null;
   readonly maxResolveDepth: number;
   readonly hdrAssumedHeadroom: number;
   readonly coexistenceNotify: boolean;
@@ -159,9 +160,9 @@ export function loadConfiguration(scope?: vscode.ConfigurationScope): RuntimeCon
     scanStrings: get<boolean>('scan.strings'),
     contextualPreview: resolveContextualPreview(get<ContextualPreviewSetting>('contextualPreview')),
     variablesResolve: get<boolean>('variables.resolve'),
-    variablesIncludePaths: get<string[]>('variables.includePaths'),
-    maxImportDepth: get<number>('variables.maxImportDepth'),
-    maxImportFiles: get<number>('variables.maxImportFiles'),
+    variablesLookupGlobs: get<string[]>('variables.lookupGlobs'),
+    maxIndexedFiles: get<number>('variables.maxIndexedFiles'),
+    variablesLanguageIds: get<string[] | null>('variables.languageIds'),
     maxResolveDepth: get<number>('variables.maxResolveDepth'),
     hdrAssumedHeadroom: get<number>('experimental.hdrAssumedHeadroom'),
     coexistenceNotify: get<boolean>('coexistence.notify'),
@@ -194,9 +195,9 @@ export function configurationDigest(config: RuntimeConfiguration): string {
     config.hdrAssumedHeadroom,
     config.variablesResolve,
     // 变量解析的其余参数同样改变扫描结果: 搜索路径变了, 能解析到的定义就变了。
-    config.variablesIncludePaths,
-    config.maxImportDepth,
-    config.maxImportFiles,
+    config.variablesLookupGlobs,
+    config.maxIndexedFiles,
+    config.variablesLanguageIds,
     config.maxResolveDepth,
     config.maxMatchesPerDocument,
   ]);

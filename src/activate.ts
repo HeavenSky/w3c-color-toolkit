@@ -7,11 +7,7 @@
 import * as vscode from 'vscode';
 
 import type { StyleFileSource } from './adapters/types.js';
-import {
-  DEFAULT_LOOKUP_GLOBS,
-  DEFAULT_MAX_INDEXED_FILES,
-  WorkspaceVariableIndex,
-} from './adapters/workspace-variable-index.js';
+import { WorkspaceVariableIndex } from './adapters/workspace-variable-index.js';
 import { registerCommands, syncHdrContextKey } from './commands/register.js';
 import { invalidPatterns } from './configuration/disable-filter.js';
 import { disableRulesOf, isDocumentHidden } from './configuration/disable-gate.js';
@@ -59,8 +55,8 @@ export function activateShared(
   // 样式文件来源以注入方式传入: 它是唯一与宿主能力相关的接缝 (glob 发现、读取、监听),
   // 保留注入点让单元测试可以替换成内存实现。
   const variableIndex = new WorkspaceVariableIndex(options.createStyleFileSource(), {
-    lookupGlobs: DEFAULT_LOOKUP_GLOBS,
-    maxIndexedFiles: DEFAULT_MAX_INDEXED_FILES,
+    lookupGlobs: initial.variablesLookupGlobs,
+    maxIndexedFiles: initial.maxIndexedFiles,
   });
   context.subscriptions.push({ dispose: () => variableIndex.dispose() });
 
@@ -186,7 +182,8 @@ export function activateShared(
       if (stats.truncated) {
         logger.warnOnce(
           'variable-index-truncated',
-          `variable index stopped at ${DEFAULT_MAX_INDEXED_FILES} files; some definitions are not indexed`,
+          `variable index stopped at ${initial.maxIndexedFiles} files; ` +
+            'some definitions are not indexed (advanced.variables.maxIndexedFiles)',
         );
       }
       for (const uri of stats.failed) {

@@ -106,9 +106,18 @@ describe('advanced 增量覆盖', () => {
   });
 
   it('数值越界被钳制并记录', () => {
-    const result = resolveAdvanced({ user: { 'variables.maxImportDepth': 5000 } });
-    expect(result.values['variables.maxImportDepth']).toBe(100);
+    const result = resolveAdvanced({ user: { 'variables.maxResolveDepth': 5000 } });
+    expect(result.values['variables.maxResolveDepth']).toBe(100);
     expect(result.issues[0].kind).toBe('clamped');
+  });
+
+  it('被删除的旧键得到 unknown-key 告警而不是静默生效', () => {
+    // `variables.includePaths` / `maxImportDepth` / `maxImportFiles` 随发现范围改为
+    // glob 索引而删除; 它们服务的 `@import` 递归路径此前因调度条件恒假从未生效。
+    const result = resolveAdvanced({
+      user: { 'variables.includePaths': ['x'], 'variables.maxImportDepth': 5 },
+    });
+    expect(result.issues.map((issue) => issue.kind)).toEqual(['unknown-key', 'unknown-key']);
   });
 
   it('非对象值被忽略而不抛异常', () => {

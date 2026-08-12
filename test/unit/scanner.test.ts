@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { findMatchAtOffset, scanText, type ScanOptions } from '../../src/core/scanner.js';
+import {
+  findMatchAtOffset,
+  isCssLikeLanguage,
+  isVariableLanguage,
+  scanText,
+  type ScanOptions,
+} from '../../src/core/scanner.js';
 import type { ColorMatch, ResolveVariable } from '../../src/core/types.js';
 
 import { DEFAULT_PARSE_OPTIONS } from './helpers.js';
@@ -204,6 +210,22 @@ describe('matchWords 与语言', () => {
 });
 
 describe('变量识别范围与颜色识别范围分开', () => {
+  it('两份语言表各管各的', () => {
+    // tailwindcss: 变量要识别, 但它不是"CSS 系语言"(裸颜色名的判定表)。
+    expect(isVariableLanguage('tailwindcss')).toBe(true);
+    expect(isCssLikeLanguage('tailwindcss')).toBe(false);
+    // stylus: 颜色照旧识别, 变量不识别 (方案 D3)。
+    expect(isCssLikeLanguage('stylus')).toBe(true);
+    expect(isVariableLanguage('stylus')).toBe(false);
+  });
+
+  it('语言表可被配置覆盖', () => {
+    expect(isVariableLanguage('vue', ['vue'])).toBe(true);
+    expect(isVariableLanguage('css', ['vue'])).toBe(false);
+    // null / undefined 表示用内置表。
+    expect(isVariableLanguage('css', null)).toBe(true);
+  });
+
   it('Stylus: 颜色照旧识别, 变量引用不识别', () => {
     // `.styl` 文件的 languageId 属于 CSS 系 (颜色名照旧), 但不在变量语言表内。
     const options = { cssLikeLanguage: true, variableSyntax: false } as const;

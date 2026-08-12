@@ -240,27 +240,29 @@ export const ADVANCED_SETTINGS: readonly SettingDefinition[] = Object.freeze([
 
   // 变量 (5)
   { key: 'variables.resolve', type: 'boolean', default: true, nlsKey: 'advanced.variables.resolve' },
+  // 发现范围以 glob 为主: 现实项目的样式文件常常只经 JS/TS 的 import 合并, 没有任何
+  // CSS 层面的 `@import`, 只跟导入图会永远看不到令牌文件。`@import` 仍作补充路径。
   {
-    key: 'variables.includePaths',
+    key: 'variables.lookupGlobs',
     type: 'string[]',
-    default: [],
-    nlsKey: 'advanced.variables.includePaths',
+    default: ['**/*.{css,scss,sass,less}'],
+    nlsKey: 'advanced.variables.lookupGlobs',
   },
   {
-    key: 'variables.maxImportDepth',
+    key: 'variables.maxIndexedFiles',
     type: 'integer',
-    default: 20,
+    default: 2000,
     minimum: 0,
-    maximum: 100,
-    nlsKey: 'advanced.variables.maxImportDepth',
+    maximum: 100000,
+    nlsKey: 'advanced.variables.maxIndexedFiles',
   },
+  // 与 `highlight.matchWords` 的语言判定分开: 那个决定"裸颜色名在哪些语言里算颜色",
+  // 这个决定"在哪些语言里识别变量引用"。含 tailwindcss, 不含 stylus。
   {
-    key: 'variables.maxImportFiles',
-    type: 'integer',
-    default: 200,
-    minimum: 0,
-    maximum: 10000,
-    nlsKey: 'advanced.variables.maxImportFiles',
+    key: 'variables.languageIds',
+    type: 'string[]|null',
+    default: null,
+    nlsKey: 'advanced.variables.languageIds',
   },
   {
     key: 'variables.maxResolveDepth',

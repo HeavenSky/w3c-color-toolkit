@@ -51,7 +51,7 @@ export function scanOptionsFor(
     scanComments: config.scanComments,
     scanStrings: config.scanStrings,
     maxMatches: config.maxMatchesPerDocument,
-    variableSyntax: config.variablesResolve && isVariableLanguage(languageId),
+    variableSyntax: config.variablesResolve && isVariableLanguage(languageId, config.variablesLanguageIds),
     resolveVariable: config.variablesResolve ? variables.resolveVariable : undefined,
     maxResolveDepth: config.maxResolveDepth,
   };
