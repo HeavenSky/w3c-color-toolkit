@@ -154,17 +154,40 @@ Output style: `w3cColorToolkit.convertSyntax` (`legacy` commas vs `modern` space
 
 ### Variable resolution
 
-| Language | Resolved |
+| Reference | Where it resolves |
 | --- | --- |
-| any | CSS custom properties (`--brand`, used through `var()`) |
-| `scss`, `sass` | `$brand` |
-| `less` | `@brand` |
-| `stylus` | `brand = …` |
+| `var(--brand)` | any CSS-like language |
+| `$brand` | `scss`, `sass` |
+| `@brand` | `less` |
+| bare `brand` (Stylus) | **not resolved** — `brand = …` definitions are still collected for other files to reference |
 
 `@import` / `@use` / `@forward` are followed across files, bounded by
 `advanced.variables.maxImportDepth`, `advanced.variables.maxImportFiles` and cycle detection. Add
 extra workspace-relative search roots with `advanced.variables.includePaths`.
 `@color-profile --name { fallback: … }` is picked up too, so `color(--name …)` can resolve.
+
+**When a reference cannot be resolved, nothing is shown** — no highlight, no swatch, no hover. That
+happens when there is no definition, when a custom property has several `:root` definitions (the
+cascade winner depends on the element, and this extension does not guess), when the value contains
+arithmetic or a non-color function call, on a reference cycle, past `maxResolveDepth`, and in an
+untrusted workspace for anything outside the current file. The reason is written to the output
+channel, so **Manage → Open log** tells you which case you hit.
+
+**A resolved reference is read only.** The picker shows the color but will not let you drag it, and
+`Convert Color` refuses and names the variable it depends on. Rewriting `var(--brand)` into
+`#ff8800` would destroy the token, which is almost never what you want.
+
+**Colors inside a reference get their own swatch.** `var(--brand, #ff8800)` shows two swatches — one
+for the whole reference and one for the fallback — because a swatch is drawn in front of its range,
+so different starting points line up side by side. Nesting works the same way:
+`var(--a, var(--b, #674), #def)` shows four. Highlighting still marks only the outermost range, so
+underlines never double up.
+
+**The color may appear a beat late.** Definitions in the current file resolve synchronously;
+resolving across `@import` needs to read those files, so the swatch appears once that finishes.
+
+Resolution is regex based, which sets a ceiling: SCSS maps, `@each`, mixins and function calls such
+as `darken($x, 10%)` are not evaluated. Those references fall into the silent case above.
 
 ### Context dependent values are never faked
 
@@ -464,9 +487,13 @@ values and read-only syntax. Use `Convert Color` to rewrite it deliberately.
 the target cannot express (`convert.alphaLoss`), or no exact color name (`convert.namedColorFallback`).
 Loosen the relevant policy, or pick a different target.
 
-**`var(--x)` stays unresolved.** Check `advanced.variables.resolve`, add the stylesheet root to
-`advanced.variables.includePaths`, and note that untrusted workspaces do not read imported files. The
-import walk is bounded by `variables.maxImportDepth` / `maxImportFiles` / `maxResolveDepth`.
+**A variable reference shows nothing at all.** That is the designed outcome for every unresolvable
+case, so start from the log: **Manage → Open log** names the reason. Then check
+`advanced.variables.resolve`, add the stylesheet root to `advanced.variables.includePaths`, and note
+that untrusted workspaces do not read imported files. The import walk is bounded by
+`variables.maxImportDepth` / `maxImportFiles` / `maxResolveDepth`. Values built with arithmetic,
+SCSS maps, `@each` or functions like `darken()` are outside what this extension evaluates. Bare
+Stylus identifiers are not treated as references at all.
 
 **A key in `advanced` seems to be ignored.** Run **Manage → Show effective configuration** — it
 prints every key with the scope it came from, plus a list of rejected keys. Set
@@ -484,6 +511,10 @@ report.
   `advanced.disable.maxFileSizeMb` and `advanced.highlight.maxMatchesPerDocument` bound the work.
 - CSS Color 6 and CSS Color HDR are drafts; values and syntax may still change.
 - Untrusted workspaces resolve variables only within the current document.
+- Variable resolution is regex based: SCSS maps, `@each`, mixins and function calls are not
+  evaluated, and such references show nothing rather than a guessed color.
+- Bare Stylus identifiers (`color: brand`) are not resolved — they are indistinguishable from any
+  other word without consulting the definitions, which are only available asynchronously.
 - No remote ICC profile download; `device-cmyk()` uses the naive fallback and is marked approximate.
 
 ## Localisation

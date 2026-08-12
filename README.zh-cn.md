@@ -140,17 +140,35 @@ rgb(): rgb(240, 112, 63)
 
 ### 变量解析
 
-| 语言 | 可解析 |
+| 引用写法 | 生效范围 |
 | --- | --- |
-| 任意 | CSS 自定义属性 (`--brand`, 通过 `var()` 使用) |
-| `scss`、`sass` | `$brand` |
-| `less` | `@brand` |
-| `stylus` | `brand = …` |
+| `var(--brand)` | 任意 CSS 系语言 |
+| `$brand` | `scss`、`sass` |
+| `@brand` | `less` |
+| Stylus 的裸标识符 `brand` | **不解析** —— `brand = …` 的定义仍会被收集, 供其他文件引用 |
 
 `@import` / `@use` / `@forward` 会跨文件跟踪, 受 `advanced.variables.maxImportDepth`、
 `advanced.variables.maxImportFiles` 与循环检测三重限制。用
 `advanced.variables.includePaths` 追加工作区相对搜索根。
 `@color-profile --name { fallback: … }` 同样会被收集, 因此 `color(--name …)` 可以解析。
+
+**解析不出来时什么都不显示** —— 没有高亮, 没有色块, 没有 Hover。以下情形都归此类: 找不到定义;
+自定义属性有多个 `:root` 定义 (cascade 胜者取决于具体元素, 本扩展不猜); 值里含运算或非颜色函数调用;
+引用成环; 超过 `maxResolveDepth`; 以及未受信任工作区中当前文件之外的一切。原因会写进输出面板,
+用 **管理 → 打开日志** 可以看到究竟命中了哪一种。
+
+**已解析的引用是只读的。** 取色器只展示颜色而不允许拖动, *转换颜色* 会拒绝并告知它依赖的变量名。
+把 `var(--brand)` 改写成 `#ff8800` 会销毁设计令牌, 那几乎不会是你想要的。
+
+**引用内部的颜色各有自己的色块。** `var(--brand, #ff8800)` 会出现两个色块 —— 整个引用一个,
+fallback 一个 —— 因为色块画在各自 range 的起点之前, 起点不同就会并排错开。嵌套同理:
+`var(--a, var(--b, #674), #def)` 会出现四个。高亮仍然只标最外层, 因此下划线不会叠加。
+
+**颜色可能迟一拍出现。** 当前文件里的定义是同步解析的; 跨 `@import` 需要读取那些文件,
+因此色块要等读取完成才出现。
+
+解析基于正则, 因此有上限: SCSS 的 map、`@each`、mixin 以及 `darken($x, 10%)` 这类函数调用不会被求值,
+这些引用会落进上面的静默情形。
 
 ### 上下文相关的值不会被伪造
 
@@ -427,9 +445,12 @@ rgb(): rgb(240, 112, 63)
 (`convert.alphaLoss`)、或没有完全匹配的颜色名 (`convert.namedColorFallback`)。
 放宽相应策略, 或换一个目标格式。
 
-**`var(--x)` 一直未解析。** 检查 `advanced.variables.resolve`, 把样式根目录加入
+**变量引用什么都不显示。** 所有无法解析的情形都是这个结果, 所以先看日志: **管理 → 打开日志**
+会告诉你原因。然后检查 `advanced.variables.resolve`, 把样式根目录加入
 `advanced.variables.includePaths`, 并注意未受信任的工作区不读取被导入的文件。
 导入遍历受 `variables.maxImportDepth` / `maxImportFiles` / `maxResolveDepth` 限制。
+用运算、SCSS map、`@each` 或 `darken()` 这类函数构造的值不在本扩展的求值范围内。
+Stylus 的裸标识符根本不被当作引用。
 
 **`advanced` 里的某个键像是没生效。** 执行 **管理 → 显示生效配置**, 它会打印每个键及其来源 scope,
 并列出被拒绝的键。把 `advanced.logLevel` 设为 `debug` 后从 **管理 → 打开日志** 看细节。
@@ -445,6 +466,9 @@ rgb(): rgb(240, 112, 63)
   `advanced.highlight.maxMatchesPerDocument` 用于限制开销。
 - CSS Color 6 与 CSS Color HDR 均为草案, 数值与语法可能变化。
 - 未受信任的工作区只解析当前文档中的变量。
+- 变量解析基于正则: SCSS 的 map、`@each`、mixin 与函数调用不会被求值, 这类引用什么都不显示,
+  而不是给出一个猜测的颜色。
+- Stylus 的裸标识符 (`color: brand`) 不解析 —— 不查定义表就无法与普通单词区分, 而定义表只能异步取得。
 - 不下载远程 ICC profile; `device-cmyk()` 使用朴素 fallback 并标记为近似。
 
 ## 界面语言

@@ -2,7 +2,44 @@
 
 Notable changes to W3C Color Toolkit.
 
-## v0.0.5 2026-08-12 Drop dead configuration
+## v0.0.5 2026-08-12 Variables, nested swatches, dead configuration
+
+### Added
+
+- **Variable resolution actually works now.** `var(--brand)`, `$brand` and `@brand` resolve to real
+  colors and take part in highlighting, hover and the inline swatch. The adapter layer for this had
+  been written but never wired to the scan pipeline — the `FileReader` was created and immediately
+  discarded, and five adapter modules had zero importers. Definitions in the current file resolve
+  synchronously; `@import` / `@use` / `@forward` are followed across files, bounded by
+  `advanced.variables.maxImportDepth`, `advanced.variables.maxImportFiles` and cycle detection.
+  `@color-profile --name { fallback: … }` is collected too, so `color(--name …)` can resolve.
+- **Colors inside a reference get their own swatch and picker.** `var(--brand, #ff8800)` shows two
+  swatches — the whole reference and the fallback — and `var(--a, var(--b, #674), #def)` shows four.
+  A swatch is drawn in front of its range, so different starting points line up side by side; the
+  de-duplication rule is therefore "one swatch per starting point" rather than per range.
+  Highlighting still marks only the outermost range, so underlines never double up.
+- Hover, `Convert Color` and the picker all act on the **innermost** color at the cursor, so working
+  on a nested value edits that value and not the expression around it.
+
+### Changed
+
+- **An unresolvable variable reference now shows nothing at all** — no highlight, no swatch, no
+  hover. This covers a missing definition, a custom property with several `:root` definitions (the
+  cascade winner depends on the element and is not guessed), values containing arithmetic or a
+  non-color function call, reference cycles, `maxResolveDepth`, and anything outside the current file
+  in an untrusted workspace. The reason is logged once per file, so **Manage → Open log** identifies
+  which case applies. Resolution is regex based, so SCSS maps, `@each`, mixins and calls like
+  `darken($x, 10%)` also fall into this silent case.
+- **A resolved variable reference is read only**: the picker displays the color without allowing a
+  drag, and `Convert Color` refuses and names the variable. Rewriting `var(--brand)` into a literal
+  would destroy the token.
+- Colors that come from a cross-file definition may appear a beat late, because reading the imported
+  files is asynchronous. Editing an **open** variable file refreshes the other visible documents;
+  changes made outside the editor still need **Manage → Rescan current document** or **Clear the
+  index cache**.
+- Bare Stylus identifiers (`color: brand`) are **not** treated as references — without consulting the
+  definitions they are indistinguishable from any other word, and the definitions only arrive
+  asynchronously. `brand = …` definitions are still collected for other files to reference.
 
 ### Removed
 
