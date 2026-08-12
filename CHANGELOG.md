@@ -9,9 +9,8 @@ Notable changes to W3C Color Toolkit.
 - **Variable resolution actually works now.** `var(--brand)`, `$brand` and `@brand` resolve to real
   colors and take part in highlighting, hover and the inline swatch. The adapter layer for this had
   been written but never wired to the scan pipeline — the `FileReader` was created and immediately
-  discarded, and five adapter modules had zero importers. Definitions in the current file resolve
-  synchronously; `@import` / `@use` / `@forward` are followed across files, bounded by
-  `advanced.variables.maxImportDepth`, `advanced.variables.maxImportFiles` and cycle detection.
+  discarded, and five adapter modules had zero importers. Definitions come from a workspace symbol
+  index (see below), and the lookup during a scan is synchronous.
   `@color-profile --name { fallback: … }` is collected too, so `color(--name …)` can resolve.
 - **Colors inside a reference get their own swatch and picker.** `var(--brand, #ff8800)` shows two
   swatches — the whole reference and the fallback — and `var(--a, var(--b, #674), #def)` shows four.
@@ -20,6 +19,22 @@ Notable changes to W3C Color Toolkit.
   Highlighting still marks only the outermost range, so underlines never double up.
 - Hover, `Convert Color` and the picker all act on the **innermost** color at the cursor, so working
   on a nested value edits that value and not the expression around it.
+- **Variable definitions are found by glob, not by following `@import`.** A workspace symbol index
+  is built from `advanced.variables.lookupGlobs` and kept current with a file watcher; `@import` /
+  `@use` / `@forward` still pull in files the globs missed. Stylesheets are frequently combined by a
+  JS bundler with no CSS level import at all, and following the import graph never saw those token
+  files. Editing an open file updates the index from the editor content, so definitions take effect
+  before you save.
+- **"Not unique" is now its own outcome.** A variable defined under
+  `@media (prefers-color-scheme: dark)` or only under selectors like `[data-theme="…"]` used to be
+  dropped exactly like an undefined one. The hover now lists every candidate with where it comes
+  from, while the swatch and the highlight stay hidden — the value genuinely depends on the element
+  or the environment, so it is not guessed. When the variable is a fragment of a color function,
+  each candidate is substituted back into the whole expression so its color can be previewed.
+- **Definitions are collected from a real CSS AST.** `postcss`, `postcss-scss` and `postcss-less`
+  replace 13 hand-written regular expressions. Comments, nested rules, conditional at-rules and
+  dialect differences are now handled structurally rather than pattern by pattern; a file with a
+  syntax error only stops contributing its own definitions.
 - **A variable used as a fragment of a color function now resolves.** `rgb(var(--channels) / 0.4)`,
   `rgba(var(--x), 0.4)`, `hsl(var(--h) 50% 50%)` and `color-mix(in srgb, var(--a), red)` used to show
   nothing at all: the whole function failed to parse statically, and the scanner did not descend into
@@ -39,26 +54,30 @@ Notable changes to W3C Color Toolkit.
   unchanged, so raising either key restores the previous behaviour. Anyone who already set these keys
   explicitly is unaffected.
 
-- **An unresolvable variable reference now shows nothing at all** — no highlight, no swatch, no
-  hover. This covers a missing definition, a custom property with several `:root` definitions (the
-  cascade winner depends on the element and is not guessed), values containing arithmetic or a
-  non-color function call, reference cycles, `maxResolveDepth`, and anything outside the current file
-  in an untrusted workspace. The reason is logged once per file, so **Manage → Open log** identifies
-  which case applies. Resolution is regex based, so SCSS maps, `@each`, mixins and calls like
-  `darken($x, 10%)` also fall into this silent case.
+- **A reference with no definition shows nothing at all** — no highlight, no swatch, no hover. This
+  covers a missing definition, a value that is not a color, a reference cycle, `maxResolveDepth`, and
+  files that are not readable in an untrusted workspace. A reference whose value merely is not
+  *unique* is a different case and keeps its hover, see above. SCSS maps, `@each`, mixins and calls
+  like `darken($x, 10%)` are not evaluated and therefore fall into the silent case.
 - **A resolved variable reference is read only**: the picker displays the color without allowing a
   drag, and `Convert Color` refuses and names the variable. Rewriting `var(--brand)` into a literal
   would destroy the token.
-- Colors that come from a cross-file definition may appear a beat late, because reading the imported
-  files is asynchronous. Editing an **open** variable file refreshes the other visible documents;
-  changes made outside the editor still need **Manage → Rescan current document** or **Clear the
-  index cache**.
-- Bare Stylus identifiers (`color: brand`) are **not** treated as references — without consulting the
-  definitions they are indistinguishable from any other word, and the definitions only arrive
-  asynchronously. `brand = …` definitions are still collected for other files to reference.
+- Colors that come from another file may appear a beat late right after activation, because building
+  the index reads files asynchronously; it does not block activation. Afterwards a file watcher keeps
+  the index current, and editing an open stylesheet updates it from the editor content immediately.
 
 ### Fixed
 
+- **Cross-file variable resolution never actually ran.** The index scheduled its asynchronous
+  cross-file pass only when the synchronous pass had left an unresolved variable behind — but that
+  same synchronous pass removes those matches, so the condition was always false and
+  `schedulePatch()` was unreachable. Variables now resolve from a workspace symbol index, which is
+  a plain synchronous lookup during the scan, so there is no second phase to be unreachable.
+- **A commented-out definition poisoned the real one.** `:root { /* --a: red; */ --a: #ff8800 }`
+  used to report two definitions and give up on both. Definitions are now collected from a PostCSS
+  AST, where a comment is a comment.
+- **A comment inside a value made the value unparseable.** `--a: /* c */ #ff8800` kept the comment
+  in the raw value, the color parse failed, and the reference silently disappeared.
 - **A `:root` block preceded by a comment was not recognised as `:root`.** The selector of a
   declaration is found by scanning back to the previous `{` / `}` / `;`, which swept up any comment
   sitting between the two — so a perfectly ordinary
@@ -68,6 +87,17 @@ Notable changes to W3C Color Toolkit.
 
 ### Removed
 
+- **Breaking.** `advanced.variables.includePaths`, `advanced.variables.maxImportDepth` and
+  `advanced.variables.maxImportFiles` are gone, replaced by `advanced.variables.lookupGlobs`,
+  `advanced.variables.maxIndexedFiles` and `advanced.variables.languageIds`. The three old keys
+  only ever configured the `@import` walk, which never ran (see *Fixed*), so removing them takes
+  nothing away. Setting them now produces an `unknown-key` warning.
+- **Breaking.** Stylus variables are no longer resolved. Colors in `.styl` files are unaffected —
+  hex, color names and color functions are still recognised — but `$brand = #ff8800` definitions
+  and `color: $brand` references are not. PostCSS has no official Stylus syntax package, and the
+  only third-party bridge depends on the Stylus compiler and `glob`, which use Node built-ins and
+  would break the browser bundle. The previous regex implementation also mis-reported the
+  definition side of `$brand = …` as a reference, because Stylus assigns with `=` rather than `:`.
 - **Breaking.** Four built-in options that never did anything are gone:
   `advanced.highlight.matchRgbWithoutFunction`, `advanced.highlight.rgbWithoutFunctionLanguages`,
   `advanced.highlight.matchHslWithoutFunction` and `advanced.highlight.hslWithoutFunctionLanguages`.

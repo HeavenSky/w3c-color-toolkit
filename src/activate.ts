@@ -1,8 +1,8 @@
 /**
  * 激活逻辑。由 `extension.ts` 调用, Node / Remote / Web 三种宿主共用。
  *
- * `FileReader` 仍以注入方式传入而不是直接 import: 它是唯一与宿主能力相关的接缝,
- * 保留注入点让单元测试可以替换成内存实现。
+ * `StyleFileSource` 以注入方式传入而不是直接 import: 它是唯一与宿主能力相关的接缝
+ * (glob 发现、读取、文件监听), 保留注入点让单元测试可以替换成内存实现。
  */
 import * as vscode from 'vscode';
 

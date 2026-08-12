@@ -4,8 +4,6 @@
  * 本层不引用 vscode API: 文件读取通过注入的 `FileReader` 完成,
  * 运行时由 `extension.ts` 注入 `workspace-file-reader.ts` 的实现, 测试可替换成内存实现。
  */
-import type { ResolvedColor } from '../core/types.js';
-
 /** 与 `vscode.TextDocument` 结构兼容的最小接口。 */
 export interface TextDocumentLike {
   readonly uri: string;
@@ -13,7 +11,8 @@ export interface TextDocumentLike {
   getText(): string;
 }
 
-export type VariableKind = 'css-custom-property' | 'scss' | 'less' | 'stylus';
+/** Stylus 不解析变量, 因此不在其中。 */
+export type VariableKind = 'css-custom-property' | 'scss' | 'less';
 
 export interface VariableDefinition {
   readonly name: string;
@@ -28,8 +27,7 @@ export interface VariableDefinition {
   /**
    * 由外到内的祖先链, 例如 `['@layer base', ':root']`。
    *
-   * 供歧义候选展示"这个值来自哪里"。旧的正则适配器不产出该字段,
-   * 因此暂为可选; 旧适配器在方案 U3 删除后收紧为必填。
+   * 供歧义候选展示"这个值来自哪里"。
    */
   readonly ancestorChain?: readonly string[];
   /** 定义处于 `@media` / `@supports` / `@container` 内, 取值依赖运行环境。 */
@@ -40,34 +38,6 @@ export interface VariableDefinition {
    */
   readonly isRoot?: boolean;
 }
-
-export interface VariableContext {
-  /** 变量名 → 全部定义。多定义即为 contextual。 */
-  readonly definitions: ReadonlyMap<string, readonly VariableDefinition[]>;
-  /** `@color-profile` 名称 → fallback 颜色。 */
-  readonly colorProfileFallbacks: ReadonlyMap<string, ResolvedColor>;
-  /** 递增版本, 供索引失效判断。 */
-  readonly version: number;
-  /** 收集过程中的问题, 供 diagnostic 使用。 */
-  readonly issues: readonly VariableIssue[];
-}
-
-export type VariableIssueKind =
-  | 'circular'
-  | 'max-depth'
-  | 'import-not-allowed'
-  | 'multiple-definitions'
-  | 'untrusted-workspace';
-
-export interface VariableIssue {
-  readonly kind: VariableIssueKind;
-  readonly detail: string;
-}
-
-export type VariableResolution =
-  | { readonly kind: 'resolved'; readonly rawValue: string }
-  | { readonly kind: 'contextual'; readonly reason: VariableIssueKind | 'no-definition' }
-  | { readonly kind: 'unknown' };
 
 /** 歧义候选: 一个变量在缺少元素上下文时可能取到的某个值, 以及它来自哪里。 */
 export interface VariableCandidate {
@@ -80,9 +50,9 @@ export interface VariableCandidate {
 /**
  * 变量查表结果 (三态)。
  *
- * 与旧的 `VariableResolution` 的区别在中间那一态: 旧形态只说"解析不出来", 于是调用方
- * 唯一的出路是把 match 整条丢掉; 新形态把**枚举得到的候选**带出来, Hover 因此可以列出
- * "这个变量可能是这几个值, 取决于元素", 而高亮与色块仍然不显示 (没有 assumed 值)。
+ * 中间那一态是关键: "有定义但取值取决于元素或环境"与"根本没有定义"必须分开 ——
+ * 前者要把候选带出来供 Hover 列出, 后者才是静默移除。改造前只有二态, 因此多主题令牌
+ * 与拼错的变量名得到同一个结果 (什么都不显示)。
  */
 export type VariableLookup =
   | { readonly kind: 'resolved'; readonly rawValue: string; readonly sourceUri: string }
@@ -139,17 +109,4 @@ export interface FileReader {
   resolveImport(fromUri: string, specifier: string, includePaths: readonly string[]): string[];
   /** 工作区是否受信任。 */
   isTrusted(): boolean;
-}
-
-export interface CollectOptions {
-  readonly resolveVariables: boolean;
-  readonly includePaths: readonly string[];
-  readonly maxImportDepth: number;
-  readonly maxImportFiles: number;
-  readonly maxResolveDepth: number;
-}
-
-export interface VariableContextProvider {
-  collect(document: TextDocumentLike, options: CollectOptions): Promise<VariableContext>;
-  resolve(name: string, atOffset: number, context: VariableContext): VariableResolution;
 }

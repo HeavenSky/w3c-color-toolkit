@@ -25,7 +25,7 @@ English: [README.md](./README.md) · 变更记录: [CHANGELOG.md](./CHANGELOG.md
 - VS Code **1.101** 或更高版本。
 - 不依赖其他扩展或外部工具。
 - 支持远程工作区与 VS Code for the Web (扩展提供 browser bundle)。
-- **未受信任**的工作区只解析当前文档内的变量, 不读取被导入的文件。
+- **未受信任**的工作区只使用已打开文件里的定义, 不读取磁盘上的其他文件。
 
 ## 快速上手
 
@@ -142,46 +142,57 @@ rgb(): rgb(240, 112, 63)
 
 | 引用写法 | 生效范围 |
 | --- | --- |
-| `var(--brand)` | 任意 CSS 系语言 |
-| `rgb(var(--channels) / 0.4)` | 任意 CSS 系语言 —— 变量作为颜色函数的片段, 见下 |
+| `var(--brand)` | 任意变量语言 (见下) |
+| `rgb(var(--channels) / 0.4)` | 变量作为颜色函数的片段, 先代换再解析 |
 | `$brand` | `scss`、`sass` |
 | `@brand` | `less` |
-| Stylus 的裸标识符 `brand` | **不解析** —— `brand = …` 的定义仍会被收集, 供其他文件引用 |
+| Stylus 的 `brand` / `$brand` | **不解析** —— `.styl` 里的颜色本身照常识别, 只是没有变量解析 |
 
-`@import` / `@use` / `@forward` 会跨文件跟踪, 受 `advanced.variables.maxImportDepth`、
-`advanced.variables.maxImportFiles` 与循环检测三重限制。用
-`advanced.variables.includePaths` 追加工作区相对搜索根。
-`@color-profile --name { fallback: … }` 同样会被收集, 因此 `color(--name …)` 可以解析。
+**定义靠 glob 发现, 不靠 `@import`。** 扩展在激活后按 `advanced.variables.lookupGlobs`
+(默认 `**/*.{css,scss,sass,less}`) 建一份工作区符号索引, 并用文件监听增量维护。
+这是刻意的: 现实项目的样式文件常常只经 JS/TS 的 `import` 合并, 没有任何 CSS 层面的
+`@import`, 只跟导入图会永远看不到令牌文件。`@import` / `@use` / `@forward` 仍作补充 ——
+明确写了导入但没被 glob 命中的文件也会被拉进索引。索引受
+`advanced.variables.maxIndexedFiles` 限制, `node_modules`、`dist`、`out`、`build` 等目录始终排除。
+编辑中的文件用编辑器里的内容, 定义不必等保存就生效。
 
-**解析不出来时什么都不显示** —— 没有高亮, 没有色块, 没有 Hover。以下情形都归此类: 找不到定义;
-自定义属性有多个 `:root` 定义 (cascade 胜者取决于具体元素, 本扩展不猜); 值里含运算或非颜色函数调用;
-引用成环; 超过 `maxResolveDepth`; 以及未受信任工作区中当前文件之外的一切。原因会写进输出面板,
-用 **管理 → 打开日志** 可以看到究竟命中了哪一种。
+**取值有三种结果。**
 
-**已解析的引用是只读的。** 取色器只展示颜色而不允许拖动, *转换颜色* 会拒绝并告知它依赖的变量名。
-把 `var(--brand)` 改写成 `#ff8800` 会销毁设计令牌, 那几乎不会是你想要的。
+1. **唯一确定** → 解析成真实颜色。判据是"没有元素上下文也能确定": 自定义属性要求恰好一个
+   无条件 root 级定义 (`:root` / `:host` / `html`, 且不在 `@media` 这类条件 at-rule 里);
+   预处理器变量取引用位置之前的最后一个定义 —— 那是顺序求值的确定结果, 不是猜测。
+   组件级的局部覆盖 (`.button { --brand: … }`) 不影响这个结论。
+2. **取值不唯一** → Hover 列出全部候选, 但**不给色块也不高亮**。两种来源: 定义在
+   `@media (prefers-color-scheme: dark)` 这类条件 at-rule 内 (取值随环境切换), 或者只定义在
+   `[data-theme="…"]`、`.dark` 这类选择器下 (取值取决于具体元素)。候选会连同来源一起列出,
+   例如 `@media (prefers-color-scheme: dark) › :root`; 变量是颜色函数片段时, 候选会被代换回
+   整段表达式再预览, 因此看到的是 `rgb(148 163 184 / 0.4)` 而不是光秃秃的通道值。
+3. **没有定义** → 什么都不显示: 没有高亮, 没有色块, 没有 Hover。这样 SCSS 里每个 `$foo`
+   才不会都弹出一个空面板。
+
+**已解析的引用是只读的。** 取色器只展示颜色而不允许拖动, *转换颜色* 会拒绝并告知它依赖的
+变量名。把 `var(--brand)` 改写成 `#ff8800` 会销毁设计令牌, 那几乎不会是你想要的。
 
 **引用内部的颜色各有自己的色块。** `var(--brand, #ff8800)` 会出现两个色块 —— 整个引用一个,
 fallback 一个 —— 因为色块画在各自 range 的起点之前, 起点不同就会并排错开。嵌套同理:
 `var(--a, var(--b, #674), #def)` 会出现四个。高亮仍然只标最外层, 因此下划线不会叠加。
 
-**变量作为颜色函数的片段同样解析。** `rgb(var(--channels) / 0.4)`、`rgba(var(--x), 0.4)`、
-`hsl(var(--h) 50% 50%)`、`color-mix(in srgb, var(--a), red)` 都会先把 `var()` 代换回原文本再解析,
+**变量作为颜色函数片段时先代换再解析。** `rgb(var(--channels) / 0.4)`、`rgba(var(--x), 0.4)`、
+`hsl(var(--h) 50% 50%)`、`color-mix(in srgb, var(--a), red)` 都会把 `var()` 代换回原文本再解析,
 因此 Tailwind 风格的通道令牌 (`--channels: 148 163 184` 这种本身不是颜色的值) 可以正常显示。
-整段与内层引用各得一个色块; 已解析的结果同样只读。两条边界:
+取不到值时 fallback 生效 (`var(--missing, 1 2 3)`); 循环引用会耗尽轮数并按"解析不出来"处理。
+预处理器变量作为片段 (`rgba($brand, 0.4)`) **整段不解析** —— 代换后是 SCSS/Less 自己的
+`rgba(颜色, alpha)` 重载而不是 CSS 语法; 内层的 `$brand` 仍有自己的色块。
 
-- 预处理器变量作为片段 (`rgba($brand, 0.4)`、`rgba(@brand, 0.4)`) **整段不解析** ——
-  代换后是 SCSS/Less 自己的 `rgba(颜色, alpha)` 重载而不是 CSS 语法。内层的 `$brand`
-  仍然有自己的色块与取色器。
-- 展开仍要求每个引用可解析, 即"当前文件或经 `@import` 可达的文件里存在唯一 root 级定义"。
-  只定义在 `[data-theme="…"]`、`.dark` 这类选择器下的多主题令牌不满足这一条 (cascade 胜者
-  取决于具体元素), 落进上面的静默情形。
+**哪些语言识别变量**由 `advanced.variables.languageIds` 决定, 默认
+`css`、`scss`、`sass`、`less`、`postcss`、`tailwindcss`。它与 `advanced.highlight.matchWords`
+的语言判定是两件事: 后者只决定裸颜色名在哪里算颜色。`tailwindcss` 在表内是因为
+Tailwind CSS IntelliSense 会把 CSS 文件切换成该语言。
 
-**颜色可能迟一拍出现。** 当前文件里的定义是同步解析的; 跨 `@import` 需要读取那些文件,
-因此色块要等读取完成才出现。
+定义收集基于 PostCSS 的真实 AST (`postcss` + `postcss-scss` + `postcss-less`), 因此注释掉的
+定义不会毒化同名真定义, 值里的注释也不会进入取值。一个语法错误的文件只让自己不贡献定义,
+不影响其他文件。
 
-解析基于正则, 因此有上限: SCSS 的 map、`@each`、mixin 以及 `darken($x, 10%)` 这类函数调用不会被求值,
-这些引用会落进上面的静默情形。
 
 ### 上下文相关的值不会被伪造
 
@@ -272,7 +283,7 @@ fallback 一个 —— 因为色块画在各自 range 的起点之前, 起点不
   "w3cColorToolkit.advanced": {
     "output.hexCase": "upper",
     "highlight.maxMatchesPerDocument": 3000,
-    "variables.includePaths": ["src/styles"]
+    "variables.lookupGlobs": ["src/styles/**/*.css"]
   }
 }
 ```
@@ -365,9 +376,9 @@ fallback 一个 —— 因为色块画在各自 range 的起点之前, 起点不
 | 键 | 取值 | 默认值 | 作用 |
 | --- | --- | --- | --- |
 | `variables.resolve` | boolean | `true` | 解析自定义属性与预处理器变量 |
-| `variables.includePaths` | string[] | `[]` | 导入查找的额外工作区相对路径 |
-| `variables.maxImportDepth` | 整数 0–100 | `20` | 最大导入深度 |
-| `variables.maxImportFiles` | 整数 0–10000 | `200` | 最大导入文件数 |
+| `variables.lookupGlobs` | string[] | `["**/*.{css,scss,sass,less}"]` | 到哪里查找变量定义。定义靠这份列表发现而不是跟随 `@import` —— 样式文件常常由 JS 打包器合并, 没有任何 CSS 层面的导入 |
+| `variables.maxIndexedFiles` | 整数 0–100000 | `2000` | 建索引的样式文件数上限 |
+| `variables.languageIds` | string[] \| null | `null` | 在哪些语言里识别变量引用。`null` 表示内置表 (`css`、`scss`、`sass`、`less`、`postcss`、`tailwindcss`) |
 | `variables.maxResolveDepth` | 整数 1–100 | `20` | 最大变量解析深度 |
 
 **其他**
@@ -462,8 +473,10 @@ fallback 一个 —— 因为色块画在各自 range 的起点之前, 起点不
 会告诉你原因。有两种常见写法是刻意落进这一类的: 令牌文件只经 JS/TS 的 `import` 引入而没有
 CSS 的 `@import`; 以及令牌只定义在 `[data-theme="…"]`、`.dark` 这类选择器下而不是 `:root`。
 然后检查 `advanced.variables.resolve`, 把样式根目录加入
-`advanced.variables.includePaths`, 并注意未受信任的工作区不读取被导入的文件。
-导入遍历受 `variables.maxImportDepth` / `maxImportFiles` / `maxResolveDepth` 限制。
+`advanced.variables.lookupGlobs` (确认令牌文件在其中), 并注意未受信任的工作区不读取其他文件。
+索引规模受 `variables.maxIndexedFiles` 限制, 代换深度受 `variables.maxResolveDepth` 限制。
+另外注意: 定义在 `[data-theme="…"]` 这类选择器下的多主题令牌属于"取值不唯一", 它会在 Hover
+里列出候选但不显示色块 —— 那是刻意的, 不是没识别。
 用运算、SCSS map、`@each` 或 `darken()` 这类函数构造的值不在本扩展的求值范围内。
 Stylus 的裸标识符根本不被当作引用。
 
@@ -483,7 +496,9 @@ Stylus 的裸标识符根本不被当作引用。
 - 未受信任的工作区只解析当前文档中的变量。
 - 变量解析基于正则: SCSS 的 map、`@each`、mixin 与函数调用不会被求值, 这类引用什么都不显示,
   而不是给出一个猜测的颜色。
-- Stylus 的裸标识符 (`color: brand`) 不解析 —— 不查定义表就无法与普通单词区分, 而定义表只能异步取得。
+- Stylus 不解析变量: `.styl` 文件里的 hex、颜色名与颜色函数照常识别, 但 `$brand = …` 这类
+  定义与引用不再解析 (PostCSS 没有官方 Stylus 语法包, 唯一的第三方桥接会引入 Node 专用依赖
+  而破坏 Web 宿主构建)。
 - 不下载远程 ICC profile; `device-cmyk()` 使用朴素 fallback 并标记为近似。
 
 ## 界面语言

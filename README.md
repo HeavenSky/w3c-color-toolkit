@@ -156,23 +156,40 @@ Output style: `w3cColorToolkit.convertSyntax` (`legacy` commas vs `modern` space
 
 | Reference | Where it resolves |
 | --- | --- |
-| `var(--brand)` | any CSS-like language |
-| `rgb(var(--channels) / 0.4)` | any CSS-like language — a variable used as a fragment of a color function, see below |
+| `var(--brand)` | any variable language (see below) |
+| `rgb(var(--channels) / 0.4)` | a variable used as a fragment of a color function; substituted before parsing |
 | `$brand` | `scss`, `sass` |
 | `@brand` | `less` |
-| bare `brand` (Stylus) | **not resolved** — `brand = …` definitions are still collected for other files to reference |
+| Stylus `brand` / `$brand` | **not resolved** — colors in `.styl` files are still recognised, there is simply no variable resolution |
 
-`@import` / `@use` / `@forward` are followed across files, bounded by
-`advanced.variables.maxImportDepth`, `advanced.variables.maxImportFiles` and cycle detection. Add
-extra workspace-relative search roots with `advanced.variables.includePaths`.
-`@color-profile --name { fallback: … }` is picked up too, so `color(--name …)` can resolve.
+**Definitions are found by glob, not by following `@import`.** After activation the extension builds
+a workspace symbol index from `advanced.variables.lookupGlobs` (default `**/*.{css,scss,sass,less}`)
+and keeps it up to date with a file watcher. This is deliberate: stylesheets are often combined by a
+JS bundler with no CSS level `@import` at all, so following the import graph would never see the
+token file. `@import` / `@use` / `@forward` still act as a supplement — a file that is explicitly
+imported but not matched by the globs is pulled into the index too. The index is bounded by
+`advanced.variables.maxIndexedFiles`, and `node_modules`, `dist`, `out`, `build` and similar
+directories are always excluded. Open files are read from the editor, so a definition takes effect
+before you save.
 
-**When a reference cannot be resolved, nothing is shown** — no highlight, no swatch, no hover. That
-happens when there is no definition, when a custom property has several `:root` definitions (the
-cascade winner depends on the element, and this extension does not guess), when the value contains
-arithmetic or a non-color function call, on a reference cycle, past `maxResolveDepth`, and in an
-untrusted workspace for anything outside the current file. The reason is written to the output
-channel, so **Manage → Open log** tells you which case you hit.
+**A lookup has three outcomes.**
+
+1. **Unambiguous** → resolved to a real color. The test is "can this be determined without an
+   element": a custom property needs exactly one unconditional root level definition (`:root` /
+   `:host` / `html`, and not inside a conditional at-rule such as `@media`); a preprocessor variable
+   takes the last definition before the reference, which is what sequential evaluation actually
+   does rather than a guess. A component level override (`.button { --brand: … }`) does not change
+   this.
+2. **Not unique** → the hover lists every candidate, but there is **no swatch and no highlight**.
+   Two sources: a definition inside a conditional at-rule such as
+   `@media (prefers-color-scheme: dark)` (the value follows the environment), or definitions that
+   only exist under selectors like `[data-theme="…"]` or `.dark` (the value depends on the element).
+   Each candidate is listed with where it comes from, for example
+   `@media (prefers-color-scheme: dark) › :root`. When the variable is a fragment of a color
+   function, each candidate is substituted back into the whole expression, so you see
+   `rgb(148 163 184 / 0.4)` rather than a bare channel triplet.
+3. **No definition** → nothing at all: no highlight, no swatch, no hover. That is what keeps every
+   `$foo` in a SCSS file from opening an empty panel.
 
 **A resolved reference is read only.** The picker shows the color but will not let you drag it, and
 `Convert Color` refuses and names the variable it depends on. Rewriting `var(--brand)` into
@@ -184,25 +201,26 @@ so different starting points line up side by side. Nesting works the same way:
 `var(--a, var(--b, #674), #def)` shows four. Highlighting still marks only the outermost range, so
 underlines never double up.
 
-**A variable used as a fragment of a color function resolves too.** `rgb(var(--channels) / 0.4)`,
-`rgba(var(--x), 0.4)`, `hsl(var(--h) 50% 50%)` and `color-mix(in srgb, var(--a), red)` substitute
-`var()` back into the text before parsing, so Tailwind-style channel tokens (`--channels: 148 163 184`,
-a value that is not a color on its own) show up. The whole expression and the inner reference each get
-a swatch, and the result is read only like any other resolved reference. Two boundaries:
+**A variable used as a fragment of a color function is substituted before parsing.**
+`rgb(var(--channels) / 0.4)`, `rgba(var(--x), 0.4)`, `hsl(var(--h) 50% 50%)` and
+`color-mix(in srgb, var(--a), red)` all substitute `var()` back into the text first, which makes
+Tailwind-style channel tokens (`--channels: 148 163 184`, a value that is not a color on its own)
+work. A fallback applies when the value cannot be found (`var(--missing, 1 2 3)`); a reference cycle
+exhausts the substitution budget and is treated as unresolvable. A preprocessor variable used the
+same way (`rgba($brand, 0.4)`) is **not** resolved as a whole — substituting it yields SCSS/Less's
+own `rgba(color, alpha)` overload rather than CSS syntax — but the inner `$brand` still gets its own
+swatch.
 
-- A preprocessor variable used as a fragment (`rgba($brand, 0.4)`, `rgba(@brand, 0.4)`) is **not**
-  resolved as a whole — substituting it yields SCSS/Less's own `rgba(color, alpha)` overload rather
-  than CSS syntax. The inner `$brand` still gets its own swatch and picker.
-- Substitution still requires every reference to be resolvable, that is a single root-level
-  definition in the current file or in a file reachable through `@import`. Multi-theme tokens defined
-  only under selectors like `[data-theme="…"]` or `.dark` do not qualify (the cascade winner depends
-  on the element) and fall into the silent case above.
+**Which languages recognise variables** is decided by `advanced.variables.languageIds`, by default
+`css`, `scss`, `sass`, `less`, `postcss` and `tailwindcss`. That is separate from the language test
+in `advanced.highlight.matchWords`, which only decides where bare color names count. `tailwindcss`
+is in the list because Tailwind CSS IntelliSense switches CSS files to that language.
 
-**The color may appear a beat late.** Definitions in the current file resolve synchronously;
-resolving across `@import` needs to read those files, so the swatch appears once that finishes.
+Definitions are collected from a real PostCSS AST (`postcss` + `postcss-scss` + `postcss-less`), so a
+commented-out definition no longer poisons the real one with the same name, and a comment inside a
+value never ends up in the value. A file with a syntax error only stops contributing its own
+definitions; it does not affect the others.
 
-Resolution is regex based, which sets a ceiling: SCSS maps, `@each`, mixins and function calls such
-as `darken($x, 10%)` are not evaluated. Those references fall into the silent case above.
 
 ### Context dependent values are never faked
 
@@ -300,7 +318,7 @@ Everything else is built in with a sensible default and overridden **incremental
   "w3cColorToolkit.advanced": {
     "output.hexCase": "upper",
     "highlight.maxMatchesPerDocument": 3000,
-    "variables.includePaths": ["src/styles"]
+    "variables.lookupGlobs": ["src/styles/**/*.css"]
   }
 }
 ```
@@ -398,9 +416,9 @@ and it is never scanned.
 | Key | Values | Default | Purpose |
 | --- | --- | --- | --- |
 | `variables.resolve` | boolean | `true` | Resolve custom properties and preprocessor variables |
-| `variables.includePaths` | string[] | `[]` | Extra workspace-relative search paths for imports |
-| `variables.maxImportDepth` | integer 0–100 | `20` | Maximum import depth |
-| `variables.maxImportFiles` | integer 0–10000 | `200` | Maximum number of imported files |
+| `variables.lookupGlobs` | string[] | `["**/*.{css,scss,sass,less}"]` | Where to look for variable definitions. Definitions are found by this list rather than by following `@import`, because stylesheets are often combined by a JS bundler |
+| `variables.maxIndexedFiles` | integer 0–100000 | `2000` | Maximum number of stylesheets to index |
+| `variables.languageIds` | string[] \| null | `null` | Languages in which variable references are recognised. `null` uses the built-in list (`css`, `scss`, `sass`, `less`, `postcss`, `tailwindcss`) |
 | `variables.maxResolveDepth` | integer 1–100 | `20` | Maximum variable resolution depth |
 
 **Other**
@@ -504,14 +522,14 @@ Loosen the relevant policy, or pick a different target.
 
 **A variable reference shows nothing at all.** That is the designed outcome for every unresolvable
 case, so start from the log: **Manage → Open log** names the reason. Then check
-`advanced.variables.resolve`, add the stylesheet root to `advanced.variables.includePaths`, and note
-that untrusted workspaces do not read imported files. Two common shapes fall into this case on
-purpose: a token file reached only through a JS/TS `import` rather than a CSS `@import`, and a token
-defined only under `[data-theme="…"]` / `.dark` selectors instead of `:root`. The import walk is
-bounded by
-`variables.maxImportDepth` / `maxImportFiles` / `maxResolveDepth`. Values built with arithmetic,
-SCSS maps, `@each` or functions like `darken()` are outside what this extension evaluates. Bare
-Stylus identifiers are not treated as references at all.
+`advanced.variables.resolve` and make sure the token file is covered by
+`advanced.variables.lookupGlobs`; note that untrusted workspaces only use definitions from files you
+have open. A token defined only under `[data-theme="…"]` / `.dark` selectors is **not** this case —
+it is "not unique", so the hover lists its candidates while the swatch stays hidden on purpose. The
+index size is bounded by
+`variables.maxIndexedFiles` / `maxResolveDepth`. Values built with arithmetic,
+SCSS maps, `@each` or functions like `darken()` are outside what this extension evaluates. Stylus
+variables are not resolved at all.
 
 **A key in `advanced` seems to be ignored.** Run **Manage → Show effective configuration** — it
 prints every key with the scope it came from, plus a list of rejected keys. Set
@@ -531,8 +549,9 @@ report.
 - Untrusted workspaces resolve variables only within the current document.
 - Variable resolution is regex based: SCSS maps, `@each`, mixins and function calls are not
   evaluated, and such references show nothing rather than a guessed color.
-- Bare Stylus identifiers (`color: brand`) are not resolved — they are indistinguishable from any
-  other word without consulting the definitions, which are only available asynchronously.
+- Stylus has no variable resolution: colors in `.styl` files are still recognised, but `$brand = …`
+  definitions and references are not (PostCSS has no official Stylus syntax package, and the only
+  third-party bridge pulls in Node-only dependencies that would break the web bundle).
 - No remote ICC profile download; `device-cmyk()` uses the naive fallback and is marked approximate.
 
 ## Localisation
