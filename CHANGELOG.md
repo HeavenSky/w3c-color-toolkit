@@ -4,6 +4,19 @@ Notable changes to W3C Color Toolkit.
 
 ## v0.0.6 2026-08-13 Duplicate swatches outside CSS
 
+### Added
+
+- `advanced.colorPicker.dedupeLanguages` (`string[]`, default `[]`) — extra language ids to probe
+  in `dedupe` mode. Built-in language services are detected automatically, but a third-party color
+  extension registers its provider at runtime with a selector that its manifest does not describe,
+  so there is nothing to detect; this list is the manual way in. Already probed and not to be
+  listed again: `css`, `less`, `scss`, `html`, `handlebars`, `json`, `jsonc`, `snippets`, plus
+  anything attached to the HTML or JSON service through a participant contribution point. Listing
+  a covered language changes nothing and is reported once in the output channel. Each entry costs
+  one extra provider round trip per document version, which is why the default is empty.
+
+  The built-in options go from 33 to 34.
+
 ### Fixed
 
 - **Every color in an HTML `<style>` block had two swatches.** Probing for other color providers

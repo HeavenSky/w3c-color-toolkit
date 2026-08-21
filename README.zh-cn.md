@@ -109,6 +109,11 @@ rgb(): rgb(240, 112, 63)
 | `all` | 所有语言上报全部受支持语法, 即使别人已经给过。 |
 | `off` | 不提供, 交回 VS Code 自己的提供器。 |
 
+自动探测的语言是 `css`、`less`、`scss`、`html`、`handlebars`、`json`、`jsonc`、`snippets`,
+外加 HTML 与 JSON 语言服务通过参与者贡献点接管的语言。第三方颜色扩展无法从清单检测,
+把它的语言写进 `advanced.colorPicker.dedupeLanguages` (默认 `[]`) 即可一并探测; 重复写入
+上面已覆盖的语言不改变任何行为, 只会在输出面板提示一次。
+
 两个 VS Code 上限会生效: 每个编辑器最多渲染 `editor.colorDecoratorsLimit` (默认 **500**) 个色块 ——
 本扩展按该值截断上报并记一次日志; `editor.colorDecoratorsActivatedOn` 决定取色器是悬停打开、
 点击打开还是两者都可。
@@ -330,6 +335,7 @@ Tailwind CSS IntelliSense 会把 CSS 文件切换成该语言。
 | 键 | 取值 | 默认值 | 作用 |
 | --- | --- | --- | --- |
 | `colorPicker.mode` | `off` \| `dedupe` \| `all` | `dedupe` | 行内色块与原生取色器, 见上文表格 |
+| `colorPicker.dedupeLanguages` | `string[]` | `[]` | `dedupe` 模式下额外探测的语言, 用于第三方颜色扩展; 内置语言服务覆盖的语言已自动探测 |
 
 **字段表 (Hover *与* 高亮)**
 
@@ -450,10 +456,10 @@ Tailwind CSS IntelliSense 会把 CSS 文件切换成该语言。
 所以"只要取色器不要色块"做不到。
 
 **一个颜色出现两个色块。** 要么 `colorPicker.mode` 是 `all`, 要么另一个颜色扩展也在上报该 range。
-`dedupe` 只在 VS Code 内置语言服务也会给颜色的语言里探测: `css`、`less`、`scss`、`html`
-(含内嵌 CSS)、`json`、`jsonc`, 以及其他扩展挂到 HTML 或 JSON 语言服务上的语言。
-Tailwind CSS IntelliSense 这类第三方颜色扩展在哪些语言里注册提供器无法从清单推导,
-与它们重叠时只能关掉其中一边。
+`dedupe` 会自动探测 VS Code 内置语言服务也给颜色的语言: `css`、`less`、`scss`、`html`、
+`handlebars`、`json`、`jsonc`、`snippets`, 以及其他扩展挂到 HTML 或 JSON 语言服务上的语言。
+第三方颜色扩展请把它的语言加进 `advanced.colorPicker.dedupeLanguages` —— 这类扩展在哪些
+语言里注册提供器无法从清单推导, 检测不到。上面列出的语言已经在探测, 不要再写进那份列表。
 
 *为什么需要探测:* VS Code 把**所有**颜色提供器的结果叠加渲染且不按 range 去重; 只要有扩展返回了
 数组 (哪怕空数组) 它就不再使用内置**默认**提供器; 而 `vscode.executeDocumentColorProvider`

@@ -90,6 +90,32 @@ export function builtInColorLanguages(
   return byLanguage;
 }
 
+/**
+ * 一次探测的对象。
+ *
+ * 两种来源要分开, 因为它们对"空结果能不能缓存"的答案不同: 内置提供器能按扩展 id 查到
+ * 就绪状态, 用户手动列出的语言背后是哪个扩展无从得知, 只能一律当作"可能还没就绪"。
+ */
+export type ProbeTarget =
+  | { readonly kind: 'built-in'; readonly extensionId: string }
+  | { readonly kind: 'configured' };
+
+/**
+ * 该语言要不要探测, 探测的是谁。
+ *
+ * 内置提供器优先: 它同时给出扩展 id, 能让空结果的缓存判断更准; 用户把同一个语言写进
+ * `dedupeLanguages` 不会让它退化成 `configured`。
+ */
+export function resolveProbeTarget(
+  languageId: string,
+  builtIn: ReadonlyMap<string, string>,
+  configuredLanguageIds: readonly string[],
+): ProbeTarget | undefined {
+  const extensionId = builtIn.get(languageId);
+  if (extensionId !== undefined) return { kind: 'built-in', extensionId };
+  return configuredLanguageIds.includes(languageId) ? { kind: 'configured' } : undefined;
+}
+
 /** 成对出现才算引号; 单引号在 JSON 里不合法, 但 JSONC 之外的方言与 schema 参与者可能允许。 */
 const QUOTES = new Set(['"', "'", '`']);
 

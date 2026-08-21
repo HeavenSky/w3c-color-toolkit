@@ -210,6 +210,14 @@
               "default": "dedupe",
               "description": "%advanced.colorPicker.mode%"
             },
+            "colorPicker.dedupeLanguages": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": [],
+              "description": "%advanced.colorPicker.dedupeLanguages%"
+            },
             "fields.enabled": {
               "type": [
                 "array",
@@ -404,7 +412,7 @@
           "defaultSnippets": [
             {
               "label": "All advanced options (with defaults)",
-              "description": "Insert all 33 built-in options with their default values",
+              "description": "Insert all 34 built-in options with their default values",
               "body": {
                 "disable.maxFileSizeMb": 0.3,
                 "disable.fileNames": [
@@ -421,6 +429,7 @@
                 "highlight.maxMatchesPerDocument": 600,
                 "highlight.hdrToneMapping": "reinhard",
                 "colorPicker.mode": "dedupe",
+                "colorPicker.dedupeLanguages": [],
                 "fields.enabled": null,
                 "fields.excluded": [],
                 "info.previewSize": "small",

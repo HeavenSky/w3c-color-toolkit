@@ -129,7 +129,7 @@ describe('配置贡献点一致性', () => {
       }
     }
 
-    // 2. 可插入模板: 全量模板含全部 33 个键及默认值。
+    // 2. 可插入模板: 全量模板含全部 34 个键及默认值。
     const snippets = advanced.defaultSnippets as { label: string; body: Record<string, unknown> }[];
     expect(snippets.length).toBeGreaterThanOrEqual(2);
     const full = snippets[0].body;
@@ -157,11 +157,11 @@ describe('配置贡献点一致性', () => {
     }
   });
 
-  it('advanced 列出全部 33 个内置键并拒绝未知键', () => {
+  it('advanced 列出全部 34 个内置键并拒绝未知键', () => {
     const advanced = properties['w3cColorToolkit.advanced'];
     expect(advanced.additionalProperties).toBe(false);
     const advancedProperties = advanced.properties as Record<string, { default: unknown }>;
-    expect(Object.keys(advancedProperties)).toHaveLength(33);
+    expect(Object.keys(advancedProperties)).toHaveLength(34);
     for (const setting of ADVANCED_SETTINGS) {
       expect(advancedProperties[setting.key], `${setting.key} 未声明`).toBeDefined();
       expect(advancedProperties[setting.key].default).toEqual(setting.default);

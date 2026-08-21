@@ -16,6 +16,7 @@ import {
   builtInColorLanguages,
   coverageKeys,
   readProbeCache,
+  resolveProbeTarget,
   shouldCacheProbe,
   writeProbeCache,
   type ProbeEntry,
@@ -79,6 +80,34 @@ describe('要探测哪些语言', () => {
       { contributes: { jsonLanguageParticipants: [{ languageId: 'css' }] } },
     ]);
     expect(languages.get('css')).toBe(CSS_EXTENSION);
+  });
+});
+
+describe('一个语言要不要探测, 探测的是谁', () => {
+  const builtIn = builtInColorLanguages([]);
+
+  it('内置提供器覆盖的语言带出扩展 id', () => {
+    expect(resolveProbeTarget('scss', builtIn, [])).toEqual({
+      kind: 'built-in',
+      extensionId: CSS_EXTENSION,
+    });
+  });
+
+  it('没有内置提供器且没配置时不探测', () => {
+    expect(resolveProbeTarget('typescriptreact', builtIn, [])).toBeUndefined();
+  });
+
+  it('用户配置的语言按 configured 探测: 背后是哪个扩展无从得知', () => {
+    expect(resolveProbeTarget('typescriptreact', builtIn, ['vue', 'typescriptreact'])).toEqual({
+      kind: 'configured',
+    });
+  });
+
+  it('重复配置内置语言不改变结果, 内置优先', () => {
+    expect(resolveProbeTarget('css', builtIn, ['css'])).toEqual({
+      kind: 'built-in',
+      extensionId: CSS_EXTENSION,
+    });
   });
 });
 

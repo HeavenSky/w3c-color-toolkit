@@ -152,7 +152,7 @@ export const ADVANCED_SETTINGS: readonly SettingDefinition[] = Object.freeze([
     nlsKey: 'advanced.highlight.hdrToneMapping',
   },
 
-  // 原生色块与取色器 (1)
+  // 原生色块与取色器 (2)
   {
     key: 'colorPicker.mode',
     type: 'string',
@@ -161,6 +161,14 @@ export const ADVANCED_SETTINGS: readonly SettingDefinition[] = Object.freeze([
     default: 'dedupe',
     enum: ['off', 'dedupe', 'all'],
     nlsKey: 'advanced.colorPicker.mode',
+  },
+  {
+    // 第三方颜色扩展在哪些语言里注册提供器无法从清单推导, 因此留一个手动出口:
+    // 这些语言在 `dedupe` 模式下一并探测。默认空 —— 内置提供器覆盖的语言已自动包含。
+    key: 'colorPicker.dedupeLanguages',
+    type: 'string[]',
+    default: [],
+    nlsKey: 'advanced.colorPicker.dedupeLanguages',
   },
 
   // 字段范围 (2): 同时决定 Hover 行与高亮的颜色语法范围。

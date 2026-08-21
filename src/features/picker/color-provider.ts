@@ -23,8 +23,8 @@
  *
  * 哪些语言要探测由 `builtInColorLanguages` 在运行时算出, 不是一份常量: HTML 与 JSON
  * 两个语言服务都会把其他扩展通过参与者贡献点挂进来的语言一并接管 (见 swatch-plan.ts)。
- * 第三方颜色扩展 (Tailwind、Volar 等) 不在探测范围内: 它们在哪些语言里注册提供器无法从
- * 清单静态判定, 与它们重叠时只能关掉其中一边。
+ * 第三方颜色扩展在哪些语言里注册提供器无法从清单静态判定, 因此不自动探测; 需要时用
+ * `advanced.colorPicker.dedupeLanguages` 手动把语言加进来。
  *
  * 其他约束:
  * - 任何"没有可上报颜色"的分支必须返回 `undefined` 而不是 `[]`,
@@ -49,9 +49,11 @@ import {
   coverageKeys,
   planSwatches,
   readProbeCache,
+  resolveProbeTarget,
   shouldCacheProbe,
   writeProbeCache,
   type ProbeEntry,
+  type ProbeTarget,
 } from './swatch-plan.js';
 
 /**
@@ -91,9 +93,9 @@ export class ColorSwatchProvider implements vscode.DocumentColorProvider, vscode
   /** 探测结果按 uri 缓存, 每个 uri 一条并携带文档版本; 避免每次按键都多一次跨进程往返。 */
   private readonly probeCache = new Map<string, ProbeEntry>();
   /** 语言 id → 内置提供器扩展 id; 装扩展会改变它, 因此按 `extensions.onDidChange` 失效。 */
-  private builtInLanguages: ReadonlyMap<string, string> | undefined;
+  private builtInLanguageCache: ReadonlyMap<string, string> | undefined;
   private readonly extensionsChanged = vscode.extensions.onDidChange(() => {
-    this.builtInLanguages = undefined;
+    this.builtInLanguageCache = undefined;
   });
 
   constructor(
@@ -118,13 +120,28 @@ export class ColorSwatchProvider implements vscode.DocumentColorProvider, vscode
     const snapshot = this.manager.ensure(document);
     if (!snapshot) return undefined;
 
-    const builtInProvider =
+    const target =
       config.colorPickerMode === 'dedupe'
-        ? this.builtInProviderFor(document.languageId)
+        ? resolveProbeTarget(
+            document.languageId,
+            this.builtInLanguages(),
+            config.colorPickerDedupeLanguages,
+          )
         : undefined;
-    const covered = builtInProvider
-      ? await this.probeOtherProviders(document, builtInProvider)
-      : undefined;
+    // 已被内置提供器覆盖的语言又被写进 dedupeLanguages: 结果不变 (内置优先), 但用户多半是
+    // 误以为不写就不探测, 提示一次省得他们继续往里加。
+    if (
+      target?.kind === 'built-in' &&
+      config.colorPickerDedupeLanguages.includes(document.languageId)
+    ) {
+      this.logger.warnOnce(
+        `redundant-dedupe-language:${document.languageId}`,
+        `advanced.colorPicker.dedupeLanguages lists "${document.languageId}", which a built-in ` +
+          `language service already covers; the entry has no effect and can be removed`,
+      );
+    }
+
+    const covered = target ? await this.probeOtherProviders(document, target) : undefined;
 
     const syntaxes = resolveHighlightSyntaxes(
       config.fields,
@@ -200,7 +217,7 @@ export class ColorSwatchProvider implements vscode.DocumentColorProvider, vscode
    */
   private async probeOtherProviders(
     document: vscode.TextDocument,
-    builtInExtensionId: string,
+    target: ProbeTarget,
   ): Promise<ReadonlySet<string> | undefined> {
     const uri = document.uri.toString();
     const cached = readProbeCache(this.probeCache, uri, document.version);
@@ -234,8 +251,10 @@ export class ColorSwatchProvider implements vscode.DocumentColorProvider, vscode
         for (const key of coverageKeys(text, range)) covered.add(key);
       }
       // 其他提供器尚未激活时的空结果是暂态, 不能缓存 —— 否则"没人覆盖"会被钉死到文档
-      // 下一次改动为止, 表现为色块重复且没有任何错误日志。
-      if (shouldCacheProbe(covered.size, builtInColorProviderReady(builtInExtensionId))) {
+      // 下一次改动为止, 表现为色块重复且没有任何错误日志。用户手动列出的语言背后是哪个
+      // 扩展无从得知, 因此那里的空结果一律当作暂态, 代价是每个文档版本多一次探测。
+      const ready = target.kind === 'built-in' && builtInColorProviderReady(target.extensionId);
+      if (shouldCacheProbe(covered.size, ready)) {
         writeProbeCache(this.probeCache, uri, { version: document.version, covered });
       }
       return covered;
@@ -245,16 +264,16 @@ export class ColorSwatchProvider implements vscode.DocumentColorProvider, vscode
   }
 
   /**
-   * 该语言里是否有内置提供器也会给颜色; 有则返回它的扩展 id。
+   * 「语言 id → 内置提供器扩展 id」。
    *
    * 结果缓存在实例上: 参与者贡献点要遍历全部已安装扩展的清单, 而语言集合只在装卸或
    * 启停扩展时才变, 那时 `extensions.onDidChange` 会把缓存清掉。
    */
-  private builtInProviderFor(languageId: string): string | undefined {
-    this.builtInLanguages ??= builtInColorLanguages(
+  private builtInLanguages(): ReadonlyMap<string, string> {
+    this.builtInLanguageCache ??= builtInColorLanguages(
       vscode.extensions.all.map((extension) => extension.packageJSON),
     );
-    return this.builtInLanguages.get(languageId);
+    return this.builtInLanguageCache;
   }
 
   /** 取回该 range 对应的 match, 用于判断原格式与解析状态。 */

@@ -2,7 +2,7 @@
  * 从 TypeScript 单一来源生成 `package.json` 的 contributes 与两份 `package.nls` 文件。
  *
  * 来源:
- * - `src/configuration/schema.ts`: 7 个暴露层键 + 33 项内置层默认值;
+ * - `src/configuration/schema.ts`: 7 个暴露层键 + 34 项内置层默认值;
  * - `src/commands/ids.ts` 与 `src/features/convert/format-catalog.ts`: 5 个可见命令 + 30 个隐藏命令;
  * - `configurationDefaults`: 把 `editor.defaultColorDecorators` 默认值改为 `never` (见 buildContributes)。
  *
@@ -342,8 +342,8 @@ async function main() {
   if (sources.EXPOSED_SETTINGS.length !== 7) {
     errors.push(`expected 7 exposed settings, got ${sources.EXPOSED_SETTINGS.length}`);
   }
-  if (sources.ADVANCED_SETTINGS.length !== 33) {
-    errors.push(`expected 33 advanced settings, got ${sources.ADVANCED_SETTINGS.length}`);
+  if (sources.ADVANCED_SETTINGS.length !== 34) {
+    errors.push(`expected 34 advanced settings, got ${sources.ADVANCED_SETTINGS.length}`);
   }
 
   if (errors.length > 0) {

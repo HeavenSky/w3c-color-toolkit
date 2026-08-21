@@ -119,6 +119,12 @@ Use `Convert Color` when you want to rewrite those on purpose.
 | `all` | Report every supported syntax in every language, even where another provider already did. |
 | `off` | Provide nothing; VS Code falls back to its own providers. |
 
+The probed set is `css`, `less`, `scss`, `html`, `handlebars`, `json`, `jsonc`, `snippets` and
+whatever the HTML and JSON services adopt through their participant contribution points. Third-party
+color extensions cannot be detected from their manifests; add their languages to
+`advanced.colorPicker.dedupeLanguages` (default `[]`) and they get probed too. Listing a language
+that is already covered changes nothing and is reported once in the output channel.
+
 Two VS Code limits apply: at most `editor.colorDecoratorsLimit` (500 by default) swatches per editor
 — the extension truncates its report to that number and logs it — and
 `editor.colorDecoratorsActivatedOn` decides whether the picker opens on hover, on click, or both.
@@ -370,6 +376,7 @@ and it is never scanned.
 | Key | Values | Default | Purpose |
 | --- | --- | --- | --- |
 | `colorPicker.mode` | `off` \| `dedupe` \| `all` | `dedupe` | Inline swatch and native picker; see the table above |
+| `colorPicker.dedupeLanguages` | `string[]` | `[]` | Extra language ids to probe in `dedupe` mode, for third-party color extensions; the built-in ones are probed already |
 
 **Fields — hover *and* highlight**
 
@@ -498,11 +505,12 @@ applied.
 picker is anchored on the swatch, so "picker without swatch" is not possible.
 
 **A color shows two swatches.** Either `colorPicker.mode` is `all`, or another color extension is
-also reporting that range. `dedupe` probes only where a built-in VS Code language service also
-contributes colors: `css` / `less` / `scss`, `html` (including embedded CSS) and `json` / `jsonc`,
-plus any language another extension attaches to the HTML or JSON service. A third-party color
-extension such as Tailwind CSS IntelliSense registers in languages that cannot be derived from the
-manifests, so overlapping with one of those means turning off one of the two.
+also reporting that range. `dedupe` probes automatically wherever a built-in VS Code language
+service contributes colors — `css`, `less`, `scss`, `html`, `handlebars`, `json`, `jsonc`,
+`snippets`, plus any language an extension attaches to the HTML or JSON service. For a third-party
+color extension, add its languages to `advanced.colorPicker.dedupeLanguages`: which languages such
+an extension registers a provider in cannot be derived from its manifest, so it cannot be detected.
+The languages listed above are already probed and do not belong in that list.
 
 *Why probing is needed:* VS Code renders the results of **all** color providers without deduplicating
 by range, it drops the built-in *default* provider as soon as any extension returns an array (even an

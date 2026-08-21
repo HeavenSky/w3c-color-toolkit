@@ -39,6 +39,8 @@ export const EN = {
   'advanced.highlight.hdrToneMapping': 'Tone mapping used to preview HDR colors in sRGB.',
   'advanced.colorPicker.mode':
     'Native inline swatch and hover color picker (the picker is anchored on the swatch, so both come together). "dedupe" probes the other color providers wherever a built-in one also contributes colors (CSS, HTML and JSON language services) and only fills the gaps, so no color ever gets two swatches; "all" reports every supported syntax everywhere.',
+  'advanced.colorPicker.dedupeLanguages':
+    'Extra language ids to probe in "dedupe" mode, for third-party color extensions. Already probed automatically, do not list them again: css, less, scss (CSS language service), html, handlebars (HTML language service, including embedded CSS), json, jsonc, snippets (JSON language service), plus any language an extension attaches to the HTML or JSON service through htmlLanguageParticipants / jsonLanguageParticipants. This list exists because which languages a third-party extension registers a color provider in cannot be derived from its manifest. Each entry costs one extra provider round trip per document version.',
   'advanced.fields.enabled':
     'Ordered list of color fields. Drives both the hover rows and which color syntax is highlighted. null uses the default order.',
   'advanced.fields.excluded':
@@ -113,6 +115,8 @@ export const ZH_CN = {
   'advanced.highlight.hdrToneMapping': '在 sRGB 中预览 HDR 颜色时使用的色调映射。',
   'advanced.colorPicker.mode':
     '原生行内色块与悬停取色器 (取色器挂在色块上, 两者同时出现)。`dedupe` 在内置提供器也会给颜色的语言 (CSS 系、HTML 系、JSON 系语言服务) 里先探测其他颜色提供器, 只补它们没覆盖的位置, 因此不会有颜色出现两个色块; `all` 在所有语言上报全部受支持的语法。',
+  'advanced.colorPicker.dedupeLanguages':
+    '`dedupe` 模式下额外探测的语言标识, 用于第三方颜色扩展。以下语言已自动探测, 不要重复添加: `css`、`less`、`scss` (CSS 语言服务), `html`、`handlebars` (HTML 语言服务, 含内嵌 CSS), `json`、`jsonc`、`snippets` (JSON 语言服务), 以及任何扩展通过 `htmlLanguageParticipants` / `jsonLanguageParticipants` 挂到这两个语言服务上的语言。留这份列表是因为第三方扩展在哪些语言里注册颜色提供器无法从它的清单推导。每多一个语言, 该语言的每个文档版本就多一次提供器往返。',
   'advanced.fields.enabled':
     '颜色字段的有序列表。同时决定悬停显示哪些行与高亮识别哪些颜色语法。`null` 表示使用默认顺序。',
   'advanced.fields.excluded':

@@ -55,6 +55,14 @@ export interface RuntimeConfiguration {
   readonly hdrToneMapping: HdrToneMapping;
   /** 原生行内色块与 Hover 取色器的提供范围。 */
   readonly colorPickerMode: ColorPickerMode;
+  /**
+   * `dedupe` 模式下额外探测的语言, 用于第三方颜色扩展。
+   *
+   * 内置语言服务覆盖的语言 (css / less / scss, html / handlebars, json / jsonc / snippets,
+   * 以及参与者贡献点挂进来的语言) 已自动探测, 不必列出; 重复列出无害但会被忽略,
+   * 并在输出面板记一条提示。
+   */
+  readonly colorPickerDedupeLanguages: readonly string[];
   /** 字段范围, 同时作用于 Hover 行与高亮语法; null 表示默认顺序。 */
   readonly fields: readonly string[] | null;
   readonly excludedFields: readonly string[];
@@ -143,6 +151,7 @@ export function loadConfiguration(scope?: vscode.ConfigurationScope): RuntimeCon
     maxMatchesPerDocument: get<number>('highlight.maxMatchesPerDocument'),
     hdrToneMapping: get<HdrToneMapping>('highlight.hdrToneMapping'),
     colorPickerMode: get<ColorPickerMode>('colorPicker.mode'),
+    colorPickerDedupeLanguages: get<string[]>('colorPicker.dedupeLanguages'),
     fields: get<string[] | null>('fields.enabled'),
     excludedFields: get<string[]>('fields.excluded'),
     infoPreviewSize: get<'small' | 'large'>('info.previewSize'),
