@@ -1,10 +1,11 @@
 /**
- * 色块上报计划与探测缓存策略 (纯计算, 不引用 vscode API)。
+ * 色块上报计划与探测策略 (纯计算, 不引用 vscode API)。
  *
- * 四件事:
+ * 五件事:
  * - 按字段表过滤语法 (与高亮同一份范围);
  * - 去掉已被其他颜色提供器覆盖的 range (`dedupe` 模式);
  * - 按 `editor.colorDecoratorsLimit` 截断, 避免把渲染端根本不会画的数据跨进程传过去;
+ * - 算出"哪些语言里有内置提供器也会给颜色", 决定要不要探测;
  * - 决定一次探测结果能不能进缓存, 以及缓存怎么按文档隔离与淘汰。
  */
 import type { ColorMatch, ColorRange } from '../../core/types.js';
@@ -12,6 +13,104 @@ import type { ColorMatch, ColorRange } from '../../core/types.js';
 /** range 的稳定键; 与其他提供器比对时按精确 range 匹配。 */
 export function rangeKey(range: ColorRange): string {
   return `${range.start}:${range.end}`;
+}
+
+/**
+ * 一个内置语言服务扩展, 以及它在哪些语言里提供颜色。
+ *
+ * `participantsKey` 是它读取的"语言参与者"贡献点: 这两个语言服务都允许任意扩展把自己的
+ * 语言挂进去 (内置的 handlebars 扩展就是这样让 `handlebars` 走 HTML 语言服务的),
+ * 因此语言集合不是常量, 必须在运行时把所有扩展的这个贡献点合并进来。
+ */
+export interface BuiltInColorProvider {
+  readonly extensionId: string;
+  readonly baseLanguageIds: readonly string[];
+  readonly participantsKey?: string;
+}
+
+/**
+ * 会提供颜色的三个内置扩展 (2026-08-13 实测 VS Code 1.130.0 随附的内置扩展)。
+ *
+ * 判据是它们的 server 能力里声明了 `colorProvider`, 而不是"看起来和颜色有关":
+ * - `vscode.css-language-features`: css / less / scss, 激活事件即这三种语言;
+ * - `vscode.html-language-features`: 内嵌 CSS (`<style>` 与 style 属性), 基础语言只有
+ *   `html`, `handlebars` 来自参与者贡献点;
+ * - `vscode.json-language-features`: schema 标了 `format: color-hex` / `color` 的字符串,
+ *   例如主题文件与 `settings.json` 里的 `workbench.colorCustomizations`。
+ *
+ * `vscode.markdown-language-features` 打包了 languageclient 的颜色特性代码, 但它的语言
+ * 服务没有声明该能力, 所以不在此列。
+ */
+export const BUILT_IN_COLOR_PROVIDERS: readonly BuiltInColorProvider[] = [
+  { extensionId: 'vscode.css-language-features', baseLanguageIds: ['css', 'less', 'scss'] },
+  {
+    extensionId: 'vscode.html-language-features',
+    baseLanguageIds: ['html'],
+    participantsKey: 'htmlLanguageParticipants',
+  },
+  {
+    extensionId: 'vscode.json-language-features',
+    baseLanguageIds: ['json', 'jsonc', 'snippets'],
+    participantsKey: 'jsonLanguageParticipants',
+  },
+];
+
+/**
+ * 语言 id → 会在该语言里提供颜色的内置扩展 id。
+ *
+ * 入参是所有已安装扩展的 `packageJSON`; 形状不可信, 因此逐层做类型判断。
+ * 同一个语言被基础集合与参与者同时声明时以基础集合为准 —— 这份映射只用来决定
+ * "要不要探测"与"探测到的空结果能不能缓存", 两个扩展的就绪时机没有实质差别。
+ */
+export function builtInColorLanguages(
+  packageJsons: Iterable<unknown>,
+): ReadonlyMap<string, string> {
+  const byLanguage = new Map<string, string>();
+  for (const provider of BUILT_IN_COLOR_PROVIDERS) {
+    for (const languageId of provider.baseLanguageIds) {
+      byLanguage.set(languageId, provider.extensionId);
+    }
+  }
+
+  const withParticipants = BUILT_IN_COLOR_PROVIDERS.filter((provider) => provider.participantsKey);
+  for (const packageJson of packageJsons) {
+    const contributes = (packageJson as { contributes?: Record<string, unknown> } | undefined)
+      ?.contributes;
+    if (typeof contributes !== 'object' || contributes === null) continue;
+    for (const provider of withParticipants) {
+      const participants = contributes[provider.participantsKey as string];
+      if (!Array.isArray(participants)) continue;
+      for (const participant of participants) {
+        const languageId = (participant as { languageId?: unknown } | undefined)?.languageId;
+        if (typeof languageId !== 'string' || languageId === '') continue;
+        if (!byLanguage.has(languageId)) byLanguage.set(languageId, provider.extensionId);
+      }
+    }
+  }
+  return byLanguage;
+}
+
+/** 成对出现才算引号; 单引号在 JSON 里不合法, 但 JSONC 之外的方言与 schema 参与者可能允许。 */
+const QUOTES = new Set(['"', "'", '`']);
+
+/**
+ * 其他提供器上报的一个 range 对应哪些覆盖键。
+ *
+ * 通常只有它自己, 但内置 JSON 提供器给出的是**整个字符串节点**的 range (包含两侧引号),
+ * 而本扩展给出的是引号内部的颜色本身。只按精确 range 比对时两边永远对不上, 于是
+ * `"#ff8800"` 在主题文件里得到两个色块。因此带引号的 range 额外产出一个"引号内部"的键。
+ *
+ * 反过来不做: 不会因为别人报了 `#ff8800` 就把本扩展的 `"#ff8800"` 也算成被覆盖 ——
+ * 本扩展根本不会上报带引号的 range。
+ */
+export function coverageKeys(text: string, range: ColorRange): string[] {
+  const keys = [rangeKey(range)];
+  const first = text[range.start];
+  const last = text[range.end - 1];
+  if (range.end - range.start >= 2 && first !== undefined && first === last && QUOTES.has(first)) {
+    keys.push(rangeKey({ start: range.start + 1, end: range.end - 1 }));
+  }
+  return keys;
 }
 
 /** 探测缓存最多保留多少个文档; 与索引管理器的隐藏文档上限同量级。 */
@@ -26,7 +125,7 @@ export interface ProbeEntry {
  * 一次探测结果是否可以进缓存。
  *
  * 空结果有两种来源, 必须区别对待:
- * - 其他提供器**还没就绪** (本扩展是 `onStartupFinished`, 内置 CSS 是 `onLanguage:*`,
+ * - 其他提供器**还没就绪** (本扩展是 `onStartupFinished`, 内置语言服务是 `onLanguage:*`,
  *   工作区启动时就打开的文件很容易撞上): 这是暂态, 缓存下来会让"没人覆盖"被钉死到
  *   文档下一次改动为止, 表现为色块重复且不产生任何错误日志;
  * - 其他提供器就绪了但确实没给颜色 (例如颜色只出现在注释或字符串里): 这是稳定事实,

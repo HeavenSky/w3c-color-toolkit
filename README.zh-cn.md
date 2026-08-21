@@ -105,7 +105,7 @@ rgb(): rgb(240, 112, 63)
 
 | 取值 | 行为 |
 | --- | --- |
-| `dedupe` *(默认)* | 在 `css` / `less` / `scss` (VS Code 内置 CSS 提供器也会给颜色的三种语言) 里按文档版本探测一次其他提供器, 只上报它们没覆盖的 range; 其他语言全量上报。任何颜色都不会出现两个色块。 |
+| `dedupe` *(默认)* | 在内置语言服务也会给颜色的语言里按文档版本探测一次其他提供器, 只上报它们没覆盖的 range: `css` / `less` / `scss`, `html` 及其内嵌 CSS, `json` / `jsonc`, 以及其他扩展挂到这两个语言服务上的语言; 其余语言全量上报。任何颜色都不会出现两个色块。 |
 | `all` | 所有语言上报全部受支持语法, 即使别人已经给过。 |
 | `off` | 不提供, 交回 VS Code 自己的提供器。 |
 
@@ -450,7 +450,10 @@ Tailwind CSS IntelliSense 会把 CSS 文件切换成该语言。
 所以"只要取色器不要色块"做不到。
 
 **一个颜色出现两个色块。** 要么 `colorPicker.mode` 是 `all`, 要么另一个颜色扩展也在上报该 range。
-`dedupe` 只探测 VS Code 内置 CSS 提供器, 且只在 `css`、`less`、`scss` 里探测。
+`dedupe` 只在 VS Code 内置语言服务也会给颜色的语言里探测: `css`、`less`、`scss`、`html`
+(含内嵌 CSS)、`json`、`jsonc`, 以及其他扩展挂到 HTML 或 JSON 语言服务上的语言。
+Tailwind CSS IntelliSense 这类第三方颜色扩展在哪些语言里注册提供器无法从清单推导,
+与它们重叠时只能关掉其中一边。
 
 *为什么需要探测:* VS Code 把**所有**颜色提供器的结果叠加渲染且不按 range 去重; 只要有扩展返回了
 数组 (哪怕空数组) 它就不再使用内置**默认**提供器; 而 `vscode.executeDocumentColorProvider`

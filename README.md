@@ -115,7 +115,7 @@ Use `Convert Color` when you want to rewrite those on purpose.
 
 | Mode | Behaviour |
 | --- | --- |
-| `dedupe` *(default)* | In `css` / `less` / `scss` — the three languages where VS Code's built-in CSS provider also contributes colors — probe the other providers once per document version and report only the ranges they left uncovered. Everywhere else, report everything. No color ever gets two swatches. |
+| `dedupe` *(default)* | Wherever a built-in language service also contributes colors — `css` / `less` / `scss`, `html` and its embedded CSS, `json` / `jsonc` and any language another extension registers with those services — probe the other providers once per document version and report only the ranges they left uncovered. Everywhere else, report everything. No color ever gets two swatches. |
 | `all` | Report every supported syntax in every language, even where another provider already did. |
 | `off` | Provide nothing; VS Code falls back to its own providers. |
 
@@ -498,8 +498,11 @@ applied.
 picker is anchored on the swatch, so "picker without swatch" is not possible.
 
 **A color shows two swatches.** Either `colorPicker.mode` is `all`, or another color extension is
-also reporting that range. `dedupe` only probes VS Code's built-in CSS provider, in `css`, `less` and
-`scss`.
+also reporting that range. `dedupe` probes only where a built-in VS Code language service also
+contributes colors: `css` / `less` / `scss`, `html` (including embedded CSS) and `json` / `jsonc`,
+plus any language another extension attaches to the HTML or JSON service. A third-party color
+extension such as Tailwind CSS IntelliSense registers in languages that cannot be derived from the
+manifests, so overlapping with one of those means turning off one of the two.
 
 *Why probing is needed:* VS Code renders the results of **all** color providers without deduplicating
 by range, it drops the built-in *default* provider as soon as any extension returns an array (even an

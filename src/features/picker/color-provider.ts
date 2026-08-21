@@ -4,22 +4,27 @@
  * 为什么必须自己提供:
  * - 原生取色器挂在"颜色装饰"上 (`ColorHoverParticipant` 只对 `isColorDecoration`
  *   的装饰产出取色器), 因此"要调节器就必须有色块", 二者不能拆开;
- * - VS Code 内置的默认提供器只认 hex 与 rgb/hsl 系写法, 内置 CSS 提供器只在
- *   `css` / `less` / `scss` 且颜色落在 AST 认得的位置时给颜色。`oklch()`、`lab()`、
- *   `color()`、`color-mix()`、相对颜色、HDR 空间, 以及注释与字符串里的颜色, 两者都不给。
+ * - VS Code 内置的默认提供器只认 hex 与 rgb/hsl 系写法, 内置语言服务只在自己的语言里,
+ *   且颜色落在 AST 认得的位置时给颜色。`oklch()`、`lab()`、`color()`、`color-mix()`、
+ *   相对颜色、HDR 空间, 以及注释与字符串里的颜色, 两者都不给。
  *
  * 去重的难点 (2026-08-05 实测 VS Code 1.130.0 打包源码):
  * - 渲染端 `getColors` 只要有**任意**扩展提供器返回了数组 (哪怕是空数组) 就不再使用
  *   内置默认提供器, 且多个提供器的结果直接叠加, 不按 range 去重;
  * - 探测命令 `vscode.executeDocumentColorProvider` 调用的是同一个函数, 但只回传
- *   `{range, color}`, **丢掉了提供器身份**, 所以无法区分"这一格是内置 CSS 给的还是
+ *   `{range, color}`, **丢掉了提供器身份**, 所以无法区分"这一格是内置语言服务给的还是
  *   默认提供器给的"。
  *
- * 由此得到 `dedupe` 模式 (默认): 只在内置 CSS 提供器覆盖的三种语言里做一次探测,
- * 按 range 补空缺; 其他语言直接全量上报 (那里唯一可能重叠的是内置默认提供器,
- * 而它会因为我们返回了数组而自动让位)。本扩展同时把 `editor.defaultColorDecorators`
- * 的默认值改为 `never` (`contributes.configurationDefaults`), 让探测结果只可能来自
- * 真正的扩展提供器 —— 此时 `dedupe` 是精确的。
+ * 由此得到 `dedupe` 模式 (默认): 只在内置提供器也会给颜色的语言里做一次探测, 按 range
+ * 补空缺; 其他语言直接全量上报 (那里唯一可能重叠的是内置默认提供器, 而它会因为我们
+ * 返回了数组而自动让位)。本扩展同时把 `editor.defaultColorDecorators` 的默认值改为
+ * `never` (`contributes.configurationDefaults`), 让探测结果只可能来自真正的扩展提供器
+ * —— 此时 `dedupe` 是精确的。
+ *
+ * 哪些语言要探测由 `builtInColorLanguages` 在运行时算出, 不是一份常量: HTML 与 JSON
+ * 两个语言服务都会把其他扩展通过参与者贡献点挂进来的语言一并接管 (见 swatch-plan.ts)。
+ * 第三方颜色扩展 (Tailwind、Volar 等) 不在探测范围内: 它们在哪些语言里注册提供器无法从
+ * 清单静态判定, 与它们重叠时只能关掉其中一边。
  *
  * 其他约束:
  * - 任何"没有可上报颜色"的分支必须返回 `undefined` 而不是 `[]`,
@@ -40,8 +45,9 @@ import { resolveHighlightSyntaxes, targetForSyntax } from '../fields/registry.js
 import { previewSrgb, previewSource } from '../highlight/preview-color.js';
 
 import {
+  builtInColorLanguages,
+  coverageKeys,
   planSwatches,
-  rangeKey,
   readProbeCache,
   shouldCacheProbe,
   writeProbeCache,
@@ -49,24 +55,14 @@ import {
 } from './swatch-plan.js';
 
 /**
- * 内置 CSS 扩展 (`vscode.css-language-features`) 提供颜色的语言。
- * 取自它的 `activationEvents`: `onLanguage:css` / `less` / `scss`。
- * `sass`、`stylus`、`postcss` 不在其中, 因此那里不需要探测。
- */
-const BUILT_IN_COLOR_LANGUAGES: ReadonlySet<string> = new Set(['css', 'less', 'scss']);
-
-/** 上面那个内置扩展的 id; 用于判断探测到的空结果是暂态还是稳定事实。 */
-const BUILT_IN_COLOR_EXTENSION_ID = 'vscode.css-language-features';
-
-/**
- * 内置 CSS 提供器是否已经就绪。
+ * 某个内置提供器是否已经就绪。
  *
- * 本扩展在 `onStartupFinished` 激活, 内置 CSS 在 `onLanguage:css/less/scss` 激活,
- * 因此工作区启动时就打开的 scss 文件很可能在它激活之前被探测一次。扩展缺失时返回 false,
- * 此时空结果同样不缓存 —— 那种情况下本来也没有别人可去重, 代价只是多一次命令调用。
+ * 本扩展在 `onStartupFinished` 激活, 内置语言服务在 `onLanguage:*` 激活, 因此工作区启动时
+ * 就打开的文件很可能在它激活之前被探测一次。扩展缺失时返回 false, 此时空结果同样不缓存
+ * —— 那种情况下本来也没有别人可去重, 代价只是多一次命令调用。
  */
-function builtInColorProviderReady(): boolean {
-  return vscode.extensions.getExtension(BUILT_IN_COLOR_EXTENSION_ID)?.isActive === true;
+function builtInColorProviderReady(extensionId: string): boolean {
+  return vscode.extensions.getExtension(extensionId)?.isActive === true;
 }
 
 /** VS Code 渲染色块的上限设置; 与 `editor.colorDecoratorsLimit` 的默认值一致。 */
@@ -82,7 +78,7 @@ function serializerOptionsOf(config: RuntimeConfiguration): SerializerOptions {
   };
 }
 
-export class ColorSwatchProvider implements vscode.DocumentColorProvider {
+export class ColorSwatchProvider implements vscode.DocumentColorProvider, vscode.Disposable {
   /**
    * 正在探测的文档 uri; 嵌套回到本提供器时返回 undefined, 只让其他提供器应答。
    *
@@ -94,12 +90,21 @@ export class ColorSwatchProvider implements vscode.DocumentColorProvider {
   private readonly probing = new Set<string>();
   /** 探测结果按 uri 缓存, 每个 uri 一条并携带文档版本; 避免每次按键都多一次跨进程往返。 */
   private readonly probeCache = new Map<string, ProbeEntry>();
+  /** 语言 id → 内置提供器扩展 id; 装扩展会改变它, 因此按 `extensions.onDidChange` 失效。 */
+  private builtInLanguages: ReadonlyMap<string, string> | undefined;
+  private readonly extensionsChanged = vscode.extensions.onDidChange(() => {
+    this.builtInLanguages = undefined;
+  });
 
   constructor(
     private readonly manager: DocumentIndexManager,
     private readonly getConfig: (document: vscode.TextDocument) => RuntimeConfiguration,
     private readonly logger: Logger,
   ) {}
+
+  dispose(): void {
+    this.extensionsChanged.dispose();
+  }
 
   async provideDocumentColors(
     document: vscode.TextDocument,
@@ -113,10 +118,13 @@ export class ColorSwatchProvider implements vscode.DocumentColorProvider {
     const snapshot = this.manager.ensure(document);
     if (!snapshot) return undefined;
 
-    const covered =
-      config.colorPickerMode === 'dedupe' && BUILT_IN_COLOR_LANGUAGES.has(document.languageId)
-        ? await this.probeOtherProviders(document)
+    const builtInProvider =
+      config.colorPickerMode === 'dedupe'
+        ? this.builtInProviderFor(document.languageId)
         : undefined;
+    const covered = builtInProvider
+      ? await this.probeOtherProviders(document, builtInProvider)
+      : undefined;
 
     const syntaxes = resolveHighlightSyntaxes(
       config.fields,
@@ -192,6 +200,7 @@ export class ColorSwatchProvider implements vscode.DocumentColorProvider {
    */
   private async probeOtherProviders(
     document: vscode.TextDocument,
+    builtInExtensionId: string,
   ): Promise<ReadonlySet<string> | undefined> {
     const uri = document.uri.toString();
     const cached = readProbeCache(this.probeCache, uri, document.version);
@@ -215,24 +224,37 @@ export class ColorSwatchProvider implements vscode.DocumentColorProvider {
       }
       if (!colors) return undefined;
 
+      const text = document.getText();
       const covered = new Set<string>();
       for (const color of colors) {
-        covered.add(
-          rangeKey({
-            start: document.offsetAt(color.range.start),
-            end: document.offsetAt(color.range.end),
-          }),
-        );
+        const range = {
+          start: document.offsetAt(color.range.start),
+          end: document.offsetAt(color.range.end),
+        };
+        for (const key of coverageKeys(text, range)) covered.add(key);
       }
       // 其他提供器尚未激活时的空结果是暂态, 不能缓存 —— 否则"没人覆盖"会被钉死到文档
       // 下一次改动为止, 表现为色块重复且没有任何错误日志。
-      if (shouldCacheProbe(covered.size, builtInColorProviderReady())) {
+      if (shouldCacheProbe(covered.size, builtInColorProviderReady(builtInExtensionId))) {
         writeProbeCache(this.probeCache, uri, { version: document.version, covered });
       }
       return covered;
     } finally {
       this.probing.delete(uri);
     }
+  }
+
+  /**
+   * 该语言里是否有内置提供器也会给颜色; 有则返回它的扩展 id。
+   *
+   * 结果缓存在实例上: 参与者贡献点要遍历全部已安装扩展的清单, 而语言集合只在装卸或
+   * 启停扩展时才变, 那时 `extensions.onDidChange` 会把缓存清掉。
+   */
+  private builtInProviderFor(languageId: string): string | undefined {
+    this.builtInLanguages ??= builtInColorLanguages(
+      vscode.extensions.all.map((extension) => extension.packageJSON),
+    );
+    return this.builtInLanguages.get(languageId);
   }
 
   /** 取回该 range 对应的 match, 用于判断原格式与解析状态。 */

@@ -102,7 +102,7 @@ export async function runToggleFeatures(config: RuntimeConfiguration): Promise<v
 
   // convert 与 variables 属于内置层, 需要写进 advanced 且保留其他键。
   const advancedPatch: Record<string, unknown> = {};
-  // 色块: 关闭写 off, 打开恢复默认的 dedupe (避免与内置 CSS 提供器重复)。
+  // 色块: 关闭写 off, 打开恢复默认的 dedupe (避免与内置语言服务的提供器重复)。
   const nextColorPicker = selected.has('colorPicker')
     ? config.colorPickerMode === 'off'
       ? 'dedupe'

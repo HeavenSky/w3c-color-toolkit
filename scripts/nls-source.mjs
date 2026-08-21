@@ -38,7 +38,7 @@ export const EN = {
   'advanced.highlight.maxMatchesPerDocument': 'Stop highlighting after this many colors in one document.',
   'advanced.highlight.hdrToneMapping': 'Tone mapping used to preview HDR colors in sRGB.',
   'advanced.colorPicker.mode':
-    'Native inline swatch and hover color picker (the picker is anchored on the swatch, so both come together). "dedupe" probes the other color providers in css/less/scss and only fills the gaps, so no color ever gets two swatches; "all" reports every supported syntax everywhere.',
+    'Native inline swatch and hover color picker (the picker is anchored on the swatch, so both come together). "dedupe" probes the other color providers wherever a built-in one also contributes colors (CSS, HTML and JSON language services) and only fills the gaps, so no color ever gets two swatches; "all" reports every supported syntax everywhere.',
   'advanced.fields.enabled':
     'Ordered list of color fields. Drives both the hover rows and which color syntax is highlighted. null uses the default order.',
   'advanced.fields.excluded':
@@ -112,7 +112,7 @@ export const ZH_CN = {
   'advanced.highlight.maxMatchesPerDocument': '单个文档中超过该数量后停止高亮。',
   'advanced.highlight.hdrToneMapping': '在 sRGB 中预览 HDR 颜色时使用的色调映射。',
   'advanced.colorPicker.mode':
-    '原生行内色块与悬停取色器 (取色器挂在色块上, 两者同时出现)。`dedupe` 在 css/less/scss 里先探测其他颜色提供器, 只补它们没覆盖的位置, 因此不会有颜色出现两个色块; `all` 在所有语言上报全部受支持的语法。',
+    '原生行内色块与悬停取色器 (取色器挂在色块上, 两者同时出现)。`dedupe` 在内置提供器也会给颜色的语言 (CSS 系、HTML 系、JSON 系语言服务) 里先探测其他颜色提供器, 只补它们没覆盖的位置, 因此不会有颜色出现两个色块; `all` 在所有语言上报全部受支持的语法。',
   'advanced.fields.enabled':
     '颜色字段的有序列表。同时决定悬停显示哪些行与高亮识别哪些颜色语法。`null` 表示使用默认顺序。',
   'advanced.fields.excluded':

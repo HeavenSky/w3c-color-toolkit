@@ -2,6 +2,32 @@
 
 Notable changes to W3C Color Toolkit.
 
+## v0.0.6 2026-08-13 Duplicate swatches outside CSS
+
+### Fixed
+
+- **Every color in an HTML `<style>` block had two swatches.** Probing for other color providers
+  was limited to `css` / `less` / `scss`, taken from the activation events of
+  `vscode.css-language-features`. But `vscode.html-language-features` runs the same CSS language
+  service over embedded CSS — `<style>` blocks and `style` attributes — and its server declares
+  `colorProvider` too, so in HTML both it and this extension reported the same range and VS Code
+  drew both. The probe now covers every language a built-in language service contributes colors in.
+- **The same duplicate appeared in JSON**, where `vscode.json-language-features` reports colors for
+  strings whose schema says `format: color-hex` — theme files and `workbench.colorCustomizations`
+  in `settings.json`. Two things were needed: probing `json` / `jsonc` at all, and matching the
+  range. The JSON service reports the whole string node **including the quotes** while this
+  extension reports the color inside them, so exact-range comparison never matched; a quoted probe
+  result now also covers the range inside the quotes.
+- **The set of probed languages is no longer a constant.** The HTML and JSON language services both
+  adopt languages that any extension registers through `contributes.htmlLanguageParticipants` /
+  `jsonLanguageParticipants` — that is how the built-in handlebars extension routes `handlebars`
+  through the HTML service. The set is now computed from the installed extensions and recomputed
+  when they change, so `handlebars` and third-party participants are covered as well.
+
+Third-party color extensions (Tailwind CSS IntelliSense, Volar and the like) are still out of
+scope: which languages they register a provider in cannot be derived from their manifests, so
+overlapping with one of those still means turning off one of the two.
+
 ## v0.0.5 2026-08-12 Variables, nested swatches, dead configuration
 
 ### Added

@@ -27,7 +27,7 @@ export type LogLevel = 'off' | 'error' | 'warn' | 'info' | 'debug';
 
 /**
  * 原生色块与取色器的提供范围。
- * `dedupe` 在 css/less/scss 里先探测其他提供器覆盖了哪些 range, 只补空缺。
+ * `dedupe` 在内置提供器也会给颜色的语言里先探测其他提供器覆盖了哪些 range, 只补空缺。
  */
 export type ColorPickerMode = 'off' | 'dedupe' | 'all';
 

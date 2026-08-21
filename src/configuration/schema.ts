@@ -156,8 +156,8 @@ export const ADVANCED_SETTINGS: readonly SettingDefinition[] = Object.freeze([
   {
     key: 'colorPicker.mode',
     type: 'string',
-    // `dedupe`: 在内置 CSS 提供器覆盖的 css/less/scss 里探测一次, 只补它没覆盖的 range;
-    // 其他语言全量提供 (那里唯一可能重叠的内置默认提供器会自动让位)。
+    // `dedupe`: 在内置提供器也会给颜色的语言 (CSS 系, HTML 系, JSON 系) 里探测一次,
+    // 只补它没覆盖的 range; 其他语言全量提供 (那里唯一可能重叠的内置默认提供器会自动让位)。
     default: 'dedupe',
     enum: ['off', 'dedupe', 'all'],
     nlsKey: 'advanced.colorPicker.mode',

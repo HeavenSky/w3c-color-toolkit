@@ -94,6 +94,7 @@ export function activateShared(
   // 是本提供器的真子集, 关掉它可以让"一个颜色一个色块"成为确定行为。
   const swatchProvider = new ColorSwatchProvider(manager, (document) => configFor(document), logger);
   context.subscriptions.push(
+    swatchProvider,
     vscode.languages.registerColorProvider({ scheme: '*', language: '*' }, swatchProvider),
   );
 
