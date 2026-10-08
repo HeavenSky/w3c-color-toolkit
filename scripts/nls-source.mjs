@@ -11,7 +11,7 @@ export const EN = {
   'extension.description':
     'Color highlighting, hover information and format conversion with CSS Color 4/5/6 and HDR support.',
   'capabilities.untrustedWorkspaces':
-    'In untrusted workspaces, variables are only resolved inside the current document; imported files are not read.',
+    'In untrusted workspaces, only definitions from files you have open are used; other files on disk are not read.',
 
   // 暴露层配置
   'config.enabled': 'Enable W3C Color Toolkit.',
@@ -90,7 +90,7 @@ export const EN = {
 export const ZH_CN = {
   'extension.displayName': 'W3C Color Toolkit',
   'extension.description': '颜色高亮、悬停信息与格式转换, 支持 CSS Color 4/5/6 与 HDR。',
-  'capabilities.untrustedWorkspaces': '未受信任的工作区只解析当前文档中的变量, 不读取导入的文件。',
+  'capabilities.untrustedWorkspaces': '未受信任的工作区只使用已打开文件里的定义, 不读取磁盘上的其他文件。',
 
   'config.enabled': '启用 W3C Color Toolkit。',
   'config.highlight':

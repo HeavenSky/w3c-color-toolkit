@@ -33,7 +33,7 @@
   "advanced.variables.maxIndexedFiles": "为变量定义建立索引的样式文件数上限。",
   "advanced.variables.maxResolveDepth": "变量解析深度上限。",
   "advanced.variables.resolve": "解析 CSS 自定义属性与预处理器变量。",
-  "capabilities.untrustedWorkspaces": "未受信任的工作区只解析当前文档中的变量, 不读取导入的文件。",
+  "capabilities.untrustedWorkspaces": "未受信任的工作区只使用已打开文件里的定义, 不读取磁盘上的其他文件。",
   "command.category": "W3C Color Toolkit",
   "command.clearIndexCache": "清空索引缓存",
   "command.configureColorFields": "配置颜色字段",

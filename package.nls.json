@@ -33,7 +33,7 @@
   "advanced.variables.maxIndexedFiles": "Maximum number of stylesheets to index for variable definitions.",
   "advanced.variables.maxResolveDepth": "Maximum variable resolution depth.",
   "advanced.variables.resolve": "Resolve CSS custom properties and preprocessor variables.",
-  "capabilities.untrustedWorkspaces": "In untrusted workspaces, variables are only resolved inside the current document; imported files are not read.",
+  "capabilities.untrustedWorkspaces": "In untrusted workspaces, only definitions from files you have open are used; other files on disk are not read.",
   "command.category": "W3C Color Toolkit",
   "command.clearIndexCache": "Clear Index Cache",
   "command.configureColorFields": "Configure Color Fields",

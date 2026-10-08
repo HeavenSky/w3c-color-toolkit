@@ -15,7 +15,7 @@ CSS Color HDR support.
 | **Color highlighting** | Marker drawn on the color in the editor, plus an overview-ruler tick | `w3cColorToolkit.highlight` |
 | **Hover information** | Preview swatch and one row per format when you hover a color | `w3cColorToolkit.info` |
 | **Inline swatch + color picker** | VS Code's own square in front of the color; picker opens from it | `advanced.colorPicker.mode` |
-| **Format conversion** | `Convert Color` / `Copy Color As`, or 24 direct commands | `advanced.convert.enabled` |
+| **Format conversion** | **Convert Color** / **Copy Color As**, or 24 direct commands | `advanced.convert.enabled` |
 | **Variable resolution** | `var(--brand)`, `$brand`, `@brand` resolve to a real color | `advanced.variables.resolve` |
 
 All five read the **same** document color index, so they always agree on the range, the color value,
@@ -27,8 +27,8 @@ re-parsed per feature.
 - VS Code **1.101** or newer.
 - No other extension or external tool required.
 - Works in remote workspaces and in VS Code for the Web (the extension ships a browser bundle).
-- In an **untrusted** workspace, variables resolve only inside the current document — imported files
-  are not read.
+- In an **untrusted** workspace, only definitions from files you have open are used; other files on
+  disk are not read.
 
 ## Quick start
 
@@ -109,7 +109,7 @@ offered, so one stray drag cannot flatten an expression into a literal:
 - read-only syntax: `color-mix()`, relative colors, `contrast-color()`, `device-cmyk()`,
   `color-layers()`.
 
-Use `Convert Color` when you want to rewrite those on purpose.
+Use **Convert Color** when you want to rewrite those on purpose.
 
 `advanced.colorPicker.mode`:
 
@@ -198,7 +198,7 @@ before you save.
    `$foo` in a SCSS file from opening an empty panel.
 
 **A resolved reference is read only.** The picker shows the color but will not let you drag it, and
-`Convert Color` refuses and names the variable it depends on. Rewriting `var(--brand)` into
+**Convert Color** refuses and names the variable it depends on. Rewriting `var(--brand)` into
 `#ff8800` would destroy the token, which is almost never what you want.
 
 **Colors inside a reference get their own swatch.** `var(--brand, #ff8800)` shows two swatches — one
@@ -256,9 +256,9 @@ Five entries appear in the Command Palette (category **W3C Color Toolkit**):
 | Copy Color As | `w3cColorToolkit.copyColorAs` | Same picker, writes to the clipboard |
 | Enable Features | `w3cColorToolkit.toggleFeatures` | Multi-select: highlighting, swatch + picker, hover, conversion, variables, CSS Color 6, CSS Color HDR |
 | Configure Color Fields | `w3cColorToolkit.configureColorFields` | Multi-select for the shared hover + highlight field list |
-| Manage | `w3cColorToolkit.manage` | Entry point for the seven maintenance actions below |
+| Manage | `w3cColorToolkit.manage` | Entry point for the six maintenance actions below |
 
-*Convert Color* and *Copy Color As* are also in the editor context menu, under the
+**Convert Color** and **Copy Color As** are also in the editor context menu, under the
 **W3C Color Toolkit** submenu.
 
 **Manage** actions (also registered as individual command ids):
@@ -310,7 +310,7 @@ Command id suffixes follow the format list: `hex`, `rgb`, `hsl`, `oklch`, `hwb`,
 | `w3cColorToolkit.convertSyntax` | `modern` \| `legacy` | `legacy` | `rgb()` / `hsl()` output style |
 | `w3cColorToolkit.precision` | integer 1–10 | `3` | Significant digits in generated values |
 | `w3cColorToolkit.experimental` | string[] | `["cssColor6", "cssColorHdr"]` | Draft specs to enable; both on by default |
-| `w3cColorToolkit.advanced` | object | `{}` | Incremental overrides for the 33 built-in options |
+| `w3cColorToolkit.advanced` | object | `{}` | Incremental overrides for the 34 built-in options |
 
 All seven have `resource` scope, so they can be set per folder.
 
@@ -344,7 +344,7 @@ Rules:
   replaces object settings wholesale;
 - **Manage → Show effective configuration** prints the merged result with the origin of each key.
 
-#### All 33 options
+#### All 34 options
 
 **Disable** — where the extension stays out of the way entirely
 
@@ -434,7 +434,7 @@ and it is never scanned.
 | --- | --- | --- | --- |
 | `contextualPreview` | `off` \| `auto` \| `light` \| `dark` | `auto` | Color scheme assumed for `light-dark()`; results are marked as assumed |
 | `experimental.hdrAssumedHeadroom` | number 0–10 | `0` | Assumed display HDR headroom for `hdr-color()`; `0` disables the preview |
-| `coexistence.notify` | boolean | `true` | Warn once per workspace when another installed color extension may duplicate highlighting, hovers or commands |
+| `coexistence.notify` | boolean | `true` | Warn once per workspace when any of the three extensions this one merges (`naumovs.color-highlight`, `bierner.color-info`, `bbugh.change-color-format`) is also installed, since they duplicate highlighting, hovers or commands |
 | `logLevel` | `off` \| `error` \| `warn` \| `info` \| `debug` | `warn` | Verbosity of the output channel |
 
 ### A default this extension overrides
@@ -461,14 +461,14 @@ same grouping, with the applicable scope on every entry.
 | Extra information, not a color | hover only | `preview`, `source`, `spec-level`, `diagnostics`, `alpha`\*, `gamut`\*, `contrast-on-white`\*, `contrast-on-black`\* |
 
 † requires the `cssColorHdr` experimental switch. \* off by default — add it to `fields.enabled` or
-tick it in *Configure Color Fields*. (Alpha is already visible in the serialised values such as
+tick it in **Configure Color Fields**. (Alpha is already visible in the serialised values such as
 `#ff880080`; gamut and the contrast ratios are diagnostic detail rather than everyday information.)
 
 Turning a CSS syntax off stops highlighting it; turning a format off also removes its hover row.
 Syntax the registry does not know about is always highlighted, so a new parser feature never silently
 loses its decoration.
 
-The order of `fields.enabled` is the order of the hover rows. *Configure Color Fields* always writes
+The order of `fields.enabled` is the order of the hover rows. **Configure Color Fields** always writes
 back in registry order — edit `fields.enabled` directly if you want a custom order.
 
 ---
@@ -478,7 +478,7 @@ back in registry order — edit `fields.enabled` directly if you want a custom o
 | Level | State |
 | --- | --- |
 | CSS Color 3 (legacy comma syntax) | supported |
-| CSS Color 4 (ED 2026-07-28) | supported, including all 148 named colors, four hex lengths, `none`, static `calc()`, angle units, and the 10 predefined `color()` spaces |
+| CSS Color 4 (ED 2026-07-28) | supported, including all 148 named colors, four hex lengths, `none`, static `calc()`, four angle units, and the 10 predefined `color()` spaces |
 | CSS Color 5 (ED 2026-07-31) | statically evaluable parts: `color-mix()` including the multi-color form, relative color syntax, `alpha()`, `contrast-color()`, `device-cmyk()` naive fallback, `@color-profile` `fallback` |
 | CSS Color 6 (ED 2026-01-11) | experimental, **on by default**, switchable through `w3cColorToolkit.experimental`: `color-layers()`, extended `contrast-color()`, `wcag2` / `wcag2()`, `tbd-fg` / `tbd-bg` |
 | CSS Color HDR 1 (ED 2026-07-28) | experimental, **on by default**, same switch: `ictcp()`, `jzazbz()`, `jzczhz()`, `color(rec2100-pq \| rec2100-hlg \| rec2100-linear)`, `hdr-color()` |
@@ -519,13 +519,13 @@ color. Probing the ranges is the only way to guarantee exactly one swatch.
 
 **A color is not highlighted.** In order of likelihood: `w3cColorToolkit.highlight` is `off`; the
 file is hidden by `advanced.disable.fileNames` or `advanced.disable.languageIds`; the field for that
-syntax is turned off in *Configure Color Fields*; the value is context dependent (see above); the
+syntax is turned off in **Configure Color Fields**; the value is context dependent (see above); the
 document is larger than `advanced.disable.maxFileSizeMb`; there are more colors than
 `advanced.highlight.maxMatchesPerDocument`; or it is a bare color name in a non-CSS language and
 `advanced.highlight.matchWords` is still `css-like`.
 
 **The picker offers no way to change a value.** That is the read-only swatch for context dependent
-values and read-only syntax. Use `Convert Color` to rewrite it deliberately.
+values and read-only syntax. Use **Convert Color** to rewrite it deliberately.
 
 **Conversion was refused.** The message names the reason and the line: a contextual value, alpha that
 the target cannot express (`convert.alphaLoss`), or no exact color name (`convert.namedColorFallback`).
@@ -537,10 +537,9 @@ case, so start from the log: **Manage → Open log** names the reason. Then chec
 `advanced.variables.lookupGlobs`; note that untrusted workspaces only use definitions from files you
 have open. A token defined only under `[data-theme="…"]` / `.dark` selectors is **not** this case —
 it is "not unique", so the hover lists its candidates while the swatch stays hidden on purpose. The
-index size is bounded by
-`variables.maxIndexedFiles` / `maxResolveDepth`. Values built with arithmetic,
-SCSS maps, `@each` or functions like `darken()` are outside what this extension evaluates. Stylus
-variables are not resolved at all.
+index size is bounded by `variables.maxIndexedFiles` and the substitution depth by
+`variables.maxResolveDepth`. Values built with arithmetic, SCSS maps, `@each` or functions like
+`darken()` are outside what this extension evaluates. Stylus variables are not resolved at all.
 
 **A key in `advanced` seems to be ignored.** Run **Manage → Show effective configuration** — it
 prints every key with the scope it came from, plus a list of rejected keys. Set
@@ -557,8 +556,8 @@ report.
 - Scanning very large documents is slower than the target performance budget;
   `advanced.disable.maxFileSizeMb` and `advanced.highlight.maxMatchesPerDocument` bound the work.
 - CSS Color 6 and CSS Color HDR are drafts; values and syntax may still change.
-- Untrusted workspaces resolve variables only within the current document.
-- Variable resolution is regex based: SCSS maps, `@each`, mixins and function calls are not
+- Untrusted workspaces only use definitions from files you have open; other files on disk are not read.
+- Variable resolution does not evaluate expressions: SCSS maps, `@each`, mixins and function calls are not
   evaluated, and such references show nothing rather than a guessed color.
 - Stylus has no variable resolution: colors in `.styl` files are still recognised, but `$brand = …`
   definitions and references are not (PostCSS has no official Stylus syntax package, and the only

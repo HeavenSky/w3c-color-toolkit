@@ -3,7 +3,7 @@
  *
  * 分两层:
  * - 暴露层: 7 个键, 在 `contributes.configuration` 中完整声明并出现在设置界面;
- * - 内置层: 33 项, 只有默认值, 通过 `w3cColorToolkit.advanced` 对象增量覆盖。
+ * - 内置层: 34 项, 只有默认值, 通过 `w3cColorToolkit.advanced` 对象增量覆盖。
  *
  * `package.json` 的 `contributes.configuration` 由 `scripts/gen-contributes.mjs`
  * 从本文件生成, 并由 `test/unit/contributes.test.ts` 断言一致。
@@ -91,7 +91,7 @@ export const EXPOSED_SETTINGS: readonly SettingDefinition[] = Object.freeze([
   },
 ]);
 
-/** 内置层: 只能通过 `advanced` 覆盖的 33 项。 */
+/** 内置层: 只能通过 `advanced` 覆盖的 34 项。 */
 export const ADVANCED_SETTINGS: readonly SettingDefinition[] = Object.freeze([
   // 隐身 (3): 三条件是或关系, 任一命中就完全不介入该文件。
   // 三项必须连续, 否则生成的参考表会重复出现同一个分组标题。

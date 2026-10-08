@@ -3,7 +3,7 @@
  *
  * 分两类:
  * - 命令面板可见: 5 个入口;
- * - 隐藏: 24 个 `convertTo.*` 加 7 个 `manage` 条目, 共 31 个。
+ * - 隐藏: 24 个 `convertTo.*` 加 6 个 `manage` 条目, 共 30 个。
  *   隐藏只作用于命令面板 (`contributes.menus.commandPalette` 的 `when: false`),
  *   在 Keyboard Shortcuts 界面仍可搜索并绑定, 因此同样需要本地化的 title。
  *
