@@ -2,6 +2,27 @@
 
 Notable changes to W3C Color Toolkit.
 
+## v0.0.7 2026-10-08 New icon, docs aligned
+
+### Changed
+
+- **New icon**: a color picker panel above a hue bar, drawn in the same flat style and accent
+  palette as the other HeavenSky extensions. It replaces the OKLCH gradient ring.
+- The untrusted workspace description shown by VS Code now matches the behavior: only definitions
+  from files you have open are used, and other files on disk are not read.
+
+### Fixed
+
+- **README and README.zh-cn now agree with each other and with the code**: 34 built-in options
+  (not 33), six Manage actions (not seven), command names match the UI, `coexistence.notify` names
+  the three extensions it actually detects, and the troubleshooting entry for variables no longer
+  describes the pre-glob lookup.
+
+### Internal
+
+- `package-lock.json` resolves every tarball from `registry.npmjs.org`. Mirror URLs were treated as
+  remote tarballs under npm 12's default `allow-remote=none`, so `npm ci` refused to install.
+
 ## v0.0.6 2026-08-13 Duplicate swatches outside CSS
 
 ### Added
