@@ -1,9 +1,14 @@
 # W3C Color Toolkit
 
-VS Code 的颜色高亮、Hover 信息、行内色块与原生取色器, 以及格式转换 —— 全部由**同一套**颜色内核驱动,
-支持 CSS Color 3 / 4 / 5 / 6 与 CSS Color HDR。
+[![VS Marketplace](https://vsmarketplacebadges.dev/version-short/HeavenSky.w3c-color-toolkit.svg?label=VS%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=HeavenSky.w3c-color-toolkit)
+[![Installs](https://vsmarketplacebadges.dev/installs-short/HeavenSky.w3c-color-toolkit.svg)](https://marketplace.visualstudio.com/items?itemName=HeavenSky.w3c-color-toolkit)
+[![License](https://img.shields.io/badge/license-MIT-blue)](./LICENSE.txt)
 
-English: [README.md](./README.md) · 变更记录: [CHANGELOG.md](./CHANGELOG.md)
+[English](./README.md) · **简体中文**
+
+> 市场页只渲染英文版 README, 不随访问者的显示语言切换; 插件界面本身是双语的.
+
+VS Code 的颜色高亮、Hover 信息、行内色块与原生取色器, 以及格式转换 —— 全部由**同一套**颜色内核驱动, 支持 CSS Color 3 / 4 / 5 / 6 与 CSS Color HDR。
 
 ---
 
@@ -17,8 +22,7 @@ English: [README.md](./README.md) · 变更记录: [CHANGELOG.md](./CHANGELOG.md
 | **格式转换** | **转换颜色** / **复制颜色为**, 或 24 个直达命令 | `advanced.convert.enabled` |
 | **变量解析** | `var(--brand)`、`$brand`、`@brand` 解析为真实颜色 | `advanced.variables.resolve` |
 
-五项功能读取**同一份**文档颜色索引, 因此对每个表达式的范围、颜色值、alpha、原始色彩空间与解析状态
-必然一致, 不存在逐功能重复解析。
+五项功能读取**同一份**文档颜色索引, 因此对每个表达式的范围、颜色值、alpha、原始色彩空间与解析状态必然一致, 不存在逐功能重复解析。
 
 ## 运行要求
 
@@ -33,10 +37,8 @@ English: [README.md](./README.md) · 变更记录: [CHANGELOG.md](./CHANGELOG.md
 2. 打开任意含颜色的文件 —— 不限于 CSS。
 3. **悬停**一个颜色: 得到预览色块、原始语法, 以及全部启用格式的取值。
 4. **点击颜色前的行内色块**打开原生取色器, 就地改色。
-5. 把光标放进一个颜色, 执行 **W3C Color Toolkit: 转换颜色** (或右键 → *W3C Color Toolkit* →
-   *转换颜色*), 即可改写为其他格式。
-6. 执行 **W3C Color Toolkit: 启用功能** 可在一个 Quick Pick 里开关五项功能; **配置颜色字段** 用于精确指定
-   哪些格式与语法在范围内。
+5. 把光标放进一个颜色, 执行 **W3C Color Toolkit: 转换颜色** (或右键 → *W3C Color Toolkit* → *转换颜色*), 即可改写为其他格式。
+6. 执行 **W3C Color Toolkit: 启用功能** 可在一个 Quick Pick 里开关五项功能; **配置颜色字段** 用于精确指定哪些格式与语法在范围内。
 
 以上均为开箱默认行为。下面的章节是需要调整时的参考。
 
@@ -58,17 +60,13 @@ English: [README.md](./README.md) · 变更记录: [CHANGELOG.md](./CHANGELOG.md
 | `square-before` / `square-after` | 在值前 / 后加实心方块 |
 | `off` | 关闭高亮 |
 
-`square-before` / `square-after` 由本扩展**自己的装饰**绘制, 所有语言与所有位置都生效,
-完全不依赖 VS Code 的颜色功能 —— 关掉行内色块又想要可见色块时用它。
+`square-before` / `square-after` 由本扩展**自己的装饰**绘制, 所有语言与所有位置都生效, 完全不依赖 VS Code 的颜色功能 —— 关掉行内色块又想要可见色块时用它。
 
-相关选项: `advanced.highlight.markRuler` (概览标尺打点)、
-`advanced.highlight.maxMatchesPerDocument`、`advanced.scan.comments`、`advanced.scan.strings`、
-`advanced.highlight.matchWords` (裸颜色名在哪些语言里算颜色)。
+相关选项: `advanced.highlight.markRuler` (概览标尺打点)、`advanced.highlight.maxMatchesPerDocument`、`advanced.scan.comments`、`advanced.scan.strings`、`advanced.highlight.matchWords` (裸颜色名在哪些语言里算颜色)。
 
 ### Hover 信息
 
-悬停时按此顺序渲染: 预览色块 → 原始文本 → 每个启用格式一行 → 非 CSS 表示 (`hsv`、`cmyk`) →
-元信息 (规范层级、解析说明, 以及你手动开启的 alpha、色域与两个对比度)。
+悬停时按此顺序渲染: 预览色块 → 原始文本 → 每个启用格式一行 → 非 CSS 表示 (`hsv`、`cmyk`) → 元信息 (规范层级、解析说明, 以及你手动开启的 alpha、色域与两个对比度)。
 
 ```
 ▇▇▇  (预览)
@@ -79,20 +77,15 @@ rgb(): rgb(240, 112, 63)
 规范层级: CSS Color 4
 ```
 
-色块外观: `advanced.info.previewSize` (`small` / `large`) 与
-`advanced.info.previewShape` (`square` / `rectangle`)。元信息行:
-`advanced.info.showSpecLevel`、`advanced.info.showDiagnostics`。
+色块外观: `advanced.info.previewSize` (`small` / `large`) 与 `advanced.info.previewShape` (`square` / `rectangle`)。元信息行: `advanced.info.showSpecLevel`、`advanced.info.showDiagnostics`。
 
 预览色块是本地 SVG data URI, 只用经过净化的数值拼装, 原始文本绝不参与拼接。
 
 ### 行内色块与原生取色器
 
-本扩展注册了 `DocumentColorProvider`, 因此 VS Code 会在颜色前画**行内色块**, 并从色块提供
-**原生取色器** —— 覆盖 `oklch()`、`lab()`、`color()`、`color-mix()`、相对颜色、HDR 空间,
-以及注释与字符串里的颜色, 这些都是 VS Code 自带提供器不覆盖的。
+本扩展注册了 `DocumentColorProvider`, 因此 VS Code 会在颜色前画**行内色块**, 并从色块提供 **原生取色器** —— 覆盖 `oklch()`、`lab()`、`color()`、`color-mix()`、相对颜色、HDR 空间, 以及注释与字符串里的颜色, 这些都是 VS Code 自带提供器不覆盖的。
 
-用取色器改色时**优先按原格式写回**, 依次回退到 hex、rgb、hsl、oklch, 并跳过无法表达当前 alpha
-的格式。
+用取色器改色时**优先按原格式写回**, 依次回退到 hex、rgb、hsl、oklch, 并跳过无法表达当前 alpha 的格式。
 
 不是单纯颜色的值只给**只读色块** —— 能看到颜色但不提供改写候选, 因此误拖一下不会把表达式压成字面值:
 
@@ -109,14 +102,9 @@ rgb(): rgb(240, 112, 63)
 | `all` | 所有语言上报全部受支持语法, 即使别人已经给过。 |
 | `off` | 不提供, 交回 VS Code 自己的提供器。 |
 
-自动探测的语言是 `css`、`less`、`scss`、`html`、`handlebars`、`json`、`jsonc`、`snippets`,
-外加 HTML 与 JSON 语言服务通过参与者贡献点接管的语言。第三方颜色扩展无法从清单检测,
-把它的语言写进 `advanced.colorPicker.dedupeLanguages` (默认 `[]`) 即可一并探测; 重复写入
-上面已覆盖的语言不改变任何行为, 只会在输出面板提示一次。
+自动探测的语言是 `css`、`less`、`scss`、`html`、`handlebars`、`json`、`jsonc`、`snippets`, 外加 HTML 与 JSON 语言服务通过参与者贡献点接管的语言。第三方颜色扩展无法从清单检测, 把它的语言写进 `advanced.colorPicker.dedupeLanguages` (默认 `[]`) 即可一并探测; 重复写入上面已覆盖的语言不改变任何行为, 只会在输出面板提示一次。
 
-两个 VS Code 上限会生效: 每个编辑器最多渲染 `editor.colorDecoratorsLimit` (默认 **500**) 个色块 ——
-本扩展按该值截断上报并记一次日志; `editor.colorDecoratorsActivatedOn` 决定取色器是悬停打开、
-点击打开还是两者都可。
+两个 VS Code 上限会生效: 每个编辑器最多渲染 `editor.colorDecoratorsLimit` (默认 **500**) 个色块 —— 本扩展按该值截断上报并记一次日志; `editor.colorDecoratorsActivatedOn` 决定取色器是悬停打开、点击打开还是两者都可。
 
 ### 格式转换与复制
 
@@ -136,12 +124,9 @@ rgb(): rgb(240, 112, 63)
 - **非空选区** → 必须完整覆盖单个颜色表达式; 部分选中会被判定为无效, 而不是替你猜。
 - 支持**多选区**。先解析全部选区, 只有**每个**都成功才执行一次写入, 因此不会出现改了一半的文件。
 
-写入前会明确告知是否发生色域映射、是否丢弃 alpha、是否丢失 `none` 分量。默认策略是**拒绝**而不是
-静默丢信息, 见 `advanced.convert.alphaLoss`、`advanced.convert.missingComponentLoss`、
-`advanced.convert.namedColorFallback`。
+写入前会明确告知是否发生色域映射、是否丢弃 alpha、是否丢失 `none` 分量。默认策略是**拒绝**而不是静默丢信息, 见 `advanced.convert.alphaLoss`、`advanced.convert.missingComponentLoss`、`advanced.convert.namedColorFallback`。
 
-输出风格: `w3cColorToolkit.convertSyntax` (`rgb()` / `hsl()` 用 `legacy` 逗号还是 `modern` 空格)、
-`w3cColorToolkit.precision`、`advanced.output.hexCase`、`advanced.output.gamutMapping`。
+输出风格: `w3cColorToolkit.convertSyntax` (`rgb()` / `hsl()` 用 `legacy` 逗号还是 `modern` 空格)、`w3cColorToolkit.precision`、`advanced.output.hexCase`、`advanced.output.gamutMapping`。
 
 ### 变量解析
 
@@ -153,64 +138,31 @@ rgb(): rgb(240, 112, 63)
 | `@brand` | `less` |
 | Stylus 的 `brand` / `$brand` | **不解析** —— `.styl` 里的颜色本身照常识别, 只是没有变量解析 |
 
-**定义靠 glob 发现, 不靠 `@import`。** 扩展在激活后按 `advanced.variables.lookupGlobs`
-(默认 `**/*.{css,scss,sass,less}`) 建一份工作区符号索引, 并用文件监听增量维护。
-这是刻意的: 现实项目的样式文件常常只经 JS/TS 的 `import` 合并, 没有任何 CSS 层面的
-`@import`, 只跟导入图会永远看不到令牌文件。`@import` / `@use` / `@forward` 仍作补充 ——
-明确写了导入但没被 glob 命中的文件也会被拉进索引。索引受
-`advanced.variables.maxIndexedFiles` 限制, `node_modules`、`dist`、`out`、`build` 等目录始终排除。
-编辑中的文件用编辑器里的内容, 定义不必等保存就生效。
+**定义靠 glob 发现, 不靠 `@import`。** 扩展在激活后按 `advanced.variables.lookupGlobs` (默认 `**/*.{css,scss,sass,less}`) 建一份工作区符号索引, 并用文件监听增量维护。这是刻意的: 现实项目的样式文件常常只经 JS/TS 的 `import` 合并, 没有任何 CSS 层面的 `@import`, 只跟导入图会永远看不到令牌文件。`@import` / `@use` / `@forward` 仍作补充 —— 明确写了导入但没被 glob 命中的文件也会被拉进索引。索引受 `advanced.variables.maxIndexedFiles` 限制, `node_modules`、`dist`、`out`、`build` 等目录始终排除。编辑中的文件用编辑器里的内容, 定义不必等保存就生效。
 
 **取值有三种结果。**
 
-1. **唯一确定** → 解析成真实颜色。判据是"没有元素上下文也能确定": 自定义属性要求恰好一个
-   无条件 root 级定义 (`:root` / `:host` / `html`, 且不在 `@media` 这类条件 at-rule 里);
-   预处理器变量取引用位置之前的最后一个定义 —— 那是顺序求值的确定结果, 不是猜测。
-   组件级的局部覆盖 (`.button { --brand: … }`) 不影响这个结论。
-2. **取值不唯一** → Hover 列出全部候选, 但**不给色块也不高亮**。两种来源: 定义在
-   `@media (prefers-color-scheme: dark)` 这类条件 at-rule 内 (取值随环境切换), 或者只定义在
-   `[data-theme="…"]`、`.dark` 这类选择器下 (取值取决于具体元素)。候选会连同来源一起列出,
-   例如 `@media (prefers-color-scheme: dark) › :root`; 变量是颜色函数片段时, 候选会被代换回
-   整段表达式再预览, 因此看到的是 `rgb(148 163 184 / 0.4)` 而不是光秃秃的通道值。
-3. **没有定义** → 什么都不显示: 没有高亮, 没有色块, 没有 Hover。这样 SCSS 里每个 `$foo`
-   才不会都弹出一个空面板。
+1. **唯一确定** → 解析成真实颜色。判据是"没有元素上下文也能确定": 自定义属性要求恰好一个无条件 root 级定义 (`:root` / `:host` / `html`, 且不在 `@media` 这类条件 at-rule 里); 预处理器变量取引用位置之前的最后一个定义 —— 那是顺序求值的确定结果, 不是猜测。组件级的局部覆盖 (`.button { --brand: … }`) 不影响这个结论。
+2. **取值不唯一** → Hover 列出全部候选, 但**不给色块也不高亮**。两种来源: 定义在 `@media (prefers-color-scheme: dark)` 这类条件 at-rule 内 (取值随环境切换), 或者只定义在 `[data-theme="…"]`、`.dark` 这类选择器下 (取值取决于具体元素)。候选会连同来源一起列出, 例如 `@media (prefers-color-scheme: dark) › :root`; 变量是颜色函数片段时, 候选会被代换回整段表达式再预览, 因此看到的是 `rgb(148 163 184 / 0.4)` 而不是光秃秃的通道值。
+3. **没有定义** → 什么都不显示: 没有高亮, 没有色块, 没有 Hover。这样 SCSS 里每个 `$foo` 才不会都弹出一个空面板。
 
-**已解析的引用是只读的。** 取色器只展示颜色而不允许拖动, **转换颜色** 会拒绝并告知它依赖的
-变量名。把 `var(--brand)` 改写成 `#ff8800` 会销毁设计令牌, 那几乎不会是你想要的。
+**已解析的引用是只读的。** 取色器只展示颜色而不允许拖动, **转换颜色** 会拒绝并告知它依赖的变量名。把 `var(--brand)` 改写成 `#ff8800` 会销毁设计令牌, 那几乎不会是你想要的。
 
-**引用内部的颜色各有自己的色块。** `var(--brand, #ff8800)` 会出现两个色块 —— 整个引用一个,
-fallback 一个 —— 因为色块画在各自 range 的起点之前, 起点不同就会并排错开。嵌套同理:
-`var(--a, var(--b, #674), #def)` 会出现四个。高亮仍然只标最外层, 因此下划线不会叠加。
+**引用内部的颜色各有自己的色块。** `var(--brand, #ff8800)` 会出现两个色块 —— 整个引用一个, fallback 一个 —— 因为色块画在各自 range 的起点之前, 起点不同就会并排错开。嵌套同理: `var(--a, var(--b, #674), #def)` 会出现四个。高亮仍然只标最外层, 因此下划线不会叠加。
 
-**变量作为颜色函数片段时先代换再解析。** `rgb(var(--channels) / 0.4)`、`rgba(var(--x), 0.4)`、
-`hsl(var(--h) 50% 50%)`、`color-mix(in srgb, var(--a), red)` 都会把 `var()` 代换回原文本再解析,
-因此 Tailwind 风格的通道令牌 (`--channels: 148 163 184` 这种本身不是颜色的值) 可以正常显示。
-取不到值时 fallback 生效 (`var(--missing, 1 2 3)`); 循环引用会耗尽轮数并按"解析不出来"处理。
-预处理器变量作为片段 (`rgba($brand, 0.4)`) **整段不解析** —— 代换后是 SCSS/Less 自己的
-`rgba(颜色, alpha)` 重载而不是 CSS 语法; 内层的 `$brand` 仍有自己的色块。
+**变量作为颜色函数片段时先代换再解析。** `rgb(var(--channels) / 0.4)`、`rgba(var(--x), 0.4)`、`hsl(var(--h) 50% 50%)`、`color-mix(in srgb, var(--a), red)` 都会把 `var()` 代换回原文本再解析, 因此 Tailwind 风格的通道令牌 (`--channels: 148 163 184` 这种本身不是颜色的值) 可以正常显示。取不到值时 fallback 生效 (`var(--missing, 1 2 3)`); 循环引用会耗尽轮数并按"解析不出来"处理。预处理器变量作为片段 (`rgba($brand, 0.4)`) **整段不解析** —— 代换后是 SCSS/Less 自己的 `rgba(颜色, alpha)` 重载而不是 CSS 语法; 内层的 `$brand` 仍有自己的色块。
 
-**哪些语言识别变量**由 `advanced.variables.languageIds` 决定, 默认
-`css`、`scss`、`sass`、`less`、`postcss`、`tailwindcss`。它与 `advanced.highlight.matchWords`
-的语言判定是两件事: 后者只决定裸颜色名在哪里算颜色。`tailwindcss` 在表内是因为
-Tailwind CSS IntelliSense 会把 CSS 文件切换成该语言。
+**哪些语言识别变量**由 `advanced.variables.languageIds` 决定, 默认 `css`、`scss`、`sass`、`less`、`postcss`、`tailwindcss`。它与 `advanced.highlight.matchWords` 的语言判定是两件事: 后者只决定裸颜色名在哪里算颜色。`tailwindcss` 在表内是因为 Tailwind CSS IntelliSense 会把 CSS 文件切换成该语言。
 
-定义收集基于 PostCSS 的真实 AST (`postcss` + `postcss-scss` + `postcss-less`), 因此注释掉的
-定义不会毒化同名真定义, 值里的注释也不会进入取值。一个语法错误的文件只让自己不贡献定义,
-不影响其他文件。
-
+定义收集基于 PostCSS 的真实 AST (`postcss` + `postcss-scss` + `postcss-less`), 因此注释掉的定义不会毒化同名真定义, 值里的注释也不会进入取值。一个语法错误的文件只让自己不贡献定义, 不影响其他文件。
 
 ### 上下文相关的值不会被伪造
 
-`currentColor`、19 个系统色、23 个 deprecated 系统色、`light-dark()`、未解析的 `var()`、
-没有 `fallback` 的自定义 `@color-profile`, 以及非静态 alpha, 一律得到 `contextual` 状态。
-它们不允许转换; 没有显式预览假设时也不会被高亮 —— Hover 只说明**这个值依赖什么**,
-而不是给出一个编出来的色块。deprecated 系统色还会提示替代关键字。
+`currentColor`、19 个系统色、23 个 deprecated 系统色、`light-dark()`、未解析的 `var()`、没有 `fallback` 的自定义 `@color-profile`, 以及非静态 alpha, 一律得到 `contextual` 状态。它们不允许转换; 没有显式预览假设时也不会被高亮 —— Hover 只说明**这个值依赖什么**, 而不是给出一个编出来的色块。deprecated 系统色还会提示替代关键字。
 
-只有一种可以不靠猜就预览: `light-dark()` 按 `advanced.contextualPreview` 选择分支, 该项默认 `auto`,
-跟随当前编辑器主题。Hover 仍把结果标注为假设值, 切换主题会重新渲染; 设为 `off` 可回到完全不预览。
+只有一种可以不靠猜就预览: `light-dark()` 按 `advanced.contextualPreview` 选择分支, 该项默认 `auto`, 跟随当前编辑器主题。Hover 仍把结果标注为假设值, 切换主题会重新渲染; 设为 `off` 可回到完全不预览。
 
-`hdr-color()` 依赖显示器 HDR headroom, 因此即使开启 HDR 开关也保持上下文相关 ——
-除非用 `advanced.experimental.hdrAssumedHeadroom` 声明一个假设值。
+`hdr-color()` 依赖显示器 HDR headroom, 因此即使开启 HDR 开关也保持上下文相关 —— 除非用 `advanced.experimental.hdrAssumedHeadroom` 声明一个假设值。
 
 ---
 
@@ -241,8 +193,7 @@ Tailwind CSS IntelliSense 会把 CSS 文件切换成该语言。
 
 ### 快捷键
 
-24 个直达 `w3cColorToolkit.convertTo.*` 命令与 6 个管理动作在命令面板中隐藏, 但**完全可绑定** ——
-它们仍会出现在键盘快捷方式界面。本扩展不内置任何默认快捷键, 以免与既有绑定冲突:
+24 个直达 `w3cColorToolkit.convertTo.*` 命令与 6 个管理动作在命令面板中隐藏, 但**完全可绑定** —— 它们仍会出现在键盘快捷方式界面。本扩展不内置任何默认快捷键, 以免与既有绑定冲突:
 
 ```jsonc
 // keybindings.json
@@ -257,9 +208,7 @@ Tailwind CSS IntelliSense 会把 CSS 文件切换成该语言。
 ]
 ```
 
-命令 id 后缀与格式表一致: `hex`、`rgb`、`hsl`、`oklch`、`hwb`、`lab`、`lch`、`oklab`、`srgb`、
-`srgbLinear`、`displayP3`、`displayP3Linear`、`a98Rgb`、`prophotoRgb`、`rec2020`、`xyzD50`、
-`xyzD65`、`namedColor`、`ictcp`、`jzazbz`、`jzczhz`、`rec2100Pq`、`rec2100Hlg`、`rec2100Linear`。
+命令 id 后缀与格式表一致: `hex`、`rgb`、`hsl`、`oklch`、`hwb`、`lab`、`lch`、`oklab`、`srgb`、`srgbLinear`、`displayP3`、`displayP3Linear`、`a98Rgb`、`prophotoRgb`、`rec2020`、`xyzD50`、`xyzD65`、`namedColor`、`ictcp`、`jzazbz`、`jzczhz`、`rec2100Pq`、`rec2100Hlg`、`rec2100Linear`。
 
 ---
 
@@ -293,8 +242,7 @@ Tailwind CSS IntelliSense 会把 CSS 文件切换成该语言。
 }
 ```
 
-在 `settings.json` 中于对象内输入 `"` 即可获得逐键补全、悬停说明与取值范围校验。内置两个片段:
-*All advanced options (with defaults)* 与 *Minimal example*。
+在 `settings.json` 中于对象内输入 `"` 即可获得逐键补全、悬停说明与取值范围校验。内置两个片段: *All advanced options (with defaults)* 与 *Minimal example*。
 
 规则:
 
@@ -308,8 +256,7 @@ Tailwind CSS IntelliSense 会把 CSS 文件切换成该语言。
 
 **禁用** —— 让扩展彻底不介入
 
-三个条件任一成立即生效: 超过大小上限, **或**文件名命中, **或** language id 命中。被隐身的文件
-没有高亮, 没有色块, Hover 没有响应, 命令也不动作, 并且完全不会被扫描。
+三个条件任一成立即生效: 超过大小上限, **或**文件名命中, **或** language id 命中。被隐身的文件没有高亮, 没有色块, Hover 没有响应, 命令也不动作, 并且完全不会被扫描。
 
 | 键 | 取值 | 默认值 | 作用 |
 | --- | --- | --- | --- |
@@ -317,8 +264,7 @@ Tailwind CSS IntelliSense 会把 CSS 文件切换成该语言。
 | `disable.fileNames` | string[] | `["*.min.*", "*.map"]` | gitignore 语法模式, **只匹配文件名**, 因此模式不能包含 `/` (含 `/` 的模式会被忽略并记入输出面板)。后面的条目覆盖前面的, `!` 表示重新启用 —— `["*.min.*", "*.map", "!theme.min.css"]` 可以只放行其中一个压缩文件。填 `[]` 关闭该维度。 |
 | `disable.languageIds` | string[] | `["log", "plaintext"]` | 同一套语法, 匹配 language id。用来拦住文件名模式拦不住的情况, 例如 `Dockerfile`, `Makefile`, 以及手动切换过语言模式的文件。填 `[]` 关闭该维度。 |
 
-`!` 只在所在那一组内部生效: `disable.fileNames` 里的否定项救不回已经被 `disable.languageIds`
-排除的文件。没有跨维度的豁免开关 —— 需要放行就收窄对应那一组模式。
+`!` 只在所在那一组内部生效: `disable.fileNames` 里的否定项救不回已经被 `disable.languageIds` 排除的文件。没有跨维度的豁免开关 —— 需要放行就收窄对应那一组模式。
 
 **高亮**
 
@@ -398,16 +344,13 @@ Tailwind CSS IntelliSense 会把 CSS 文件切换成该语言。
 
 ### 本扩展覆盖的一个默认值
 
-本扩展通过 `contributes.configurationDefaults` 把 `"editor.defaultColorDecorators"` 的默认值设为
-`never`: VS Code 内置**默认**提供器认的 hex、`rgb()`、`hsl()` 是本扩展上报范围的真子集,
-关掉它只去掉重叠, 不损失覆盖。设置界面会显示 *"默认值被扩展覆盖"*, 你随时可以改回 `auto` 或 `always`。
+本扩展通过 `contributes.configurationDefaults` 把 `"editor.defaultColorDecorators"` 的默认值设为 `never`: VS Code 内置**默认**提供器认的 hex、`rgb()`、`hsl()` 是本扩展上报范围的真子集, 关掉它只去掉重叠, 不损失覆盖。设置界面会显示 *"默认值被扩展覆盖"*, 你随时可以改回 `auto` 或 `always`。
 
 ---
 
 ## 颜色字段: 高亮与 Hover 共用一份表
 
-`advanced.fields.enabled` / `advanced.fields.excluded` 是两者唯一的范围来源, 不存在"高亮范围"这
-第二处配置。**配置颜色字段**命令按同样的分组展示, 并在每个条目上标出生效范围。
+`advanced.fields.enabled` / `advanced.fields.excluded` 是两者唯一的范围来源, 不存在"高亮范围"这第二处配置。**配置颜色字段**命令按同样的分组展示, 并在每个条目上标出生效范围。
 
 | 分组 | 作用于 | 字段 |
 | --- | --- | --- |
@@ -416,14 +359,11 @@ Tailwind CSS IntelliSense 会把 CSS 文件切换成该语言。
 | 非 CSS 表示 | 仅 Hover | `hsv`、`cmyk` |
 | 附加信息 (不构成完整颜色) | 仅 Hover | `preview`、`source`、`spec-level`、`diagnostics`、`alpha`\*、`gamut`\*、`contrast-on-white`\*、`contrast-on-black`\* |
 
-† 需要 `cssColorHdr` 实验开关。\* 默认关闭 —— 需要时加入 `fields.enabled`, 或在 **配置颜色字段** 里勾选。
-(alpha 已经体现在 `#ff880080` 这类序列化结果里; 色域与两个对比度属于诊断性信息, 日常查看时是噪音。)
+† 需要 `cssColorHdr` 实验开关。\* 默认关闭 —— 需要时加入 `fields.enabled`, 或在 **配置颜色字段** 里勾选。(alpha 已经体现在 `#ff880080` 这类序列化结果里; 色域与两个对比度属于诊断性信息, 日常查看时是噪音。)
 
-关掉一个 CSS 语法即停止高亮它; 关掉一个格式同时移除对应的 Hover 行。
-注册表未登记的语法一律放行, 因此解析器新增语法不会静默失去高亮。
+关掉一个 CSS 语法即停止高亮它; 关掉一个格式同时移除对应的 Hover 行。注册表未登记的语法一律放行, 因此解析器新增语法不会静默失去高亮。
 
-`fields.enabled` 的顺序即 Hover 行的顺序。**配置颜色字段** 始终按注册表顺序写回 ——
-需要自定义顺序请直接编辑 `fields.enabled`。
+`fields.enabled` 的顺序即 Hover 行的顺序。**配置颜色字段** 始终按注册表顺序写回 —— 需要自定义顺序请直接编辑 `fields.enabled`。
 
 ---
 
@@ -441,8 +381,7 @@ Tailwind CSS IntelliSense 会把 CSS 文件切换成该语言。
 
 ### 色域与 HDR 处理
 
-- sRGB 输出默认使用 CSS 规范的色域映射, 而不是逐通道裁剪
-  (`advanced.output.gamutMapping` 可切换为 `clip` 或 `none`)。
+- sRGB 输出默认使用 CSS 规范的色域映射, 而不是逐通道裁剪 (`advanced.output.gamutMapping` 可切换为 `clip` 或 `none`)。
 - 广色域颜色只在预览色块上做映射; Hover 仍显示原始值与色域状态。
 - HDR 颜色在预览时做色调映射 (`advanced.highlight.hdrToneMapping`), 并在 Hover 中标注。
 
@@ -450,66 +389,42 @@ Tailwind CSS IntelliSense 会把 CSS 文件切换成该语言。
 
 ## 排查
 
-**看不到行内色块。** 依次检查 `editor.colorDecorators` (VS Code 自己的总开关)、
-`advanced.colorPicker.mode` (不能为 `off`), 以及文件颜色数是否超过
-`editor.colorDecoratorsLimit` (500) —— 本扩展会在该上限处截断并记日志。取色器挂在色块上,
-所以"只要取色器不要色块"做不到。
+**看不到行内色块。** 依次检查 `editor.colorDecorators` (VS Code 自己的总开关)、`advanced.colorPicker.mode` (不能为 `off`), 以及文件颜色数是否超过 `editor.colorDecoratorsLimit` (500) —— 本扩展会在该上限处截断并记日志。取色器挂在色块上, 所以"只要取色器不要色块"做不到。
 
-**一个颜色出现两个色块。** 要么 `colorPicker.mode` 是 `all`, 要么另一个颜色扩展也在上报该 range。
-`dedupe` 会自动探测 VS Code 内置语言服务也给颜色的语言: `css`、`less`、`scss`、`html`、
-`handlebars`、`json`、`jsonc`、`snippets`, 以及其他扩展挂到 HTML 或 JSON 语言服务上的语言。
-第三方颜色扩展请把它的语言加进 `advanced.colorPicker.dedupeLanguages` —— 这类扩展在哪些
-语言里注册提供器无法从清单推导, 检测不到。上面列出的语言已经在探测, 不要再写进那份列表。
+**一个颜色出现两个色块。** 要么 `colorPicker.mode` 是 `all`, 要么另一个颜色扩展也在上报该 range。`dedupe` 会自动探测 VS Code 内置语言服务也给颜色的语言: `css`、`less`、`scss`、`html`、`handlebars`、`json`、`jsonc`、`snippets`, 以及其他扩展挂到 HTML 或 JSON 语言服务上的语言。第三方颜色扩展请把它的语言加进 `advanced.colorPicker.dedupeLanguages` —— 这类扩展在哪些语言里注册提供器无法从清单推导, 检测不到。上面列出的语言已经在探测, 不要再写进那份列表。
 
-*为什么需要探测:* VS Code 把**所有**颜色提供器的结果叠加渲染且不按 range 去重; 只要有扩展返回了
-数组 (哪怕空数组) 它就不再使用内置**默认**提供器; 而 `vscode.executeDocumentColorProvider`
-不回传"这个颜色是谁给的"。按 range 探测是保证"一个颜色一个色块"的唯一办法。
+*为什么需要探测:* VS Code 把**所有**颜色提供器的结果叠加渲染且不按 range 去重; 只要有扩展返回了数组 (哪怕空数组) 它就不再使用内置**默认**提供器; 而 `vscode.executeDocumentColorProvider` 不回传"这个颜色是谁给的"。按 range 探测是保证"一个颜色一个色块"的唯一办法。
 
-**某个颜色没有高亮。** 按可能性排序: `w3cColorToolkit.highlight` 为 `off`;
-该文件被 `advanced.disable.fileNames` 或 `advanced.disable.languageIds` 隐身;
-对应语法的字段在 **配置颜色字段** 里被关掉; 该值是上下文相关值 (见上文);
-文档超过 `advanced.disable.maxFileSizeMb`;
-颜色数超过 `advanced.highlight.maxMatchesPerDocument`; 或者它是非 CSS 语言里的裸颜色名而
-`advanced.highlight.matchWords` 仍为 `css-like`。
+**某个颜色没有高亮。** 按可能性排序: `w3cColorToolkit.highlight` 为 `off`; 该文件被 `advanced.disable.fileNames` 或 `advanced.disable.languageIds` 隐身; 对应语法的字段在 **配置颜色字段** 里被关掉; 该值是上下文相关值 (见上文); 文档超过 `advanced.disable.maxFileSizeMb`; 颜色数超过 `advanced.highlight.maxMatchesPerDocument`; 或者它是非 CSS 语言里的裸颜色名而 `advanced.highlight.matchWords` 仍为 `css-like`。
 
 **取色器不提供改写方式。** 那是上下文相关值与只读语法的只读色块。要有意改写请用 **转换颜色**。
 
-**转换被拒绝。** 提示会给出原因和行号: 上下文相关值、目标格式无法表达 alpha
-(`convert.alphaLoss`)、或没有完全匹配的颜色名 (`convert.namedColorFallback`)。
-放宽相应策略, 或换一个目标格式。
+**转换被拒绝。** 提示会给出原因和行号: 上下文相关值、目标格式无法表达 alpha (`convert.alphaLoss`)、或没有完全匹配的颜色名 (`convert.namedColorFallback`)。放宽相应策略, 或换一个目标格式。
 
-**变量引用什么都不显示。** 所有无法解析的情形都是这个结果, 所以先看日志: **管理 → 打开日志**
-会告诉你原因。然后检查 `advanced.variables.resolve`, 并确认令牌文件被
-`advanced.variables.lookupGlobs` 覆盖; 注意未受信任的工作区只使用已打开文件里的定义。
-只定义在 `[data-theme="…"]` / `.dark` 这类选择器下的令牌**不属于**这种情况 —— 它是"取值不唯一",
-Hover 会列出候选, 色块则刻意不显示。索引规模受 `variables.maxIndexedFiles` 限制, 代换深度受
-`variables.maxResolveDepth` 限制。用运算、SCSS map、`@each` 或 `darken()` 这类函数构造的值不在
-本扩展的求值范围内。Stylus 变量完全不解析。
+**变量引用什么都不显示。** 所有无法解析的情形都是这个结果, 所以先看日志: **管理 → 打开日志** 会告诉你原因。然后检查 `advanced.variables.resolve`, 并确认令牌文件被 `advanced.variables.lookupGlobs` 覆盖; 注意未受信任的工作区只使用已打开文件里的定义。只定义在 `[data-theme="…"]` / `.dark` 这类选择器下的令牌**不属于**这种情况 —— 它是"取值不唯一", Hover 会列出候选, 色块则刻意不显示。索引规模受 `variables.maxIndexedFiles` 限制, 代换深度受 `variables.maxResolveDepth` 限制。用运算、SCSS map、`@each` 或 `darken()` 这类函数构造的值不在本扩展的求值范围内。Stylus 变量完全不解析。
 
-**`advanced` 里的某个键像是没生效。** 执行 **管理 → 显示生效配置**, 它会打印每个键及其来源 scope,
-并列出被拒绝的键。把 `advanced.logLevel` 设为 `debug` 后从 **管理 → 打开日志** 看细节。
+**`advanced` 里的某个键像是没生效。** 执行 **管理 → 显示生效配置**, 它会打印每个键及其来源 scope, 并列出被拒绝的键。把 `advanced.logLevel` 设为 `debug` 后从 **管理 → 打开日志** 看细节。
 
-**结果看起来是旧的。** 执行 **管理 → 重新扫描当前文档** 或 **清空索引缓存**。
-遇到本扩展不认识的语法时, **管理 → 记录不支持的语法** 会把它记入日志, 方便提 issue。
+**结果看起来是旧的。** 执行 **管理 → 重新扫描当前文档** 或 **清空索引缓存**。遇到本扩展不认识的语法时, **管理 → 记录不支持的语法** 会把它记入日志, 方便提 issue。
 
 ---
 
 ## 已知限制
 
-- 超大文档的扫描速度低于目标性能预算; `advanced.disable.maxFileSizeMb` 与
-  `advanced.highlight.maxMatchesPerDocument` 用于限制开销。
+- 超大文档的扫描速度低于目标性能预算; `advanced.disable.maxFileSizeMb` 与 `advanced.highlight.maxMatchesPerDocument` 用于限制开销。
 - CSS Color 6 与 CSS Color HDR 均为草案, 数值与语法可能变化。
 - 未受信任的工作区只使用已打开文件里的定义, 不读取磁盘上的其他文件。
-- 变量解析不对表达式求值: SCSS 的 map、`@each`、mixin 与函数调用不会被求值, 这类引用什么都不显示,
-  而不是给出一个猜测的颜色。
-- Stylus 不解析变量: `.styl` 文件里的 hex、颜色名与颜色函数照常识别, 但 `$brand = …` 这类
-  定义与引用不解析 (PostCSS 没有官方 Stylus 语法包, 唯一的第三方桥接会引入 Node 专用依赖
-  而破坏 Web 宿主构建)。
+- 变量解析不对表达式求值: SCSS 的 map、`@each`、mixin 与函数调用不会被求值, 这类引用什么都不显示, 而不是给出一个猜测的颜色。
+- Stylus 不解析变量: `.styl` 文件里的 hex、颜色名与颜色函数照常识别, 但 `$brand = …` 这类定义与引用不解析 (PostCSS 没有官方 Stylus 语法包, 唯一的第三方桥接会引入 Node 专用依赖而破坏 Web 宿主构建)。
 - 不下载远程 ICC profile; `device-cmyk()` 使用朴素 fallback 并标记为近似。
 
 ## 界面语言
 
 英语与简体中文, 命令标题一并本地化。其他 locale 回退到英语。
+
+## 变更记录
+
+见 [CHANGELOG.md](./CHANGELOG.md)。
 
 ## 许可
 

@@ -1,10 +1,12 @@
 # W3C Color Toolkit
 
-Color highlighting, hover information, an inline swatch with the native color picker, and format
-conversion for VS Code — all driven by **one** color engine with CSS Color 3 / 4 / 5 / 6 and
-CSS Color HDR support.
+[![VS Marketplace](https://vsmarketplacebadges.dev/version-short/HeavenSky.w3c-color-toolkit.svg?label=VS%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=HeavenSky.w3c-color-toolkit)
+[![Installs](https://vsmarketplacebadges.dev/installs-short/HeavenSky.w3c-color-toolkit.svg)](https://marketplace.visualstudio.com/items?itemName=HeavenSky.w3c-color-toolkit)
+[![License](https://img.shields.io/badge/license-MIT-blue)](./LICENSE.txt)
 
-中文文档: [README.zh-cn.md](./README.zh-cn.md) · Changes: [CHANGELOG.md](./CHANGELOG.md)
+**English** · [简体中文](./README.zh-cn.md)
+
+Color highlighting, hover information, an inline swatch with the native color picker, and format conversion for VS Code — all driven by **one** color engine with CSS Color 3 / 4 / 5 / 6 and CSS Color HDR support.
 
 ---
 
@@ -18,29 +20,23 @@ CSS Color HDR support.
 | **Format conversion** | **Convert Color** / **Copy Color As**, or 24 direct commands | `advanced.convert.enabled` |
 | **Variable resolution** | `var(--brand)`, `$brand`, `@brand` resolve to a real color | `advanced.variables.resolve` |
 
-All five read the **same** document color index, so they always agree on the range, the color value,
-the alpha, the original color space, and whether the value could be resolved at all. Nothing is
-re-parsed per feature.
+All five read the **same** document color index, so they always agree on the range, the color value, the alpha, the original color space, and whether the value could be resolved at all. Nothing is re-parsed per feature.
 
 ## Requirements
 
 - VS Code **1.101** or newer.
 - No other extension or external tool required.
 - Works in remote workspaces and in VS Code for the Web (the extension ships a browser bundle).
-- In an **untrusted** workspace, only definitions from files you have open are used; other files on
-  disk are not read.
+- In an **untrusted** workspace, only definitions from files you have open are used; other files on disk are not read.
 
 ## Quick start
 
 1. Install the extension. It activates after startup finishes; no command is needed.
 2. Open any file with colors in it — CSS or not.
 3. **Hover** a color: you get a preview swatch, the original syntax, and every enabled format.
-4. **Click the inline swatch** in front of the color to open the native picker and edit the value in
-   place.
-5. Put the cursor inside a color and run **W3C Color Toolkit: Convert Color** (or right-click →
-   *W3C Color Toolkit* → *Convert Color*) to rewrite it in another format.
-6. Run **W3C Color Toolkit: Enable Features** to toggle the five features from one Quick Pick, or
-   **Configure Color Fields** to choose exactly which formats and syntaxes are in scope.
+4. **Click the inline swatch** in front of the color to open the native picker and edit the value in place.
+5. Put the cursor inside a color and run **W3C Color Toolkit: Convert Color** (or right-click → *W3C Color Toolkit* → *Convert Color*) to rewrite it in another format.
+6. Run **W3C Color Toolkit: Enable Features** to toggle the five features from one Quick Pick, or **Configure Color Fields** to choose exactly which formats and syntaxes are in scope.
 
 Everything works out of the box. The sections below are the reference for when you want to change it.
 
@@ -62,19 +58,13 @@ Everything works out of the box. The sections below are the reference for when y
 | `square-before` / `square-after` | Filled square before / after the value |
 | `off` | No highlighting |
 
-`square-before` / `square-after` are the extension's **own** decoration, so they work in every
-language and every position and do not depend on VS Code's color feature at all — useful if you
-turned inline swatches off but still want a visible chip.
+`square-before` / `square-after` are the extension's **own** decoration, so they work in every language and every position and do not depend on VS Code's color feature at all — useful if you turned inline swatches off but still want a visible chip.
 
-Related options: `advanced.highlight.markRuler` (overview-ruler tick),
-`advanced.highlight.maxMatchesPerDocument`, `advanced.scan.comments`, `advanced.scan.strings`,
-`advanced.highlight.matchWords` (where bare color names count as colors).
+Related options: `advanced.highlight.markRuler` (overview-ruler tick), `advanced.highlight.maxMatchesPerDocument`, `advanced.scan.comments`, `advanced.scan.strings`, `advanced.highlight.matchWords` (where bare color names count as colors).
 
 ### Hover information
 
-Hovering a color renders, in this order: the preview swatch, the original source text, then one row
-per enabled format, then the non-CSS rows (`hsv`, `cmyk`), then the meta rows (specification level,
-parser notes, and — if you enable them — alpha, gamut and the two contrast ratios).
+Hovering a color renders, in this order: the preview swatch, the original source text, then one row per enabled format, then the non-CSS rows (`hsv`, `cmyk`), then the meta rows (specification level, parser notes, and — if you enable them — alpha, gamut and the two contrast ratios).
 
 ```
 ▇▇▇  (preview)
@@ -85,29 +75,20 @@ rgb(): rgb(240, 112, 63)
 Specification: CSS Color 4
 ```
 
-Preview appearance: `advanced.info.previewSize` (`small` / `large`) and
-`advanced.info.previewShape` (`square` / `rectangle`). Meta rows:
-`advanced.info.showSpecLevel`, `advanced.info.showDiagnostics`.
+Preview appearance: `advanced.info.previewSize` (`small` / `large`) and `advanced.info.previewShape` (`square` / `rectangle`). Meta rows: `advanced.info.showSpecLevel`, `advanced.info.showDiagnostics`.
 
-The swatch is rendered as a local SVG data URI built only from sanitised numbers — the raw source
-text is never interpolated into it.
+The swatch is rendered as a local SVG data URI built only from sanitised numbers — the raw source text is never interpolated into it.
 
 ### Inline swatch and the native color picker
 
-The extension registers a `DocumentColorProvider`, so VS Code draws its **inline swatch** in front of
-the color and offers its **color picker** from that swatch — including `oklch()`, `lab()`, `color()`,
-`color-mix()`, relative color syntax, the HDR spaces, and colors inside comments and strings, none of
-which VS Code's built-in providers cover.
+The extension registers a `DocumentColorProvider`, so VS Code draws its **inline swatch** in front of the color and offers its **color picker** from that swatch — including `oklch()`, `lab()`, `color()`, `color-mix()`, relative color syntax, the HDR spaces, and colors inside comments and strings, none of which VS Code's built-in providers cover.
 
-Picking a color rewrites the value in the **original format first**, falling back to hex, rgb, hsl,
-oklch, and skipping any format that cannot express the current alpha.
+Picking a color rewrites the value in the **original format first**, falling back to hex, rgb, hsl, oklch, and skipping any format that cannot express the current alpha.
 
-Values that are not a plain color get a **read-only** swatch — you see the color, but no rewrite is
-offered, so one stray drag cannot flatten an expression into a literal:
+Values that are not a plain color get a **read-only** swatch — you see the color, but no rewrite is offered, so one stray drag cannot flatten an expression into a literal:
 
 - context dependent values: `light-dark()`, system colors, `currentColor`, unresolved `var()`;
-- read-only syntax: `color-mix()`, relative colors, `contrast-color()`, `device-cmyk()`,
-  `color-layers()`.
+- read-only syntax: `color-mix()`, relative colors, `contrast-color()`, `device-cmyk()`, `color-layers()`.
 
 Use **Convert Color** when you want to rewrite those on purpose.
 
@@ -119,20 +100,13 @@ Use **Convert Color** when you want to rewrite those on purpose.
 | `all` | Report every supported syntax in every language, even where another provider already did. |
 | `off` | Provide nothing; VS Code falls back to its own providers. |
 
-The probed set is `css`, `less`, `scss`, `html`, `handlebars`, `json`, `jsonc`, `snippets` and
-whatever the HTML and JSON services adopt through their participant contribution points. Third-party
-color extensions cannot be detected from their manifests; add their languages to
-`advanced.colorPicker.dedupeLanguages` (default `[]`) and they get probed too. Listing a language
-that is already covered changes nothing and is reported once in the output channel.
+The probed set is `css`, `less`, `scss`, `html`, `handlebars`, `json`, `jsonc`, `snippets` and whatever the HTML and JSON services adopt through their participant contribution points. Third-party color extensions cannot be detected from their manifests; add their languages to `advanced.colorPicker.dedupeLanguages` (default `[]`) and they get probed too. Listing a language that is already covered changes nothing and is reported once in the output channel.
 
-Two VS Code limits apply: at most `editor.colorDecoratorsLimit` (500 by default) swatches per editor
-— the extension truncates its report to that number and logs it — and
-`editor.colorDecoratorsActivatedOn` decides whether the picker opens on hover, on click, or both.
+Two VS Code limits apply: at most `editor.colorDecoratorsLimit` (500 by default) swatches per editor — the extension truncates its report to that number and logs it — and `editor.colorDecoratorsActivatedOn` decides whether the picker opens on hover, on click, or both.
 
 ### Format conversion and copying
 
-**Convert Color** rewrites the value in the document; **Copy Color As** puts it on the clipboard and
-leaves the document untouched. Both use the same picker, grouped by category.
+**Convert Color** rewrites the value in the document; **Copy Color As** puts it on the clipboard and leaves the document untouched. Both use the same picker, grouped by category.
 
 | Category | Targets |
 | --- | --- |
@@ -145,18 +119,12 @@ leaves the document untouched. Both use the same picker, grouped by category.
 How the target color is chosen:
 
 - **Empty selection** → the color under the cursor.
-- **Non-empty selection** → it must cover exactly one complete color expression; a partial selection
-  is reported as invalid rather than guessed at.
-- **Multiple selections** are supported. All of them are resolved first; the document is written in a
-  single edit only if **every** selection succeeded, so you never get a half-converted file.
+- **Non-empty selection** → it must cover exactly one complete color expression; a partial selection is reported as invalid rather than guessed at.
+- **Multiple selections** are supported. All of them are resolved first; the document is written in a single edit only if **every** selection succeeded, so you never get a half-converted file.
 
-Before writing, conversion tells you whether the value will be gamut mapped, whether alpha will be
-dropped, and whether `none` components will be lost. The default policy is to **refuse** rather than
-silently lose information — see `advanced.convert.alphaLoss`,
-`advanced.convert.missingComponentLoss`, `advanced.convert.namedColorFallback`.
+Before writing, conversion tells you whether the value will be gamut mapped, whether alpha will be dropped, and whether `none` components will be lost. The default policy is to **refuse** rather than silently lose information — see `advanced.convert.alphaLoss`, `advanced.convert.missingComponentLoss`, `advanced.convert.namedColorFallback`.
 
-Output style: `w3cColorToolkit.convertSyntax` (`legacy` commas vs `modern` spaces for `rgb()` /
-`hsl()`), `w3cColorToolkit.precision`, `advanced.output.hexCase`, `advanced.output.gamutMapping`.
+Output style: `w3cColorToolkit.convertSyntax` (`legacy` commas vs `modern` spaces for `rgb()` / `hsl()`), `w3cColorToolkit.precision`, `advanced.output.hexCase`, `advanced.output.gamutMapping`.
 
 ### Variable resolution
 
@@ -168,81 +136,31 @@ Output style: `w3cColorToolkit.convertSyntax` (`legacy` commas vs `modern` space
 | `@brand` | `less` |
 | Stylus `brand` / `$brand` | **not resolved** — colors in `.styl` files are still recognised, there is simply no variable resolution |
 
-**Definitions are found by glob, not by following `@import`.** After activation the extension builds
-a workspace symbol index from `advanced.variables.lookupGlobs` (default `**/*.{css,scss,sass,less}`)
-and keeps it up to date with a file watcher. This is deliberate: stylesheets are often combined by a
-JS bundler with no CSS level `@import` at all, so following the import graph would never see the
-token file. `@import` / `@use` / `@forward` still act as a supplement — a file that is explicitly
-imported but not matched by the globs is pulled into the index too. The index is bounded by
-`advanced.variables.maxIndexedFiles`, and `node_modules`, `dist`, `out`, `build` and similar
-directories are always excluded. Open files are read from the editor, so a definition takes effect
-before you save.
+**Definitions are found by glob, not by following `@import`.** After activation the extension builds a workspace symbol index from `advanced.variables.lookupGlobs` (default `**/*.{css,scss,sass,less}`) and keeps it up to date with a file watcher. This is deliberate: stylesheets are often combined by a JS bundler with no CSS level `@import` at all, so following the import graph would never see the token file. `@import` / `@use` / `@forward` still act as a supplement — a file that is explicitly imported but not matched by the globs is pulled into the index too. The index is bounded by `advanced.variables.maxIndexedFiles`, and `node_modules`, `dist`, `out`, `build` and similar directories are always excluded. Open files are read from the editor, so a definition takes effect before you save.
 
 **A lookup has three outcomes.**
 
-1. **Unambiguous** → resolved to a real color. The test is "can this be determined without an
-   element": a custom property needs exactly one unconditional root level definition (`:root` /
-   `:host` / `html`, and not inside a conditional at-rule such as `@media`); a preprocessor variable
-   takes the last definition before the reference, which is what sequential evaluation actually
-   does rather than a guess. A component level override (`.button { --brand: … }`) does not change
-   this.
-2. **Not unique** → the hover lists every candidate, but there is **no swatch and no highlight**.
-   Two sources: a definition inside a conditional at-rule such as
-   `@media (prefers-color-scheme: dark)` (the value follows the environment), or definitions that
-   only exist under selectors like `[data-theme="…"]` or `.dark` (the value depends on the element).
-   Each candidate is listed with where it comes from, for example
-   `@media (prefers-color-scheme: dark) › :root`. When the variable is a fragment of a color
-   function, each candidate is substituted back into the whole expression, so you see
-   `rgb(148 163 184 / 0.4)` rather than a bare channel triplet.
-3. **No definition** → nothing at all: no highlight, no swatch, no hover. That is what keeps every
-   `$foo` in a SCSS file from opening an empty panel.
+1. **Unambiguous** → resolved to a real color. The test is "can this be determined without an element": a custom property needs exactly one unconditional root level definition (`:root` / `:host` / `html`, and not inside a conditional at-rule such as `@media`); a preprocessor variable takes the last definition before the reference, which is what sequential evaluation actually does rather than a guess. A component level override (`.button { --brand: … }`) does not change this.
+2. **Not unique** → the hover lists every candidate, but there is **no swatch and no highlight**. Two sources: a definition inside a conditional at-rule such as `@media (prefers-color-scheme: dark)` (the value follows the environment), or definitions that only exist under selectors like `[data-theme="…"]` or `.dark` (the value depends on the element). Each candidate is listed with where it comes from, for example `@media (prefers-color-scheme: dark) › :root`. When the variable is a fragment of a color function, each candidate is substituted back into the whole expression, so you see `rgb(148 163 184 / 0.4)` rather than a bare channel triplet.
+3. **No definition** → nothing at all: no highlight, no swatch, no hover. That is what keeps every `$foo` in a SCSS file from opening an empty panel.
 
-**A resolved reference is read only.** The picker shows the color but will not let you drag it, and
-**Convert Color** refuses and names the variable it depends on. Rewriting `var(--brand)` into
-`#ff8800` would destroy the token, which is almost never what you want.
+**A resolved reference is read only.** The picker shows the color but will not let you drag it, and **Convert Color** refuses and names the variable it depends on. Rewriting `var(--brand)` into `#ff8800` would destroy the token, which is almost never what you want.
 
-**Colors inside a reference get their own swatch.** `var(--brand, #ff8800)` shows two swatches — one
-for the whole reference and one for the fallback — because a swatch is drawn in front of its range,
-so different starting points line up side by side. Nesting works the same way:
-`var(--a, var(--b, #674), #def)` shows four. Highlighting still marks only the outermost range, so
-underlines never double up.
+**Colors inside a reference get their own swatch.** `var(--brand, #ff8800)` shows two swatches — one for the whole reference and one for the fallback — because a swatch is drawn in front of its range, so different starting points line up side by side. Nesting works the same way: `var(--a, var(--b, #674), #def)` shows four. Highlighting still marks only the outermost range, so underlines never double up.
 
-**A variable used as a fragment of a color function is substituted before parsing.**
-`rgb(var(--channels) / 0.4)`, `rgba(var(--x), 0.4)`, `hsl(var(--h) 50% 50%)` and
-`color-mix(in srgb, var(--a), red)` all substitute `var()` back into the text first, which makes
-Tailwind-style channel tokens (`--channels: 148 163 184`, a value that is not a color on its own)
-work. A fallback applies when the value cannot be found (`var(--missing, 1 2 3)`); a reference cycle
-exhausts the substitution budget and is treated as unresolvable. A preprocessor variable used the
-same way (`rgba($brand, 0.4)`) is **not** resolved as a whole — substituting it yields SCSS/Less's
-own `rgba(color, alpha)` overload rather than CSS syntax — but the inner `$brand` still gets its own
-swatch.
+**A variable used as a fragment of a color function is substituted before parsing.** `rgb(var(--channels) / 0.4)`, `rgba(var(--x), 0.4)`, `hsl(var(--h) 50% 50%)` and `color-mix(in srgb, var(--a), red)` all substitute `var()` back into the text first, which makes Tailwind-style channel tokens (`--channels: 148 163 184`, a value that is not a color on its own) work. A fallback applies when the value cannot be found (`var(--missing, 1 2 3)`); a reference cycle exhausts the substitution budget and is treated as unresolvable. A preprocessor variable used the same way (`rgba($brand, 0.4)`) is **not** resolved as a whole — substituting it yields SCSS/Less's own `rgba(color, alpha)` overload rather than CSS syntax — but the inner `$brand` still gets its own swatch.
 
-**Which languages recognise variables** is decided by `advanced.variables.languageIds`, by default
-`css`, `scss`, `sass`, `less`, `postcss` and `tailwindcss`. That is separate from the language test
-in `advanced.highlight.matchWords`, which only decides where bare color names count. `tailwindcss`
-is in the list because Tailwind CSS IntelliSense switches CSS files to that language.
+**Which languages recognise variables** is decided by `advanced.variables.languageIds`, by default `css`, `scss`, `sass`, `less`, `postcss` and `tailwindcss`. That is separate from the language test in `advanced.highlight.matchWords`, which only decides where bare color names count. `tailwindcss` is in the list because Tailwind CSS IntelliSense switches CSS files to that language.
 
-Definitions are collected from a real PostCSS AST (`postcss` + `postcss-scss` + `postcss-less`), so a
-commented-out definition no longer poisons the real one with the same name, and a comment inside a
-value never ends up in the value. A file with a syntax error only stops contributing its own
-definitions; it does not affect the others.
-
+Definitions are collected from a real PostCSS AST (`postcss` + `postcss-scss` + `postcss-less`), so a commented-out definition no longer poisons the real one with the same name, and a comment inside a value never ends up in the value. A file with a syntax error only stops contributing its own definitions; it does not affect the others.
 
 ### Context dependent values are never faked
 
-`currentColor`, the 19 system colors, the 23 deprecated system colors, `light-dark()`, unresolved
-`var()`, a custom `@color-profile` without a `fallback`, and non-static alpha all resolve to a
-`contextual` state. They are never converted, and unless an explicit preview assumption applies they
-are not highlighted either: the hover explains **what the value depends on** instead of showing a
-made-up swatch. Deprecated system colors also show their replacement keyword.
+`currentColor`, the 19 system colors, the 23 deprecated system colors, `light-dark()`, unresolved `var()`, a custom `@color-profile` without a `fallback`, and non-static alpha all resolve to a `contextual` state. They are never converted, and unless an explicit preview assumption applies they are not highlighted either: the hover explains **what the value depends on** instead of showing a made-up swatch. Deprecated system colors also show their replacement keyword.
 
-One case is previewable without guessing: `light-dark()` picks a branch according to
-`advanced.contextualPreview`, whose default `auto` follows the current editor theme. The hover still
-labels the result as an assumption, and switching theme re-renders it. Set the option to `off` for no
-preview at all.
+One case is previewable without guessing: `light-dark()` picks a branch according to `advanced.contextualPreview`, whose default `auto` follows the current editor theme. The hover still labels the result as an assumption, and switching theme re-renders it. Set the option to `off` for no preview at all.
 
-`hdr-color()` depends on the display's HDR headroom, so it stays contextual even with the HDR switch
-on — unless you declare a headroom via `advanced.experimental.hdrAssumedHeadroom`.
+`hdr-color()` depends on the display's HDR headroom, so it stays contextual even with the HDR switch on — unless you declare a headroom via `advanced.experimental.hdrAssumedHeadroom`.
 
 ---
 
@@ -258,8 +176,7 @@ Five entries appear in the Command Palette (category **W3C Color Toolkit**):
 | Configure Color Fields | `w3cColorToolkit.configureColorFields` | Multi-select for the shared hover + highlight field list |
 | Manage | `w3cColorToolkit.manage` | Entry point for the six maintenance actions below |
 
-**Convert Color** and **Copy Color As** are also in the editor context menu, under the
-**W3C Color Toolkit** submenu.
+**Convert Color** and **Copy Color As** are also in the editor context menu, under the **W3C Color Toolkit** submenu.
 
 **Manage** actions (also registered as individual command ids):
 
@@ -274,9 +191,7 @@ Five entries appear in the Command Palette (category **W3C Color Toolkit**):
 
 ### Keyboard shortcuts
 
-The 24 direct `w3cColorToolkit.convertTo.*` commands and the 6 Manage actions are hidden from the
-Command Palette but **fully bindable** — they appear in the Keyboard Shortcuts editor. No default
-keybindings are shipped, to avoid clashing with yours:
+The 24 direct `w3cColorToolkit.convertTo.*` commands and the 6 Manage actions are hidden from the Command Palette but **fully bindable** — they appear in the Keyboard Shortcuts editor. No default keybindings are shipped, to avoid clashing with yours:
 
 ```jsonc
 // keybindings.json
@@ -291,10 +206,7 @@ keybindings are shipped, to avoid clashing with yours:
 ]
 ```
 
-Command id suffixes follow the format list: `hex`, `rgb`, `hsl`, `oklch`, `hwb`, `lab`, `lch`,
-`oklab`, `srgb`, `srgbLinear`, `displayP3`, `displayP3Linear`, `a98Rgb`, `prophotoRgb`, `rec2020`,
-`xyzD50`, `xyzD65`, `namedColor`, `ictcp`, `jzazbz`, `jzczhz`, `rec2100Pq`, `rec2100Hlg`,
-`rec2100Linear`.
+Command id suffixes follow the format list: `hex`, `rgb`, `hsl`, `oklch`, `hwb`, `lab`, `lch`, `oklab`, `srgb`, `srgbLinear`, `displayP3`, `displayP3Linear`, `a98Rgb`, `prophotoRgb`, `rec2020`, `xyzD50`, `xyzD65`, `namedColor`, `ictcp`, `jzazbz`, `jzczhz`, `rec2100Pq`, `rec2100Hlg`, `rec2100Linear`.
 
 ---
 
@@ -316,8 +228,7 @@ All seven have `resource` scope, so they can be set per folder.
 
 ### The advanced object
 
-Everything else is built in with a sensible default and overridden **incrementally** through
-`w3cColorToolkit.advanced`, using flat dotted keys:
+Everything else is built in with a sensible default and overridden **incrementally** through `w3cColorToolkit.advanced`, using flat dotted keys:
 
 ```jsonc
 {
@@ -329,28 +240,21 @@ Everything else is built in with a sensible default and overridden **incremental
 }
 ```
 
-In `settings.json`, typing `"` inside the object gives you completion, hover docs and range
-validation for every key. Two snippets are available: *All advanced options (with defaults)* and
-*Minimal example*.
+In `settings.json`, typing `"` inside the object gives you completion, hover docs and range validation for every key. Two snippets are available: *All advanced options (with defaults)* and *Minimal example*.
 
 Rules:
 
 - keys you omit keep their built-in default; arrays and objects are replaced as a whole;
-- the 7 top-level settings must **not** appear here — they are ignored with a warning, which removes
-  any ambiguity about precedence;
-- unknown keys and wrong types are ignored, out-of-range numbers are clamped, and every case is
-  logged instead of throwing;
-- User / Workspace / Folder scopes are merged **key by key** by the extension, because VS Code
-  replaces object settings wholesale;
+- the 7 top-level settings must **not** appear here — they are ignored with a warning, which removes any ambiguity about precedence;
+- unknown keys and wrong types are ignored, out-of-range numbers are clamped, and every case is logged instead of throwing;
+- User / Workspace / Folder scopes are merged **key by key** by the extension, because VS Code replaces object settings wholesale;
 - **Manage → Show effective configuration** prints the merged result with the origin of each key.
 
 #### All 34 options
 
 **Disable** — where the extension stays out of the way entirely
 
-Any of the three conditions is enough: over the size limit, **or** the file name matches, **or** the
-language id matches. A hidden file gets no highlighting, no swatch, no hover and no working commands,
-and it is never scanned.
+Any of the three conditions is enough: over the size limit, **or** the file name matches, **or** the language id matches. A hidden file gets no highlighting, no swatch, no hover and no working commands, and it is never scanned.
 
 | Key | Values | Default | Purpose |
 | --- | --- | --- | --- |
@@ -358,8 +262,7 @@ and it is never scanned.
 | `disable.fileNames` | string[] | `["*.min.*", "*.map"]` | gitignore-style patterns matched against **the file name only**, so a pattern must not contain `/` (one that does is ignored and reported in the output channel). Later entries win; `!` re-enables — `["*.min.*", "*.map", "!theme.min.css"]` keeps one minified file in scope. Setting `[]` turns this dimension off. |
 | `disable.languageIds` | string[] | `["log", "plaintext"]` | The same syntax, matched against the language id. Catches files a name pattern cannot, such as `Dockerfile`, `Makefile` or anything whose language you switched by hand. Setting `[]` turns this dimension off. |
 
-`!` only applies within its own list: a negation in `disable.fileNames` cannot rescue a file that
-`disable.languageIds` already excluded. There is no cross-cutting override — narrow the list instead.
+`!` only applies within its own list: a negation in `disable.fileNames` cannot rescue a file that `disable.languageIds` already excluded. There is no cross-cutting override — narrow the list instead.
 
 **Highlight**
 
@@ -439,19 +342,13 @@ and it is never scanned.
 
 ### A default this extension overrides
 
-Through `contributes.configurationDefaults` the extension sets
-`"editor.defaultColorDecorators": "never"`. Everything VS Code's built-in *default* provider
-recognises (hex, `rgb()`, `hsl()`) is a subset of what this extension reports, so switching it off
-removes overlap without losing coverage. The Settings UI shows it as *"default value overridden by
-extension"* and you can set it back to `auto` or `always` at any time.
+Through `contributes.configurationDefaults` the extension sets `"editor.defaultColorDecorators": "never"`. Everything VS Code's built-in *default* provider recognises (hex, `rgb()`, `hsl()`) is a subset of what this extension reports, so switching it off removes overlap without losing coverage. The Settings UI shows it as *"default value overridden by extension"* and you can set it back to `auto` or `always` at any time.
 
 ---
 
 ## Color fields — one list for hover and highlighting
 
-`advanced.fields.enabled` / `advanced.fields.excluded` are the single scope for both features, so
-there is no second place to configure what gets highlighted. **Configure Color Fields** shows the
-same grouping, with the applicable scope on every entry.
+`advanced.fields.enabled` / `advanced.fields.excluded` are the single scope for both features, so there is no second place to configure what gets highlighted. **Configure Color Fields** shows the same grouping, with the applicable scope on every entry.
 
 | Group | Applies to | Fields |
 | --- | --- | --- |
@@ -460,16 +357,11 @@ same grouping, with the applicable scope on every entry.
 | Non-CSS representations | hover only | `hsv`, `cmyk` |
 | Extra information, not a color | hover only | `preview`, `source`, `spec-level`, `diagnostics`, `alpha`\*, `gamut`\*, `contrast-on-white`\*, `contrast-on-black`\* |
 
-† requires the `cssColorHdr` experimental switch. \* off by default — add it to `fields.enabled` or
-tick it in **Configure Color Fields**. (Alpha is already visible in the serialised values such as
-`#ff880080`; gamut and the contrast ratios are diagnostic detail rather than everyday information.)
+† requires the `cssColorHdr` experimental switch. \* off by default — add it to `fields.enabled` or tick it in **Configure Color Fields**. (Alpha is already visible in the serialised values such as `#ff880080`; gamut and the contrast ratios are diagnostic detail rather than everyday information.)
 
-Turning a CSS syntax off stops highlighting it; turning a format off also removes its hover row.
-Syntax the registry does not know about is always highlighted, so a new parser feature never silently
-loses its decoration.
+Turning a CSS syntax off stops highlighting it; turning a format off also removes its hover row. Syntax the registry does not know about is always highlighted, so a new parser feature never silently loses its decoration.
 
-The order of `fields.enabled` is the order of the hover rows. **Configure Color Fields** always writes
-back in registry order — edit `fields.enabled` directly if you want a custom order.
+The order of `fields.enabled` is the order of the hover rows. **Configure Color Fields** always writes back in registry order — edit `fields.enabled` directly if you want a custom order.
 
 ---
 
@@ -483,90 +375,54 @@ back in registry order — edit `fields.enabled` directly if you want a custom o
 | CSS Color 6 (ED 2026-01-11) | experimental, **on by default**, switchable through `w3cColorToolkit.experimental`: `color-layers()`, extended `contrast-color()`, `wcag2` / `wcag2()`, `tbd-fg` / `tbd-bg` |
 | CSS Color HDR 1 (ED 2026-07-28) | experimental, **on by default**, same switch: `ictcp()`, `jzazbz()`, `jzczhz()`, `color(rec2100-pq \| rec2100-hlg \| rec2100-linear)`, `hdr-color()` |
 
-Run **Manage → Show specification support matrix** to see the matrix with your current switches
-applied.
+Run **Manage → Show specification support matrix** to see the matrix with your current switches applied.
 
 ### Gamut and HDR handling
 
-- sRGB output uses the CSS-specified gamut mapping by default, not per-channel clipping
-  (`advanced.output.gamutMapping` can switch to `clip` or `none`).
-- Wide gamut colors are mapped for the preview swatch only; the hover keeps showing the original
-  value and the gamut status.
-- HDR colors are tone mapped for the preview (`advanced.highlight.hdrToneMapping`) and flagged as
-  tone mapped in the hover.
+- sRGB output uses the CSS-specified gamut mapping by default, not per-channel clipping (`advanced.output.gamutMapping` can switch to `clip` or `none`).
+- Wide gamut colors are mapped for the preview swatch only; the hover keeps showing the original value and the gamut status.
+- HDR colors are tone mapped for the preview (`advanced.highlight.hdrToneMapping`) and flagged as tone mapped in the hover.
 
 ---
 
 ## Troubleshooting
 
-**No inline swatch appears.** Check `editor.colorDecorators` (VS Code's own master switch),
-`advanced.colorPicker.mode` (must not be `off`), and whether the file has more than
-`editor.colorDecoratorsLimit` (500) colors — the extension truncates at that limit and logs it. The
-picker is anchored on the swatch, so "picker without swatch" is not possible.
+**No inline swatch appears.** Check `editor.colorDecorators` (VS Code's own master switch), `advanced.colorPicker.mode` (must not be `off`), and whether the file has more than `editor.colorDecoratorsLimit` (500) colors — the extension truncates at that limit and logs it. The picker is anchored on the swatch, so "picker without swatch" is not possible.
 
-**A color shows two swatches.** Either `colorPicker.mode` is `all`, or another color extension is
-also reporting that range. `dedupe` probes automatically wherever a built-in VS Code language
-service contributes colors — `css`, `less`, `scss`, `html`, `handlebars`, `json`, `jsonc`,
-`snippets`, plus any language an extension attaches to the HTML or JSON service. For a third-party
-color extension, add its languages to `advanced.colorPicker.dedupeLanguages`: which languages such
-an extension registers a provider in cannot be derived from its manifest, so it cannot be detected.
-The languages listed above are already probed and do not belong in that list.
+**A color shows two swatches.** Either `colorPicker.mode` is `all`, or another color extension is also reporting that range. `dedupe` probes automatically wherever a built-in VS Code language service contributes colors — `css`, `less`, `scss`, `html`, `handlebars`, `json`, `jsonc`, `snippets`, plus any language an extension attaches to the HTML or JSON service. For a third-party color extension, add its languages to `advanced.colorPicker.dedupeLanguages`: which languages such an extension registers a provider in cannot be derived from its manifest, so it cannot be detected. The languages listed above are already probed and do not belong in that list.
 
-*Why probing is needed:* VS Code renders the results of **all** color providers without deduplicating
-by range, it drops the built-in *default* provider as soon as any extension returns an array (even an
-empty one), and `vscode.executeDocumentColorProvider` does not tell you which provider produced which
-color. Probing the ranges is the only way to guarantee exactly one swatch.
+*Why probing is needed:* VS Code renders the results of **all** color providers without deduplicating by range, it drops the built-in *default* provider as soon as any extension returns an array (even an empty one), and `vscode.executeDocumentColorProvider` does not tell you which provider produced which color. Probing the ranges is the only way to guarantee exactly one swatch.
 
-**A color is not highlighted.** In order of likelihood: `w3cColorToolkit.highlight` is `off`; the
-file is hidden by `advanced.disable.fileNames` or `advanced.disable.languageIds`; the field for that
-syntax is turned off in **Configure Color Fields**; the value is context dependent (see above); the
-document is larger than `advanced.disable.maxFileSizeMb`; there are more colors than
-`advanced.highlight.maxMatchesPerDocument`; or it is a bare color name in a non-CSS language and
-`advanced.highlight.matchWords` is still `css-like`.
+**A color is not highlighted.** In order of likelihood: `w3cColorToolkit.highlight` is `off`; the file is hidden by `advanced.disable.fileNames` or `advanced.disable.languageIds`; the field for that syntax is turned off in **Configure Color Fields**; the value is context dependent (see above); the document is larger than `advanced.disable.maxFileSizeMb`; there are more colors than `advanced.highlight.maxMatchesPerDocument`; or it is a bare color name in a non-CSS language and `advanced.highlight.matchWords` is still `css-like`.
 
-**The picker offers no way to change a value.** That is the read-only swatch for context dependent
-values and read-only syntax. Use **Convert Color** to rewrite it deliberately.
+**The picker offers no way to change a value.** That is the read-only swatch for context dependent values and read-only syntax. Use **Convert Color** to rewrite it deliberately.
 
-**Conversion was refused.** The message names the reason and the line: a contextual value, alpha that
-the target cannot express (`convert.alphaLoss`), or no exact color name (`convert.namedColorFallback`).
-Loosen the relevant policy, or pick a different target.
+**Conversion was refused.** The message names the reason and the line: a contextual value, alpha that the target cannot express (`convert.alphaLoss`), or no exact color name (`convert.namedColorFallback`). Loosen the relevant policy, or pick a different target.
 
-**A variable reference shows nothing at all.** That is the designed outcome for every unresolvable
-case, so start from the log: **Manage → Open log** names the reason. Then check
-`advanced.variables.resolve` and make sure the token file is covered by
-`advanced.variables.lookupGlobs`; note that untrusted workspaces only use definitions from files you
-have open. A token defined only under `[data-theme="…"]` / `.dark` selectors is **not** this case —
-it is "not unique", so the hover lists its candidates while the swatch stays hidden on purpose. The
-index size is bounded by `variables.maxIndexedFiles` and the substitution depth by
-`variables.maxResolveDepth`. Values built with arithmetic, SCSS maps, `@each` or functions like
-`darken()` are outside what this extension evaluates. Stylus variables are not resolved at all.
+**A variable reference shows nothing at all.** That is the designed outcome for every unresolvable case, so start from the log: **Manage → Open the log** names the reason. Then check `advanced.variables.resolve` and make sure the token file is covered by `advanced.variables.lookupGlobs`; note that untrusted workspaces only use definitions from files you have open. A token defined only under `[data-theme="…"]` / `.dark` selectors is **not** this case — it is "not unique", so the hover lists its candidates while the swatch stays hidden on purpose. The index size is bounded by `variables.maxIndexedFiles` and the substitution depth by `variables.maxResolveDepth`. Values built with arithmetic, SCSS maps, `@each` or functions like `darken()` are outside what this extension evaluates. Stylus variables are not resolved at all.
 
-**A key in `advanced` seems to be ignored.** Run **Manage → Show effective configuration** — it
-prints every key with the scope it came from, plus a list of rejected keys. Set
-`advanced.logLevel` to `debug` and open **Manage → Open the log** for details.
+**A key in `advanced` seems to be ignored.** Run **Manage → Show effective configuration** — it prints every key with the scope it came from, plus a list of rejected keys. Set `advanced.logLevel` to `debug` and open **Manage → Open the log** for details.
 
-**Results look stale.** **Manage → Rescan the current document**, or **Clear the index cache**. If you
-hit syntax the extension does not recognise, **Manage → Log unsupported syntax** records it for a bug
-report.
+**Results look stale.** **Manage → Rescan the current document**, or **Clear the index cache**. If you hit syntax the extension does not recognise, **Manage → Log unsupported syntax** records it for a bug report.
 
 ---
 
 ## Known limitations
 
-- Scanning very large documents is slower than the target performance budget;
-  `advanced.disable.maxFileSizeMb` and `advanced.highlight.maxMatchesPerDocument` bound the work.
+- Scanning very large documents is slower than the target performance budget; `advanced.disable.maxFileSizeMb` and `advanced.highlight.maxMatchesPerDocument` bound the work.
 - CSS Color 6 and CSS Color HDR are drafts; values and syntax may still change.
 - Untrusted workspaces only use definitions from files you have open; other files on disk are not read.
-- Variable resolution does not evaluate expressions: SCSS maps, `@each`, mixins and function calls are not
-  evaluated, and such references show nothing rather than a guessed color.
-- Stylus has no variable resolution: colors in `.styl` files are still recognised, but `$brand = …`
-  definitions and references are not (PostCSS has no official Stylus syntax package, and the only
-  third-party bridge pulls in Node-only dependencies that would break the web bundle).
+- Variable resolution does not evaluate expressions: SCSS maps, `@each`, mixins and function calls are not evaluated, and such references show nothing rather than a guessed color.
+- Stylus has no variable resolution: colors in `.styl` files are still recognised, but `$brand = …` definitions and references are not (PostCSS has no official Stylus syntax package, and the only third-party bridge pulls in Node-only dependencies that would break the web bundle).
 - No remote ICC profile download; `device-cmyk()` uses the naive fallback and is marked approximate.
 
 ## Localisation
 
 English and Simplified Chinese, including the command titles. Other locales fall back to English.
+
+## Changelog
+
+See [CHANGELOG.md](./CHANGELOG.md).
 
 ## License
 
