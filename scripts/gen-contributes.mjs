@@ -14,11 +14,12 @@ import { build } from 'esbuild';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { pathToFileURL } from 'node:url';
 
 import { CONVERT_TITLE_TEMPLATE, EN, ZH_CN } from './nls-source.mjs';
 
-const ROOT = new URL('..', import.meta.url).pathname;
+const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const CHECK_ONLY = process.argv.includes('--check');
 
 /** 把 TS 单一来源打包成一个临时 ESM 文件后动态导入。 */

@@ -9,9 +9,10 @@ import { build } from 'esbuild';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { pathToFileURL } from 'node:url';
 
-const ROOT = new URL('..', import.meta.url).pathname;
+const ROOT = fileURLToPath(new URL('..', import.meta.url));
 
 const dir = await mkdtemp(join(tmpdir(), 'w3c-color-toolkit-smoke-'));
 const outfile = join(dir, 'smoke.mjs');

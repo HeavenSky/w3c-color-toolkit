@@ -7,9 +7,10 @@
 //   variables      变量解析: var() 有多个候选定义时 Hover 列出全部候选
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { launch, gitInit } from './lib/shoot-ext.mjs';
 
-const REPO = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 // 设计令牌: --brand 唯一定义, --surface 随深浅色模式变化, 用来演示有多个候选的情形
 const TOKENS_CSS = `:root {
