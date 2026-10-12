@@ -3,42 +3,46 @@
  *
  * 与 `icon-spec.mjs` 分开是为了让底色, 圆角这类只关乎观感的参数只有一处定义 ——
  * 调整品牌配色时只动本文件, 不必碰前景图形的坐标。
+ *
+ * 骨架分类: **B 类, 观感参数, 允许按品牌整份替换**, 因此不在 `.template-shared` 里,
+ * 改动它不会被骨架漂移检查拦住。同目录的其余 `lib/*.mjs` 是 A 类, 改动会被拦。
+ * (这行注释必须留在文件里: 派生仓库会删掉骨架的 README, 分类信息只能靠文件自述。)
  */
 export const SIZE = 256;
 export const CORNER_RADIUS = 56;
 
 /** 前景图形可以引用的强调色与前景色。 */
-export const ACCENT_FROM = '#6FD6FF';
-export const ACCENT_TO = '#3E8BFF';
-export const FOREGROUND = '#E6EBF5';
+export const ACCENT_FROM = "#6FD6FF";
+export const ACCENT_TO = "#3E8BFF";
+export const FOREGROUND = "#E6EBF5";
 
-const BACKGROUND_FROM = '#2E3547';
-const BACKGROUND_TO = '#171B26';
-const BORDER = '#3C4459';
+const BACKGROUND_FROM = "#2E3547";
+const BACKGROUND_TO = "#171B26";
+const BORDER = "#3C4459";
 const BORDER_WIDTH = 3;
 
 /** 背景层 + 描边层, 放在 `shapes` 数组最前面。 */
 export function baseShapes() {
-  return [
-    {
-      kind: 'roundedRect',
-      x: 0,
-      y: 0,
-      w: SIZE,
-      h: SIZE,
-      r: CORNER_RADIUS,
-      fill: { kind: 'linear', from: BACKGROUND_FROM, to: BACKGROUND_TO, direction: 'diagonal' },
-    },
-    {
-      // 描边居中在路径上, 因此这里向内缩 BORDER_WIDTH, 让描边完整落在画布内。
-      kind: 'roundedRectStroke',
-      x: BORDER_WIDTH,
-      y: BORDER_WIDTH,
-      w: SIZE - BORDER_WIDTH * 2,
-      h: SIZE - BORDER_WIDTH * 2,
-      r: CORNER_RADIUS - BORDER_WIDTH,
-      stroke: BORDER,
-      strokeWidth: BORDER_WIDTH,
-    },
-  ];
+	return [
+		{
+			kind: "roundedRect",
+			x: 0,
+			y: 0,
+			w: SIZE,
+			h: SIZE,
+			r: CORNER_RADIUS,
+			fill: { kind: "linear", from: BACKGROUND_FROM, to: BACKGROUND_TO, direction: "diagonal" },
+		},
+		{
+			// 描边居中在路径上, 因此这里向内缩 BORDER_WIDTH, 让描边完整落在画布内。
+			kind: "roundedRectStroke",
+			x: BORDER_WIDTH,
+			y: BORDER_WIDTH,
+			w: SIZE - BORDER_WIDTH * 2,
+			h: SIZE - BORDER_WIDTH * 2,
+			r: CORNER_RADIUS - BORDER_WIDTH,
+			stroke: BORDER,
+			strokeWidth: BORDER_WIDTH,
+		},
+	];
 }
