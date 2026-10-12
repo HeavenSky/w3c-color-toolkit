@@ -180,6 +180,43 @@ describe('取值不唯一', () => {
   });
 });
 
+describe('取值不唯一时的规范层级', () => {
+  const DARK = '@media (prefers-color-scheme: dark)';
+
+  it('整体引用不归属任何 CSS Color 层级, 不借用候选的层级', () => {
+    const matches = scan(`:root { --a: #fff }\n${DARK} { :root { --a: oklch(60% 0.1 200) } }\nx { color: var(--a) }`);
+    const reference = matches.find((match) => match.raw === 'var(--a)');
+    expect(reference?.resolution).toBe('contextual');
+    expect(reference?.specLevel).toBeUndefined();
+  });
+
+  it('片段写法按代换后的候选取层级: 逗号写法是 Color 3', () => {
+    const matches = scan(`:root { --c: 255, 0, 0 }\n${DARK} { :root { --c: 0, 0, 0 } }\nx { color: rgba(var(--c), 0.4) }`);
+    const fn = matches.find((match) => match.raw === 'rgba(var(--c), 0.4)');
+    expect(fn?.resolution).toBe('contextual');
+    expect(fn?.specLevel).toBe('color-3');
+  });
+
+  it('片段写法按代换后的候选取层级: 空格写法是 Color 4', () => {
+    const matches = scan(`:root { --c: 255 0 0 }\n${DARK} { :root { --c: 0 0 0 } }\nx { color: rgb(var(--c) / 0.4) }`);
+    expect(matches.find((match) => match.raw === 'rgb(var(--c) / 0.4)')?.specLevel).toBe('color-4');
+  });
+
+  it('候选都无法解析成颜色时不给层级', () => {
+    const matches = scan(
+      `:root { --a: #ffffff }\n${DARK} { :root { --a: #000000 } }\nx { color: rgb(var(--a) / 0.4) }`,
+    );
+    const fn = matches.find((match) => match.raw === 'rgb(var(--a) / 0.4)');
+    expect(fn?.resolution).toBe('contextual');
+    expect(fn?.specLevel).toBeUndefined();
+  });
+
+  it('唯一解析的引用仍取实际生效值的层级', () => {
+    const matches = scan(':root { --brand: rgb(255, 136, 0) }\na { color: var(--brand) }');
+    expect(matches.find((match) => match.raw === 'var(--brand)')?.specLevel).toBe('color-3');
+  });
+});
+
 describe('静默移除', () => {
   it('没有定义的引用不产出任何 match', () => {
     expect(scan('a { color: var(--missing) }')).toEqual([]);

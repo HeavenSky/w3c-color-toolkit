@@ -62,7 +62,8 @@ export interface ParseOptions extends ContextualPreviewOptions {
 export interface ParsedColor {
   readonly resolution: ResolutionKind;
   readonly syntax: string;
-  readonly specLevel: SpecLevel;
+  /** 缺省的含义见 `ColorMatch.specLevel`。 */
+  readonly specLevel?: SpecLevel;
   readonly experimental: boolean;
   readonly sourceSpace?: string;
   readonly resolved?: ResolvedColor;

@@ -99,7 +99,8 @@ export function renderHover(match: ColorMatch, config: RuntimeConfiguration): vs
     }
 
     if (field === 'spec-level') {
-      if (!config.infoShowSpecLevel) continue;
+      // 取值不唯一的整体变量引用不归属任何 CSS Color 层级, 不显示这一行。
+      if (!config.infoShowSpecLevel || !match.specLevel) continue;
       lines.push(`**${fieldLabel('spec-level')}**: ${renderSpecLevel(match.specLevel)}`);
       continue;
     }

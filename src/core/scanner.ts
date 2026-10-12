@@ -36,7 +36,7 @@ import {
   type ParsedColor,
   type ParseOptions,
 } from './parser.js';
-import type { ColorMatch, ColorRange, ContextualBranch, ResolveVariable } from './types.js';
+import type { ColorMatch, ColorRange, ContextualBranch, ResolveVariable, SpecLevel } from './types.js';
 import { substituteVariables, type SubstitutionResult } from './variable-substitution.js';
 
 /** 颜色名的识别范围。 */
@@ -286,11 +286,15 @@ interface Evaluated {
  * 候选进 `branches`: 它们是**枚举出来的事实**而不是猜测, 因此 Hover 可以逐条列出
  * "这个变量可能是哪个值、来自哪里"; 高亮与色块仍然不显示 —— `assumed` 为空,
  * 消费方 (`previewSource`) 因此拿不到可预览的颜色。
+ *
+ * `specLevel` 默认缺省: 整体引用 (`var(--x)`、`$x`、`@x`) 是自定义属性或预处理器语法,
+ * 不属于任何 CSS Color 层级; 只有"变量是颜色函数片段"时才由调用方按候选给出层级。
  */
 function contextualVariable(
   syntax: string,
   dependsOn: string,
   branches: ContextualBranch[] = [],
+  specLevel?: SpecLevel,
 ): ParsedColor {
   const isPreprocessor = dependsOn.startsWith('$') || dependsOn.startsWith('@');
   const contextual = isPreprocessor
@@ -299,11 +303,17 @@ function contextualVariable(
   return {
     resolution: 'contextual',
     syntax,
-    specLevel: 'color-4',
+    ...(specLevel ? { specLevel } : {}),
     experimental: false,
     contextual,
     diagnostics: [],
   };
+}
+
+interface VariableBranches {
+  readonly branches: ContextualBranch[];
+  /** 全部可解析候选的层级一致时取该层级, 否则缺省。 */
+  readonly specLevel?: SpecLevel;
 }
 
 /**
@@ -318,17 +328,21 @@ function branchesFor(
   candidate: Candidate,
   options: ScanOptions,
   resolve: ResolveVariable,
-): ContextualBranch[] {
+): VariableBranches {
   const ambiguousName = substituted.ambiguousName;
-  if (!substituted.ambiguous || !ambiguousName) return [];
+  if (!substituted.ambiguous || !ambiguousName) return { branches: [] };
 
-  return substituted.ambiguous.map((value) => {
+  const levels = new Set<SpecLevel>();
+  const branches = substituted.ambiguous.map((value) => {
     const forced: ResolveVariable = (name, atOffset) =>
       name === ambiguousName ? { kind: 'resolved', rawValue: value.rawValue } : resolve(name, atOffset);
     const text = substituteVariables(raw, forced, candidate.range.start, options.maxResolveDepth).text;
     const color = text === undefined ? undefined : colorOfText(text, options);
+    if (color?.specLevel) levels.add(color.specLevel);
     return { label: value.origin, raw: text ?? value.rawValue, resolved: color?.resolved };
   });
+  const [only] = levels;
+  return levels.size === 1 ? { branches, specLevel: only } : { branches };
 }
 
 /** 代换后的文本必须真的是一个颜色; 否则该候选不产出 match。 */
@@ -353,9 +367,9 @@ function evaluateVariable(
     const substituted = substituteVariables(raw, resolve, candidate.range.start, options.maxResolveDepth);
     if (substituted.text === undefined) {
       if (!substituted.ambiguous) return undefined;
-      return {
-        parsed: contextualVariable(syntax, name, branchesFor(raw, substituted, candidate, options, resolve)),
-      };
+      // 整体引用不取候选的层级: 那是候选值的语法, 不是引用本身的。
+      const { branches } = branchesFor(raw, substituted, candidate, options, resolve);
+      return { parsed: contextualVariable(syntax, name, branches) };
     }
     const color = colorOfText(substituted.text, options);
     if (!color) return undefined;
@@ -390,13 +404,9 @@ function evaluateVariableFunction(
   const syntax = (candidate.node && functionName(candidate.node)) || 'css-variable';
   if (substituted.text === undefined) {
     if (!substituted.ambiguous) return undefined;
-    return {
-      parsed: contextualVariable(
-        syntax,
-        substituted.names.join(', '),
-        branchesFor(raw, substituted, candidate, options, resolve),
-      ),
-    };
+    // 片段写法的语法就是外层颜色函数, 层级按代换后的候选判定 (`rgba(var(--c), .4)` 是 Color 3)。
+    const { branches, specLevel } = branchesFor(raw, substituted, candidate, options, resolve);
+    return { parsed: contextualVariable(syntax, substituted.names.join(', '), branches, specLevel) };
   }
   const color = colorOfText(substituted.text, options);
   if (!color) return undefined;

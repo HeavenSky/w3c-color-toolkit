@@ -6,6 +6,7 @@
 import { serialize, targetSupportsAlpha, exactNamedColor, type TargetFormat } from '../../core/serializer.js';
 import { convertTo } from '../../core/colorjs-bridge.js';
 import type { ColorMatch, ResolvedColor, SerializedColor, SerializerOptions } from '../../core/types.js';
+import { to8Bit, type PreviewSrgb } from '../highlight/preview-color.js';
 
 export type ConvertRejection =
   | { readonly kind: 'contextual'; readonly detail: string }
@@ -115,6 +116,48 @@ export function colorPresentationTexts(
     if (text && !texts.includes(text)) texts.push(text);
   }
   return texts;
+}
+
+/** 取色器传回的颜色, 与 `vscode.Color` 同形; 这里不引用 vscode 以便单元测试。 */
+export interface PickedRgba {
+  readonly red: number;
+  readonly green: number;
+  readonly blue: number;
+  readonly alpha: number;
+}
+
+/**
+ * 取色器传回的颜色是否就是该色块上报的预览色, 即用户没有改色。
+ *
+ * 必须按 VS Code 的精度比较而不是比浮点: 取色器打开时用上报的原值求候选写法, 之后每次
+ * 重算 (点标题切换写法、点"原色"复位) 传回的都是它内部的 8-bit RGB 与三位小数的 alpha。
+ * 精度以内的差异取色器本来就表达不了, 当作未改色不会丢失用户的操作。
+ */
+export function isUnchangedPick(picked: PickedRgba, preview: Pick<PreviewSrgb, 'coords' | 'alpha'>): boolean {
+  const alphaOf = (alpha: number) => Math.round(Math.max(0, Math.min(1, alpha)) * 1000);
+  return (
+    to8Bit(picked.red) === to8Bit(preview.coords[0]) &&
+    to8Bit(picked.green) === to8Bit(preview.coords[1]) &&
+    to8Bit(picked.blue) === to8Bit(preview.coords[2]) &&
+    alphaOf(picked.alpha) === alphaOf(preview.alpha)
+  );
+}
+
+/**
+ * 未改色时的候选写法: 第一项是原文, 其余由原值 (而不是取色器的 sRGB) 序列化。
+ *
+ * 取色器只在 sRGB 内传递颜色, 广色域与 HDR 值到它手里已经被映射过, 再转回原格式就是
+ * 有损值; 色域内的值也会因 8-bit 量化与格式归一化而改变写法。原文排第一, 取色器打开时
+ * 标题显示原文; 点标题切到的下一项则来自原值, 与"转换颜色"命令的结果一致。
+ */
+export function unchangedPresentationTexts(
+  originalText: string,
+  resolved: ResolvedColor,
+  preferredTarget: TargetFormat | undefined,
+  options: SerializerOptions,
+): string[] {
+  const rest = colorPresentationTexts(resolved, preferredTarget, options);
+  return [originalText, ...rest.filter((text) => text !== originalText)];
 }
 
 export function isRejection(

@@ -9,7 +9,13 @@ import { describe, expect, it } from 'vitest';
 
 import { scanText, type ScanOptions } from '../../src/core/scanner.js';
 import type { ColorMatch } from '../../src/core/types.js';
-import { colorPresentationTexts } from '../../src/features/convert/presentations.js';
+import { buildResolved } from '../../src/core/colorjs-bridge.js';
+import {
+  colorPresentationTexts,
+  isUnchangedPick,
+  unchangedPresentationTexts,
+  type PickedRgba,
+} from '../../src/features/convert/presentations.js';
 import {
   DEFAULT_FIELDS,
   FIELDS,
@@ -24,7 +30,7 @@ import { previewSource, previewSrgb } from '../../src/features/highlight/preview
 import { planSwatches, rangeKey } from '../../src/features/picker/swatch-plan.js';
 import { RUNTIME_STRINGS } from '../../src/l10n/runtime-strings.js';
 
-import { resolvedOf } from './helpers.js';
+import { parse, resolvedOf } from './helpers.js';
 
 /** 覆盖全部规范层级与全部解析分支的样本。 */
 const SAMPLE = `
@@ -255,6 +261,72 @@ describe('原生色块与取色器', () => {
     // hex 用 #RRGGBBAA 表达 alpha, 因此保留; oklch 与 legacy rgba/hsla 也能表达。
     expect(texts).toContain('#ff880080');
     for (const text of texts) expect(text.startsWith('hwb(')).toBe(false);
+  });
+});
+
+describe('取色器: 未改色时保留原文', () => {
+  const SERIALIZE = {
+    precision: 3,
+    hexCase: 'lower',
+    syntax: 'modern',
+    gamutMapping: 'css',
+    computeMissingComponents: false,
+  } as const;
+
+  /** VS Code 取色器内部的精度: 8-bit RGB, alpha 三位小数。 */
+  function quantized(coords: readonly number[], alpha: number): PickedRgba {
+    const [red, green, blue] = coords.map((value) => Math.round(value * 255) / 255);
+    return { red, green, blue, alpha: Math.round(alpha * 1000) / 1000 };
+  }
+
+  /** 走一遍取色器的往返: 上报预览色 → 取色器量化 → 求候选写法。 */
+  function roundTrip(css: string) {
+    const parsed = parse(css);
+    const resolved = parsed.resolved as NonNullable<typeof parsed.resolved>;
+    const preview = previewSrgb(resolved, 'css', 'clip');
+    const target = targetForSyntax(parsed.syntax);
+    const picked = quantized(preview.coords, preview.alpha);
+    // 改动前的做法: 从取色器的 sRGB 转回原格式。
+    const lossy = colorPresentationTexts(
+      buildResolved({ cssSpace: 'srgb', channels: [picked.red, picked.green, picked.blue], alpha: picked.alpha }),
+      target,
+      SERIALIZE,
+    );
+    return { resolved, preview, target, picked, lossy };
+  }
+
+  it.each(['color(display-p3 0.2 0.8 0.4)', 'oklch(70% 0.2 30)'])('色域外 %s: 原文排第一, 不出现有损值', (css) => {
+    const { resolved, preview, target, picked, lossy } = roundTrip(css);
+    expect(preview.gamutMapped).toBe(true);
+    expect(isUnchangedPick(picked, preview)).toBe(true);
+    // 前提: 从 sRGB 转回原格式确实有损, 否则这条测试证明不了什么。
+    expect(lossy[0]).not.toBe(colorPresentationTexts(resolved, target, SERIALIZE)[0]);
+    const texts = unchangedPresentationTexts(css, resolved, target, SERIALIZE);
+    expect(texts[0]).toBe(css);
+    expect(texts).not.toContain(lossy[0]);
+    expect(new Set(texts).size).toBe(texts.length);
+  });
+
+  it('色域内的值同样会被量化改写, 也保留原文', () => {
+    const css = 'oklch(60% 0.1 200)';
+    const { resolved, preview, target, picked, lossy } = roundTrip(css);
+    expect(preview.gamutMapped).toBe(false);
+    expect(lossy[0]).not.toBe(css);
+    expect(isUnchangedPick(picked, preview)).toBe(true);
+    expect(unchangedPresentationTexts(css, resolved, target, SERIALIZE)[0]).toBe(css);
+  });
+
+  it('其余候选从原值序列化而不是从取色器的 sRGB', () => {
+    const { resolved, target } = roundTrip('color(display-p3 0.2 0.8 0.4)');
+    const texts = unchangedPresentationTexts('color(display-p3 .2 .8 .4)', resolved, target, SERIALIZE);
+    expect(texts).toEqual(['color(display-p3 .2 .8 .4)', ...colorPresentationTexts(resolved, target, SERIALIZE)]);
+  });
+
+  it('任一通道或 alpha 变化即视为改色', () => {
+    const { preview, picked } = roundTrip('rgb(255 0 153 / 80%)');
+    expect(isUnchangedPick(picked, preview)).toBe(true);
+    expect(isUnchangedPick({ ...picked, green: picked.green + 1 / 255 }, preview)).toBe(false);
+    expect(isUnchangedPick({ ...picked, alpha: 0.79 }, preview)).toBe(false);
   });
 });
 

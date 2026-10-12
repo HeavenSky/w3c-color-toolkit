@@ -99,7 +99,13 @@ export interface ColorMatch {
   readonly range: ColorRange;
   /** 语法标识, 例如 `hex`、`rgb`、`color-mix`、`ictcp`、`system-color`。 */
   readonly syntax: string;
-  readonly specLevel: SpecLevel;
+  /**
+   * 语法所属的 CSS Color 规范层级。
+   *
+   * 缺省表示该语法不归属任何 CSS Color 层级: 取值不唯一的整体变量引用 (`var(--x)`、`$x`、`@x`)
+   * 本身是自定义属性或预处理器语法, 而各候选的层级又不止一个答案, 写死任何一级都是误导。
+   */
+  readonly specLevel?: SpecLevel;
   readonly experimental: boolean;
   readonly sourceSpace?: string;
   readonly resolution: ResolutionKind;

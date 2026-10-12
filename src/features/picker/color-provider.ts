@@ -40,7 +40,11 @@ import { buildResolved } from '../../core/colorjs-bridge.js';
 import type { SerializerOptions } from '../../core/types.js';
 import type { DocumentIndexManager } from '../../index/document-index-manager.js';
 import type { Logger } from '../../logging/output-channel.js';
-import { colorPresentationTexts } from '../convert/presentations.js';
+import {
+  colorPresentationTexts,
+  isUnchangedPick,
+  unchangedPresentationTexts,
+} from '../convert/presentations.js';
 import { resolveHighlightSyntaxes, targetForSyntax } from '../fields/registry.js';
 import { previewSrgb, previewSource } from '../highlight/preview-color.js';
 
@@ -196,7 +200,27 @@ export class ColorSwatchProvider implements vscode.DocumentColorProvider, vscode
     const target = targetForSyntax(original.syntax);
     if (original.resolution === 'contextual' || original.resolvedVia || !target) return [];
 
-    // 取色器给出的是新的 sRGB 值, 与原 match 的色彩空间无关。
+    // 未改色 (刚打开、点标题切换写法、点"原色"复位) 时保留原文, 其余写法从原值序列化:
+    // 取色器手里只有映射到 sRGB 的预览色, 从它转回原格式会把色域外的值改成有损值。
+    // range 必须与 match 完全一致, 否则原文与原值对不上同一段文本。
+    const source = previewSource(original);
+    const document = context.document;
+    if (
+      source &&
+      original.range.start === document.offsetAt(context.range.start) &&
+      original.range.end === document.offsetAt(context.range.end) &&
+      isUnchangedPick(color, previewSrgb(source, config.gamutMapping, config.hdrToneMapping))
+    ) {
+      const texts = unchangedPresentationTexts(
+        document.getText(context.range),
+        source,
+        target,
+        serializerOptionsOf(config),
+      );
+      return texts.map((text) => new vscode.ColorPresentation(text));
+    }
+
+    // 用户改了色: 取色器给出的是新的 sRGB 值, 与原 match 的色彩空间无关。
     const picked = buildResolved({
       cssSpace: 'srgb',
       channels: [color.red, color.green, color.blue],

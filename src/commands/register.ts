@@ -145,7 +145,7 @@ export function registerCommands(deps: CommandDependencies): vscode.Disposable[]
     logger.report('unsupported syntax', [
       `raw: ${match.raw}`,
       `syntax: ${match.syntax}`,
-      `specLevel: ${match.specLevel}`,
+      `specLevel: ${match.specLevel ?? 'none'}`,
       `resolution: ${match.resolution}`,
       ...match.diagnostics.map((diagnostic) => `diagnostic: ${diagnostic.code} ${diagnostic.messageKey}`),
     ]);
