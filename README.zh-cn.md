@@ -48,6 +48,8 @@ VS Code 的颜色高亮、Hover 信息、行内色块与原生取色器, 以及�
 
 ### 颜色高亮
 
+![CSS 文件中的颜色高亮与行内色块](./media/screenshots/highlight.png)
+
 `w3cColorToolkit.highlight` 为整个扩展选择一种标记样式:
 
 | 取值 | 效果 |
@@ -68,6 +70,8 @@ VS Code 的颜色高亮、Hover 信息、行内色块与原生取色器, 以及�
 
 悬停时按此顺序渲染: 预览色块 → 原始文本 → 每个启用格式一行 → 非 CSS 表示 (`hsv`、`cmyk`) → 元信息 (规范层级、解析说明, 以及你手动开启的 alpha、色域与两个对比度)。
 
+![oklch() 颜色的 Hover 信息](./media/screenshots/hover.png)
+
 ```
 ▇▇▇  (预览)
 原始语法: oklch(70% 0.2 30)
@@ -85,7 +89,11 @@ rgb(): rgb(240, 112, 63)
 
 本扩展注册了 `DocumentColorProvider`, 因此 VS Code 会在颜色前画**行内色块**, 并从色块提供 **原生取色器** —— 覆盖 `oklch()`、`lab()`、`color()`、`color-mix()`、相对颜色、HDR 空间, 以及注释与字符串里的颜色, 这些都是 VS Code 自带提供器不覆盖的。
 
+![从 display-p3 颜色的行内色块打开的原生取色器](./media/screenshots/color-picker.png)
+
 用取色器改色时**优先按原格式写回**, 依次回退到 hex、rgb、hsl、oklch, 并跳过无法表达当前 alpha 的格式。
+
+取色器本身只在 sRGB 内工作, 因此在你真正改色之前原文保持不变: 标题显示原值, 点标题切换写法时从原值转换, 而不是从取色器手里的 sRGB 近似值转换。`color(display-p3 0.2 0.8 0.4)` 这类广色域值不会因为打开一次取色器就被改写成映射到 sRGB 后的数字。
 
 不是单纯颜色的值只给**只读色块** —— 能看到颜色但不提供改写候选, 因此误拖一下不会把表达式压成字面值:
 
@@ -109,6 +117,8 @@ rgb(): rgb(240, 112, 63)
 ### 格式转换与复制
 
 **转换颜色**改写文档中的值; **复制颜色为**写入剪贴板, 不改动文档。两者共用同一套按分类分组的选择器。
+
+![转换颜色的目标格式选择器](./media/screenshots/convert.png)
 
 | 分类 | 目标格式 |
 | --- | --- |
@@ -145,6 +155,8 @@ rgb(): rgb(240, 112, 63)
 1. **唯一确定** → 解析成真实颜色。判据是"没有元素上下文也能确定": 自定义属性要求恰好一个无条件 root 级定义 (`:root` / `:host` / `html`, 且不在 `@media` 这类条件 at-rule 里); 预处理器变量取引用位置之前的最后一个定义 —— 那是顺序求值的确定结果, 不是猜测。组件级的局部覆盖 (`.button { --brand: … }`) 不影响这个结论。
 2. **取值不唯一** → Hover 列出全部候选, 但**不给色块也不高亮**。两种来源: 定义在 `@media (prefers-color-scheme: dark)` 这类条件 at-rule 内 (取值随环境切换), 或者只定义在 `[data-theme="…"]`、`.dark` 这类选择器下 (取值取决于具体元素)。候选会连同来源一起列出, 例如 `@media (prefers-color-scheme: dark) › :root`; 变量是颜色函数片段时, 候选会被代换回整段表达式再预览, 因此看到的是 `rgb(148 163 184 / 0.4)` 而不是光秃秃的通道值。
 3. **没有定义** → 什么都不显示: 没有高亮, 没有色块, 没有 Hover。这样 SCSS 里每个 `$foo` 才不会都弹出一个空面板。
+
+![变量没有唯一定义时 Hover 列出全部候选](./media/screenshots/variables.png)
 
 **已解析的引用是只读的。** 取色器只展示颜色而不允许拖动, **转换颜色** 会拒绝并告知它依赖的变量名。把 `var(--brand)` 改写成 `#ff8800` 会销毁设计令牌, 那几乎不会是你想要的。
 
@@ -297,7 +309,7 @@ rgb(): rgb(240, 112, 63)
 | `info.previewSize` | `small` \| `large` | `small` | Hover 色块尺寸 |
 | `info.previewShape` | `square` \| `rectangle` | `rectangle` | Hover 色块形状 |
 | `info.showDiagnostics` | boolean | `true` | 显示解析说明 |
-| `info.showSpecLevel` | boolean | `true` | 显示语法来自哪个规范层级 |
+| `info.showSpecLevel` | boolean | `true` | 显示语法来自哪个规范层级; 取值不唯一的变量引用不显示 |
 
 **转换**
 
@@ -421,6 +433,20 @@ rgb(): rgb(240, 112, 63)
 ## 界面语言
 
 英语与简体中文, 命令标题一并本地化。其他 locale 回退到英语。
+
+## 开发
+
+```bash
+npm ci
+npm run check       # 图标, 清单, l10n 与骨架漂移门禁
+npm run typecheck
+npm test
+npm run package     # 生成 artifacts/<名称>-<版本>.vsix 并断言包内容
+```
+
+使用 npm 12 时, `npm ci` 只接受从 `registry.npmjs.org` 解析的 lockfile, 且依赖的安装脚本(`esbuild`, `@vscode/vsce-sign`, `fsevents`)默认不执行。检查, 测试与打包都不需要它们; 只有本地签名或发布报错时, 才用 `npm install-scripts approve <包>` 放行。CI 使用 `.nvmrc` 指定的 Node 版本自带的 npm, 不受影响。
+
+`npm run shots` 手动重新生成功能截图(macOS, 运行时会弹出一个 VS Code 窗口), 输出到 `media/screenshots/`。截图不参与打包与发布。
 
 ## 变更记录
 

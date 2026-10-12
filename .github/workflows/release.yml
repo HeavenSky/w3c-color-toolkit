@@ -15,12 +15,16 @@ on:
         description: 'package.json 中的版本号, 例如 0.0.1'
         required: true
 
+# 顶层给只读, 写权限只下沉到真正要创建 Release 的那个 job. 两个发布 job 只往外部市场推,
+# 不碰仓库内容, 拿到 contents: write 只会扩大 GITHUB_TOKEN 被第三方 action 滥用的面.
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     outputs:
       version: ${{ steps.version.outputs.version }}
       vsix: ${{ steps.version.outputs.vsix }}
@@ -44,15 +48,29 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # 仓库在 tools/ 下有 Python 脚本时才装 uv: 插件专属门禁(scripts/check-extra.mjs)可能经 `uv run`
+      # 调用它们. 没装 uv 时那类门禁只能跳过, 等于发布前少了一道检查.
+      # setup-uv 不发布 v10 这类浮动大版本标签, 只能钉到完整版本号; 写成 @v10 会在 Set up job 阶段解析失败.
+      - name: Set up uv
+        if: hashFiles('tools/**/*.py') != ''
+        uses: astral-sh/setup-uv@v10.2.0
+
       # 标签与 package.json 版本必须一致, 否则产物名与 Release 名会错位.
       # 产物路径与名字都从 package.json 推导, 避免仓库名在工作流里再写一遍.
+      #
+      # ${{ }} 一律先落到 env 再在脚本里引用. 直接插值等于把表达式的值拼进 shell 源码,
+      # 值里含引号或 $( ) 时会被当成命令执行 —— workflow_dispatch 的 inputs 是外部可填的,
+      # 这是本文件里唯一一处真正的注入面.
       - name: Resolve and verify version
         id: version
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_VERSION: ${{ github.event.inputs.version }}
         run: |
           pkg_version="$(node -p "require('./package.json').version")"
           pkg_name="$(node -p "require('./package.json').name")"
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            input_version="${{ github.event.inputs.version }}"
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            input_version="$INPUT_VERSION"
           else
             input_version="${GITHUB_REF_NAME#v}"
           fi
@@ -80,14 +98,23 @@ jobs:
 
       # 取 CHANGELOG 中与本版本对应的小节作为 Release 说明; 缺失时只告警, 不阻断发布.
       - name: Extract release notes
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          if node scripts/changelog-section.mjs "${{ steps.version.outputs.version }}" > RELEASE_NOTES.md; then
+          if node scripts/changelog-section.mjs "$VERSION" > RELEASE_NOTES.md; then
             cat RELEASE_NOTES.md
           else
-            echo "::warning::CHANGELOG.md 中未找到 ${{ steps.version.outputs.version }} 的小节, Release 说明为空"
+            echo "::warning::CHANGELOG.md 中未找到 $VERSION 的小节, Release 说明为空"
             : > RELEASE_NOTES.md
           fi
 
+      # 与本文件其余 action 一样只钉大版本, 不钉 commit SHA.
+      # 钉 SHA 在安全上更严, 代价是它冻结在钉下去的那一刻: 骨架分发出去后没人会回来升它,
+      # 上游的修复与 runtime 迁移都进不来, 最终是一个悄悄烂掉的引用. 浮动大版本由上游在
+      # 每次发版时重新指向, 拿得到补丁, 破坏性变更又挡在下一个大版本后面.
+      # 真要钉 SHA 的仓库: 十处 uses 一起钉并接上 dependabot, 只钉一处既不安全也不一致.
+      # 注: GitHub Actions 的 uses 只认分支, tag 或 commit SHA, 没有 @latest 这种写法;
+      # 浮动大版本 tag 就是这里能用到的"最新".
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
@@ -134,9 +161,10 @@ jobs:
           name: ${{ needs.release.outputs.vsix_name }}
 
       - name: Publish to VS Code Marketplace
-        run: npx --no-install vsce publish --packagePath "${{ needs.release.outputs.vsix_name }}"
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
+          VSIX_NAME: ${{ needs.release.outputs.vsix_name }}
+        run: npx --no-install vsce publish --packagePath "$VSIX_NAME"
 
   # Open VSX(VSCodium / Cursor / Windsurf 等非官方发行版的市场), 同样按 secret 存在与否开关.
   open-vsx:
@@ -154,7 +182,13 @@ jobs:
         with:
           name: ${{ needs.release.outputs.vsix_name }}
 
+      # ovsx 刻意不进 devDependencies, 因此这个 job 也不装依赖: 它只被这一步用到, 而这一步
+      # 只在配了 OVSX_PAT 时才跑. 写进 devDependencies 会让所有开发者与所有 job 都为一个
+      # 多数派生仓库根本不发布的市场付安装成本. marketplace job 不同 —— vsce 是打包环节
+      # 的既有依赖, 本来就装.
+      # 代价是 `--yes` 会在发布时现拉一个版本; 介意的仓库把它改成 `ovsx@<大版本>` 约束一下.
       - name: Publish to Open VSX
-        run: npx --yes ovsx publish "${{ needs.release.outputs.vsix_name }}"
         env:
           OVSX_PAT: ${{ secrets.OVSX_PAT }}
+          VSIX_NAME: ${{ needs.release.outputs.vsix_name }}
+        run: npx --yes ovsx publish "$VSIX_NAME"

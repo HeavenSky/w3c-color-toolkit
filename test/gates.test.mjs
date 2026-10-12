@@ -9,7 +9,7 @@ import {
   parseManifest,
   renderManifest,
 } from '../scripts/lib/template-shared.mjs';
-import { deriveAllowlist } from '../scripts/lib/vsix-allowlist.mjs';
+import deriveAllowlist from '../scripts/lib/vsix-allowlist.mjs';
 
 /**
  * 门禁自身的测试。
@@ -116,6 +116,29 @@ describe('deriveAllowlist', () => {
     expect(allowed.has('media/toml-dark.svg')).toBe(true);
     expect(allowed.has('syntaxes/toml.tmLanguage.json')).toBe(true);
     expect(allowed.has('snippets/toml.json')).toBe(true);
+  });
+
+  it('纯主题扩展: 没有 main 时只收主题文件, 不收入口', () => {
+    const allowed = deriveAllowlist({
+      pkg: {
+        icon: 'media/icon.png',
+        contributes: {
+          themes: [{ path: './themes/a-color-theme.json' }, { path: './themes/b-color-theme.json' }],
+          iconThemes: [{ path: './icons/icon-theme.json' }],
+        },
+      },
+      rootEntries: ['README.md'],
+      l10nEntries: [],
+      outEntries: ['extension.wasm'],
+    });
+    expect([...allowed].sort()).toEqual([
+      'icons/icon-theme.json',
+      'media/icon.png',
+      'package.json',
+      'readme.md',
+      'themes/a-color-theme.json',
+      'themes/b-color-theme.json',
+    ]);
   });
 
   it('涵盖 l10n 子目录 (捆绑的第三方语言包)', () => {

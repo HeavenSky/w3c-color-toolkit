@@ -2,7 +2,7 @@
   "name": "w3c-color-toolkit",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "license": "MIT",
   "publisher": "HeavenSky",
   "repository": {
@@ -815,14 +815,15 @@
     "watch": "node build.mjs --watch",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:performance": "vitest run --config vitest.perf.config.ts",
+    "test:performance": "vitest run --config vitest.perf.config.mts",
     "check": "node scripts/check.mjs",
     "check:template": "node scripts/check-template.mjs",
     "gen:icon": "node scripts/gen-icon.mjs",
     "gen:contributes": "node scripts/gen-contributes.mjs",
     "gen:l10n": "node scripts/gen-l10n.mjs",
     "package": "node scripts/package.mjs",
-    "vscode:prepublish": "npm run build"
+    "vscode:prepublish": "npm run build",
+    "shots": "node scripts/shoot.mjs --readme"
   },
   "dependencies": {
     "@csstools/css-color-parser": "4.1.10",
@@ -834,11 +835,13 @@
     "postcss-scss": "4.0.9"
   },
   "devDependencies": {
-    "@types/node": "^22.15.1",
-    "@types/vscode": "~1.101.0",
-    "@vscode/vsce": "^3.9.2",
-    "esbuild": "^0.28.1",
-    "typescript": "^5.9.3",
-    "vitest": "^3.2.4"
+    "@types/node": "^26.6.5",
+    "@vscode/vsce": "^4.0.0",
+    "esbuild": "^0.28.2",
+    "playwright-core": "^1.64.0",
+    "sharp": "^0.35.5",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3",
+    "vscode-types": "npm:@types/vscode@^1.140.0"
   }
 }

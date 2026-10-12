@@ -9,7 +9,7 @@
  * 3. l10n bundle 之间 key 集一致;
  * 4. src 内联的 l10n.t 字面量与中文 bundle 一一对应;
  * 5. `.template-shared` 存在时, A 类骨架文件未偏离骨架;
- * 6. `scripts/check-extra.mjs` 存在时执行它导出的 `checks(root)`。
+ * 6. `scripts/check-extra.mjs` 存在时执行它默认导出的 `checks(root)`。
  *
  * 用法: node scripts/check.mjs
  */
@@ -17,7 +17,6 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-
 import {
 	checkInlineRuntimeStrings,
 	checkL10nBundleParity,
@@ -26,6 +25,24 @@ import {
 import { MANIFEST_NAME, checkShared } from "./lib/template-shared.mjs";
 
 const ROOT = join(fileURLToPath(new URL(".", import.meta.url)), "..");
+
+// execFileSync 默认不设超时, 子进程卡住会让整条门禁链挂着而不是失败退出 —— 在 CI 上表现为
+// job 一直跑到 runner 超时, 看不出是哪一步卡的。gen-icon 只做本地光栅化, 一分钟远远够用。
+const GEN_ICON_TIMEOUT_MS = 60_000;
+
+/**
+ * 把子进程的 stdout/stderr 补进错误信息。
+ *
+ * execFileSync 已经把 stderr 拼进 error.message, 但只拼 stderr, 且超时被杀时可能什么都没有;
+ * 所以这里补 stdout, 并对已经在 message 里的内容去重 —— 不去重就会把同一段报错打印两遍。
+ */
+const withOutput = error => {
+	const detail = [error.stderr, error.stdout]
+		.map(chunk => chunk ? chunk.toString().trim() : "")
+		.filter(chunk => chunk && !error.message.includes(chunk))
+		.join("\n");
+	return detail ? `${error.message}\n${detail}` : error.message;
+};
 
 const problems = [];
 const run = (label, fn) => {
@@ -43,10 +60,16 @@ const run = (label, fn) => {
 console.log("checks:");
 
 run("icon 产物与 spec 一致", () => {
-	execFileSync(process.execPath, [join(ROOT, "scripts/gen-icon.mjs"), "--check"], {
-		cwd: ROOT,
-		stdio: "pipe",
-	});
+	try {
+		execFileSync(process.execPath, [join(ROOT, "scripts/gen-icon.mjs"), "--check"], {
+			cwd: ROOT,
+			stdio: "pipe",
+			timeout: GEN_ICON_TIMEOUT_MS,
+		});
+	} catch (error) {
+		// run() 只读 error.message, 所以子进程写到 stdout 的诊断信息必须在这里补进去。
+		throw new Error(withOutput(error));
+	}
 	return [];
 });
 run("package.nls 与清单占位符一致", () => checkNlsParity(ROOT));
@@ -69,8 +92,8 @@ if (existsSync(manifestPath)) {
 
 const extraPath = join(ROOT, "scripts/check-extra.mjs");
 if (existsSync(extraPath)) {
-	const extra = await import(extraPath);
-	for (const [label, fn] of Object.entries(extra.checks(ROOT))) run(label, fn);
+	const { default: checks } = await import(extraPath);
+	for (const [label, fn] of Object.entries(checks(ROOT))) run(label, fn);
 }
 
 if (problems.length > 0) {

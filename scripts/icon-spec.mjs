@@ -37,7 +37,7 @@ function hueBar(y, h) {
   });
 }
 
-export const spec = {
+export default {
   size: SIZE,
   label: 'W3C Color Toolkit',
   shapes: [

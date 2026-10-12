@@ -2,6 +2,30 @@
 
 Notable changes to W3C Color Toolkit.
 
+## v0.0.8 2026-10-12 Color picker keeps the original text
+
+### Fixed
+
+- **Opening the native color picker no longer rewrites the color.** VS Code passes picker colors as
+  8-bit sRGB, so a wide-gamut value such as `color(display-p3 0.2 0.8 0.4)` showed up as
+  `color(display-p3 0.363 0.791 0.427)`, and even in-gamut values such as `oklch(60% 0.1 200)` were
+  re-serialized; one click on the picker header wrote the lossy value back. While the color is
+  unchanged, the first presentation is now the original text and the other formats are converted
+  from the original value. Dragging to a new color behaves as before.
+- **Hover no longer shows `Specification: CSS Color 4` for a variable without a unique value.**
+  `var(--x)`, `$x` and `@x` references with several candidate definitions have no CSS Color level;
+  a variable inside a color function takes the level of its candidates when they all agree.
+
+### Changed
+
+- Docs: the README now shows a screenshot of each feature. The
+  images are loaded from GitHub when the page is viewed and are not packaged into the extension.
+
+### Internal
+
+- Synced the shared skeleton scripts; `npm run shots` regenerates the screenshots by hand and is not
+  part of packaging or release.
+
 ## v0.0.7 2026-10-08 New icon, docs aligned
 
 ### Changed

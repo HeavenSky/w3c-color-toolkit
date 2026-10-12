@@ -11,9 +11,8 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-
+import spec from "./icon-spec.mjs";
 import { renderPng, renderSvg } from "./lib/icon-render.mjs";
-import { spec } from "./icon-spec.mjs";
 
 const ROOT = join(fileURLToPath(new URL(".", import.meta.url)), "..");
 const CHECK_ONLY = process.argv.includes("--check");

@@ -19,7 +19,7 @@ function drift(root, script, label) {
   }
 }
 
-export function checks(root) {
+export default function checks(root) {
   return {
     'contributes 与 TS 单一来源一致': () => drift(root, 'scripts/gen-contributes.mjs', 'contributes'),
     'l10n bundle 与字符串表一致': () => drift(root, 'scripts/gen-l10n.mjs', 'l10n bundle'),

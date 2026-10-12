@@ -15,11 +15,36 @@ import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-
-import { deriveAllowlist } from "./lib/vsix-allowlist.mjs";
+import deriveAllowlist from "./lib/vsix-allowlist.mjs";
 
 const ROOT = join(fileURLToPath(new URL(".", import.meta.url)), "..");
 const OUT_DIR = join(ROOT, "artifacts");
+
+// execFileSync 默认不设超时, 子进程卡住会让打包永远挂着而不是失败退出 —— 在 CI 上表现为
+// job 跑到 runner 超时, 看不出卡在哪一步。vsce 要压缩整个包并访问 marketplace 元数据, 取宽值;
+// unzip 只读本地已经落盘的 vsix, 短值足够。
+const VSCE_TIMEOUT_MS = 10 * 60_000;
+const UNZIP_TIMEOUT_MS = 60_000;
+
+/**
+ * 跑一个子进程, 失败时连同它的输出一起报出来再退出。
+ *
+ * 原来这两处调用都没有 catch: 子进程一失败就是一段带 Node 栈的未捕获异常, 看不出是哪一步挂的。
+ * execFileSync 只会把 stderr 拼进 error.message, 所以这里补 stdout 并按 message 已有内容去重;
+ * stdio: "inherit" 的调用两个字段都是 null, 输出早已直接落到终端, 只剩一行失败标签。
+ */
+function runChild(label, args, options) {
+	try {
+		return execFileSync(args[0], args.slice(1), options);
+	} catch (error) {
+		const detail = [error.stderr, error.stdout]
+			.map(chunk => chunk ? chunk.toString().trim() : "")
+			.filter(chunk => chunk && !error.message.includes(chunk))
+			.join("\n");
+		console.error(`\n${label} 失败: ${error.message}${detail ? `\n${detail}` : ""}`);
+		process.exit(1);
+	}
+}
 
 const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
 const target = join(OUT_DIR, `${pkg.name}-${pkg.version}.vsix`);
@@ -58,35 +83,41 @@ function listFiles(dir, prefix = "") {
 	return found;
 }
 
-// ── 推导允许清单 ────────────────────────────────────────────
-// 入口所在目录要在构建之后读: `.wasm` 这类无法内联的产物是构建阶段才落盘的。
-// l10n 要递归读: 捆绑第三方语言服务器时, 它自带的语言包按来源放在各自的子目录里。
-const outDir = join(ROOT, pkg.main.replace(/^\.\//, "").split("/").slice(0, -1).join("/"));
-const allowed = deriveAllowlist({
-	pkg,
-	rootEntries: readdirSync(ROOT),
-	l10nEntries: pkg.l10n ? listFiles(join(ROOT, pkg.l10n.replace(/^\.\//, ""))) : [],
-	outEntries: existsSync(outDir) ? readdirSync(outDir) : [],
-});
-
 // ── 打包 ────────────────────────────────────────────────────
 mkdirSync(OUT_DIR, { recursive: true });
 const vsce = join(ROOT, "node_modules", ".bin", "vsce");
 
-execFileSync(
-	vsce,
+runChild(
+	"vsce package",
 	[
+		vsce,
 		"package",
 		"--out",
 		target,
 		// 产物由 esbuild 打成单文件, 不需要 vsce 解析并打包依赖树。
 		"--no-dependencies",
 	],
-	{ cwd: ROOT, stdio: "inherit" }
+	{ cwd: ROOT, stdio: "inherit", timeout: VSCE_TIMEOUT_MS }
 );
 
+// ── 推导允许清单 ────────────────────────────────────────────
+// 必须放在 vsce package 之后: 它先跑 `vscode:prepublish` 构建, `.wasm` 与捆绑的第三方语言包
+// 这类构建期产物此时才落盘; 提前推导会在全新 clone 的首次打包里把它们判成 unexpected entry。
+// l10n 要递归读: 捆绑第三方语言服务器时, 它自带的语言包按来源放在各自的子目录里。
+// 纯主题扩展没有 `main`, 也就没有入口目录可读。
+const outDir = pkg.main ? join(ROOT, pkg.main.replace(/^\.\//, "").split("/").slice(0, -1).join("/")) : undefined;
+const allowed = deriveAllowlist({
+	pkg,
+	rootEntries: readdirSync(ROOT),
+	l10nEntries: pkg.l10n ? listFiles(join(ROOT, pkg.l10n.replace(/^\.\//, ""))) : [],
+	outEntries: outDir && existsSync(outDir) ? readdirSync(outDir) : [],
+});
+
 // ── 断言包内容 ──────────────────────────────────────────────
-const listing = execFileSync("unzip", ["-l", target], { encoding: "utf8" });
+const listing = runChild("unzip -l", ["unzip", "-l", target], {
+	encoding: "utf8",
+	timeout: UNZIP_TIMEOUT_MS,
+});
 const entries = listing
 	.split("\n")
 	.map(line => line.trim().split(/\s+/).slice(3).join(" "))

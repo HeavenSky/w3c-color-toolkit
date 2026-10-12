@@ -20,15 +20,15 @@
  *
  * 本模块是纯函数: 文件内容由调用方读好传进来, 便于单测用假清单断言解析与核对规则。
  */
-import { createHash } from 'node:crypto';
+import { createHash } from "node:crypto";
 
-export const MANIFEST_NAME = '.template-shared';
+export const MANIFEST_NAME = ".template-shared";
 
 /** 骨架身份标记; 派生仓库落地时应删除, 见 `isSkeletonRepo`。 */
-export const MARKER_NAME = '.template-source';
+export const MARKER_NAME = ".template-source";
 
 /** 骨架 `package.json` 里未被替换的包名占位符, 作为门控的第二判据。 */
-export const NAME_PLACEHOLDER = '<ext-name>';
+export const NAME_PLACEHOLDER = "<ext-name>";
 
 /**
  * A 类共享文件: 与插件内容完全无关, 复制后不要改动。
@@ -37,28 +37,29 @@ export const NAME_PLACEHOLDER = '<ext-name>';
  * 顺序即清单的输出顺序, 保持稳定可以让派生仓库同步时的 diff 只有 hash 变化。
  */
 export const SHARED_FILES = [
-  '.github/workflows/release.yml',
-  '.gitignore',
-  '.nvmrc',
-  '.vscode/launch.json',
-  '.vscode/tasks.json',
-  'build.mjs',
-  'scripts/changelog-section.mjs',
-  'scripts/check-template.mjs',
-  'scripts/check.mjs',
-  'scripts/gen-icon.mjs',
-  'scripts/lib/check-manifest.mjs',
-  'scripts/lib/icon-render.mjs',
-  'scripts/lib/template-shared.mjs',
-  'scripts/lib/vsix-allowlist.mjs',
-  'scripts/package.mjs',
-  'tsconfig.json',
-  'vitest.config.ts',
+	".github/workflows/release.yml",
+	".gitignore",
+	".nvmrc",
+	".vscode/launch.json",
+	".vscode/tasks.json",
+	"build.mjs",
+	"scripts/changelog-section.mjs",
+	"scripts/check-template.mjs",
+	"scripts/check.mjs",
+	"scripts/gen-icon.mjs",
+	"scripts/lib/check-manifest.mjs",
+	"scripts/lib/icon-render.mjs",
+	"scripts/lib/shoot-ext.mjs",
+	"scripts/lib/template-shared.mjs",
+	"scripts/lib/vsix-allowlist.mjs",
+	"scripts/package.mjs",
+	"tsconfig.json",
+	"vitest.config.mts",
 ];
 
 /** 记录用的短 hash: 16 个十六进制字符, 碰撞概率对这个用途足够低, 且一行读得完。 */
 export function digest(content) {
-  return createHash('sha256').update(content).digest('hex').slice(0, 16);
+	return createHash("sha256").update(content).digest("hex").slice(0, 16);
 }
 
 /**
@@ -72,34 +73,34 @@ export function digest(content) {
  * 只有路径没有 hash 的裸行仍归入 `tracked` 且 `hash` 为 null, 由 `checkShared` 提示补齐 ——
  * 这是给旧清单留的兜底, 不是新格式的一部分。
  *
- * @param {string} text
+ * @param {string} text - 清单文件的全部内容
  * @returns {{ tracked: { hash: string | null, path: string }[], excluded: { path: string, reason: string }[] }}
  */
 export function parseManifest(text) {
-  const tracked = [];
-  const excluded = [];
+	const tracked = [];
+	const excluded = [];
 
-  for (const raw of text.split('\n')) {
-    const line = raw.trim();
-    if (line === '' || line.startsWith('#')) continue;
+	for (const raw of text.split("\n")) {
+		const line = raw.trim();
+		if (line === "" || line.startsWith("#")) continue;
 
-    if (line.startsWith('!')) {
-      const body = line.slice(1).trim();
-      const separator = body.search(/\s/);
-      excluded.push(
-        separator === -1
-          ? { path: body, reason: '' }
-          : { path: body.slice(0, separator), reason: body.slice(separator).trim() },
-      );
-      continue;
-    }
+		if (line.startsWith("!")) {
+			const body = line.slice(1).trim();
+			const separator = body.search(/\s/);
+			excluded.push(
+				separator === -1
+					? { path: body, reason: "" }
+					: { path: body.slice(0, separator), reason: body.slice(separator).trim() }
+			);
+			continue;
+		}
 
-    const match = /^([0-9a-f]{16})\s+(.+)$/.exec(line);
-    if (match) tracked.push({ hash: match[1], path: match[2].trim() });
-    else tracked.push({ hash: null, path: line });
-  }
+		const match = /^([0-9a-f]{16})\s+(.+)$/.exec(line);
+		if (match) tracked.push({ hash: match[1], path: match[2].trim() });
+		else tracked.push({ hash: null, path: line });
+	}
 
-  return { tracked, excluded };
+	return { tracked, excluded };
 }
 
 /**
@@ -108,30 +109,30 @@ export function parseManifest(text) {
  * 不接收"上一版清单"作为输入 —— 生成结果只取决于 `SHARED_FILES`、排除项与文件当前内容,
  * 因此清单损坏后重跑一次就能完整重建。排除项就地输出, 与追踪行共用同一套行序。
  *
- * @param {object} input
- * @param {{ path: string, reason: string }[]} [input.excluded] 要保留的排除声明
- * @param {(path: string) => string | Buffer} input.readFile
+ * @param {object} input - 生成清单所需的输入
+ * @param {{ path: string, reason: string }[]} [input.excluded] - 要保留的排除声明
+ * @param {(path: string) => string | Buffer} input.readFile - 按相对仓库根的路径读取文件内容
  * @returns {string}
  */
 export function renderManifest({ excluded = [], readFile }) {
-  const reasonByPath = new Map(excluded.map((entry) => [entry.path, entry.reason]));
+	const reasonByPath = new Map(excluded.map(entry => [entry.path, entry.reason]));
 
-  const lines = SHARED_FILES.map((path) => {
-    if (reasonByPath.has(path)) {
-      const reason = reasonByPath.get(path);
-      return reason ? `!${path}  ${reason}` : `!${path}`;
-    }
-    return `${digest(readFile(path))}  ${path}`;
-  });
+	const lines = SHARED_FILES.map(path => {
+		if (reasonByPath.has(path)) {
+			const reason = reasonByPath.get(path);
+			return reason ? `!${path}  ${reason}` : `!${path}`;
+		}
+		return `${digest(readFile(path))}  ${path}`;
+	});
 
-  return `${lines.join('\n')}\n`;
+	return `${lines.join("\n")}\n`;
 }
 
 /** 覆盖校验的问题描述里最多列出几个路径, 再多就省略号。 */
 const SAMPLE_LIMIT = 3;
 
-const sample = (paths) =>
-  `${paths.slice(0, SAMPLE_LIMIT).join(', ')}${paths.length > SAMPLE_LIMIT ? ' …' : ''}`;
+const sample = paths =>
+	`${paths.slice(0, SAMPLE_LIMIT).join(", ")}${paths.length > SAMPLE_LIMIT ? " …" : ""}`;
 
 /**
  * 核对清单里的每个文件。
@@ -139,67 +140,65 @@ const sample = (paths) =>
  * 先做覆盖校验再逐项比对: 清单被清空, 少了几行, 或混进了 `SHARED_FILES` 之外的条目, 都会在
  * 这一步暴露。以前只逐项比对, 空清单会报告"通过 (0 个文件)"—— 检查在最该报警的时候最安静。
  *
- * @param {object} input
- * @param {string} input.manifestText
- * @param {(path: string) => string | Buffer | undefined} input.readFile 读不到时返回 undefined
+ * @param {object} input - 核对所需的输入
+ * @param {string} input.manifestText - 清单文件的全部内容
+ * @param {(path: string) => string | Buffer | undefined} input.readFile - 按相对仓库根的路径读取文件内容, 读不到时返回 undefined
  * @returns {string[]} 问题描述; 空数组表示通过
  */
 export function checkShared({ manifestText, readFile }) {
-  const problems = [];
-  const { tracked, excluded } = parseManifest(manifestText);
+	const problems = [];
+	const { tracked, excluded } = parseManifest(manifestText);
 
-  // ── 覆盖校验 ────────────────────────────────────────────
-  const declared = new Set([...tracked.map((entry) => entry.path), ...excluded.map((entry) => entry.path)]);
-  const expected = new Set(SHARED_FILES);
+	// ── 覆盖校验 ────────────────────────────────────────────
+	const declared = new Set([...tracked.map(entry => entry.path), ...excluded.map(entry => entry.path)]);
+	const expected = new Set(SHARED_FILES);
 
-  const missing = SHARED_FILES.filter((path) => !declared.has(path));
-  const unknown = [...declared].filter((path) => !expected.has(path));
+	const missing = SHARED_FILES.filter(path => !declared.has(path));
+	const unknown = [...declared].filter(path => !expected.has(path));
 
-  if (missing.length > 0 || unknown.length > 0) {
-    const detail = [
-      missing.length > 0 ? `缺少 ${missing.length} 项 (${sample(missing)})` : '',
-      unknown.length > 0 ? `多出 ${unknown.length} 项 (${sample(unknown)})` : '',
-    ]
-      .filter(Boolean)
-      .join('; ');
+	if (missing.length > 0 || unknown.length > 0) {
+		const detail = [
+			missing.length > 0 ? `缺少 ${missing.length} 项 (${sample(missing)})` : "",
+			unknown.length > 0 ? `多出 ${unknown.length} 项 (${sample(unknown)})` : "",
+		]
+			.filter(Boolean)
+			.join("; ");
 
-    problems.push(
-      `${MANIFEST_NAME} 与 SHARED_FILES 不一致: ${detail} —— 清单是生成物, ` +
-        '在骨架仓库跑 check-template.mjs --update 重新生成, 派生仓库则从骨架同步这份文件',
-    );
-    // 覆盖都对不上时, 逐项比对的结果没有参考价值。
-    return problems;
-  }
+		problems.push(
+			`${MANIFEST_NAME} 与 SHARED_FILES 不一致: ${detail} —— 清单是生成物, ` +
+				"在骨架仓库跑 check-template.mjs --update 重新生成, 派生仓库则从骨架同步这份文件"
+		);
+		// 覆盖都对不上时, 逐项比对的结果没有参考价值。
+		return problems;
+	}
 
-  // ── 逐项比对 ────────────────────────────────────────────
-  for (const entry of tracked) {
-    const content = readFile(entry.path);
+	// ── 逐项比对 ────────────────────────────────────────────
+	for (const entry of tracked) {
+		const content = readFile(entry.path);
 
-    if (content === undefined) {
-      problems.push(
-        `${entry.path}: 是 A 类文件但本仓库没有 —— 从骨架同步这个文件; ` +
-          `本仓库有意不要它就在 ${MANIFEST_NAME} 里改成 !${entry.path}  <原因>`,
-      );
-      continue;
-    }
+		if (content === undefined) {
+			problems.push(
+				`${entry.path}: 是 A 类文件但本仓库没有 —— 从骨架同步这个文件; ` +
+					`本仓库有意不要它就在 ${MANIFEST_NAME} 里改成 !${entry.path}  <原因>`
+			);
+			continue;
+		}
 
-    if (entry.hash === null) {
-      problems.push(
-        `${entry.path}: 清单里没有记录 hash, 在骨架仓库跑 check-template.mjs --update 补齐`,
-      );
-      continue;
-    }
+		if (entry.hash === null) {
+			problems.push(`${entry.path}: 清单里没有记录 hash, 在骨架仓库跑 check-template.mjs --update 补齐`);
+			continue;
+		}
 
-    const actual = digest(content);
-    if (actual !== entry.hash) {
-      problems.push(
-        `${entry.path}: 已偏离骨架 (清单 ${entry.hash}, 实际 ${actual}) —— 从骨架同步这个文件; ` +
-          `确实要长期偏离就在 ${MANIFEST_NAME} 里改成 !${entry.path}  <原因>`,
-      );
-    }
-  }
+		const actual = digest(content);
+		if (actual !== entry.hash) {
+			problems.push(
+				`${entry.path}: 已偏离骨架 (清单 ${entry.hash}, 实际 ${actual}) —— 从骨架同步这个文件; ` +
+					`确实要长期偏离就在 ${MANIFEST_NAME} 里改成 !${entry.path}  <原因>`
+			);
+		}
+	}
 
-  return problems;
+	return problems;
 }
 
 /**
@@ -209,11 +208,11 @@ export function checkShared({ manifestText, readFile }) {
  * - **标记文件**表达意图, 但它会被 `cp -R` 一起带到派生仓库;
  * - **包名仍是占位符**复制不走 —— 派生仓库落地第一步就是替换它。
  *
- * @param {object} input
- * @param {boolean} input.hasMarker 仓库根目录下是否存在 `MARKER_NAME`
- * @param {string | undefined} input.packageName `package.json` 的 `name`
+ * @param {object} input - 门控的两个判据
+ * @param {boolean} input.hasMarker - 仓库根目录下是否存在 `MARKER_NAME`
+ * @param {string | undefined} input.packageName - `package.json` 的 `name`
  * @returns {boolean}
  */
 export function isSkeletonRepo({ hasMarker, packageName }) {
-  return hasMarker === true && packageName === NAME_PLACEHOLDER;
+	return hasMarker === true && packageName === NAME_PLACEHOLDER;
 }

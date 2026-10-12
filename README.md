@@ -46,6 +46,8 @@ Everything works out of the box. The sections below are the reference for when y
 
 ### Color highlighting
 
+![Color highlighting and inline swatches in a CSS file](./media/screenshots/highlight.png)
+
 `w3cColorToolkit.highlight` picks one marker style for the whole extension:
 
 | Value | What it draws |
@@ -66,6 +68,8 @@ Related options: `advanced.highlight.markRuler` (overview-ruler tick), `advanced
 
 Hovering a color renders, in this order: the preview swatch, the original source text, then one row per enabled format, then the non-CSS rows (`hsv`, `cmyk`), then the meta rows (specification level, parser notes, and — if you enable them — alpha, gamut and the two contrast ratios).
 
+![Hover information for an oklch() color](./media/screenshots/hover.png)
+
 ```
 ▇▇▇  (preview)
 Source: oklch(70% 0.2 30)
@@ -83,7 +87,11 @@ The swatch is rendered as a local SVG data URI built only from sanitised numbers
 
 The extension registers a `DocumentColorProvider`, so VS Code draws its **inline swatch** in front of the color and offers its **color picker** from that swatch — including `oklch()`, `lab()`, `color()`, `color-mix()`, relative color syntax, the HDR spaces, and colors inside comments and strings, none of which VS Code's built-in providers cover.
 
+![Native color picker opened from the inline swatch of a display-p3 color](./media/screenshots/color-picker.png)
+
 Picking a color rewrites the value in the **original format first**, falling back to hex, rgb, hsl, oklch, and skipping any format that cannot express the current alpha.
+
+The picker itself only works in sRGB, so until you actually change the color the source text is kept as written: the header shows the original value, and clicking the header to cycle formats converts from the original color rather than from the picker's sRGB approximation. A wide gamut value such as `color(display-p3 0.2 0.8 0.4)` is therefore not rewritten into its sRGB-mapped numbers just by opening the picker.
 
 Values that are not a plain color get a **read-only** swatch — you see the color, but no rewrite is offered, so one stray drag cannot flatten an expression into a literal:
 
@@ -107,6 +115,8 @@ Two VS Code limits apply: at most `editor.colorDecoratorsLimit` (500 by default)
 ### Format conversion and copying
 
 **Convert Color** rewrites the value in the document; **Copy Color As** puts it on the clipboard and leaves the document untouched. Both use the same picker, grouped by category.
+
+![Convert Color picker](./media/screenshots/convert.png)
 
 | Category | Targets |
 | --- | --- |
@@ -143,6 +153,8 @@ Output style: `w3cColorToolkit.convertSyntax` (`legacy` commas vs `modern` space
 1. **Unambiguous** → resolved to a real color. The test is "can this be determined without an element": a custom property needs exactly one unconditional root level definition (`:root` / `:host` / `html`, and not inside a conditional at-rule such as `@media`); a preprocessor variable takes the last definition before the reference, which is what sequential evaluation actually does rather than a guess. A component level override (`.button { --brand: … }`) does not change this.
 2. **Not unique** → the hover lists every candidate, but there is **no swatch and no highlight**. Two sources: a definition inside a conditional at-rule such as `@media (prefers-color-scheme: dark)` (the value follows the environment), or definitions that only exist under selectors like `[data-theme="…"]` or `.dark` (the value depends on the element). Each candidate is listed with where it comes from, for example `@media (prefers-color-scheme: dark) › :root`. When the variable is a fragment of a color function, each candidate is substituted back into the whole expression, so you see `rgb(148 163 184 / 0.4)` rather than a bare channel triplet.
 3. **No definition** → nothing at all: no highlight, no swatch, no hover. That is what keeps every `$foo` in a SCSS file from opening an empty panel.
+
+![Hover listing every candidate of a variable without a unique definition](./media/screenshots/variables.png)
 
 **A resolved reference is read only.** The picker shows the color but will not let you drag it, and **Convert Color** refuses and names the variable it depends on. Rewriting `var(--brand)` into `#ff8800` would destroy the token, which is almost never what you want.
 
@@ -295,7 +307,7 @@ Any of the three conditions is enough: over the size limit, **or** the file name
 | `info.previewSize` | `small` \| `large` | `small` | Size of the hover swatch |
 | `info.previewShape` | `square` \| `rectangle` | `rectangle` | Shape of the hover swatch |
 | `info.showDiagnostics` | boolean | `true` | Show parser notes |
-| `info.showSpecLevel` | boolean | `true` | Show which specification level a syntax comes from |
+| `info.showSpecLevel` | boolean | `true` | Show which specification level a syntax comes from; omitted for a variable reference without a unique value |
 
 **Convert**
 
@@ -419,6 +431,20 @@ Run **Manage → Show specification support matrix** to see the matrix with your
 ## Localisation
 
 English and Simplified Chinese, including the command titles. Other locales fall back to English.
+
+## Development
+
+```bash
+npm ci
+npm run check       # icon, manifest, l10n and template drift gates
+npm run typecheck
+npm test
+npm run package     # build artifacts/<name>-<version>.vsix and assert its contents
+```
+
+With npm 12, `npm ci` only accepts a lockfile resolved from `registry.npmjs.org`, and dependency install scripts (`esbuild`, `@vscode/vsce-sign`, `fsevents`) are skipped by default. None of them is needed to check, test or package; approve one with `npm install-scripts approve <package>` only if signing or publishing locally fails. CI uses the npm bundled with the Node version in `.nvmrc` and is not affected.
+
+`npm run shots` regenerates the feature screenshots by hand (macOS; a VS Code window opens while it runs) into `media/screenshots/`. Screenshots are not part of packaging or publishing.
 
 ## Changelog
 
