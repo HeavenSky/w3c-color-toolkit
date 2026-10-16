@@ -42,6 +42,13 @@ export interface StyleDeclaration {
   readonly ancestors: readonly StyleAncestor[];
   /** 声明起点的 UTF-16 offset。 */
   readonly offset: number;
+  /** 直接所在块的 offset 区间 `[start, end)`; 顶层声明没有。 */
+  readonly scope?: StyleScope;
+}
+
+export interface StyleScope {
+  readonly start: number;
+  readonly end: number;
 }
 
 export interface StylesheetFacts {
@@ -123,6 +130,15 @@ function ancestorsOf(node: ChildNode): StyleAncestor[] {
   return chain;
 }
 
+function scopeOf(node: ChildNode): StyleScope | undefined {
+  const parent = node.parent;
+  if (!parent || parent.type === 'root' || parent.type === 'document') return undefined;
+  const start = parent.source?.start?.offset;
+  const end = parent.source?.end?.offset;
+  if (start === undefined || end === undefined) return undefined;
+  return { start, end };
+}
+
 /** 按语言选语法包; 未知语言按标准 CSS 处理。 */
 function syntaxFor(languageId: string): { parse: (css: string) => Root } {
   switch (languageId) {
@@ -166,6 +182,8 @@ export function readStylesheet(document: TextDocumentLike): StylesheetFacts {
         value: stripScssFlags(node.value),
         ancestors: ancestorsOf(node),
         offset: node.source?.start?.offset ?? 0,
+        // SCSS 的 `!global` 赋值写在块内也是顶层变量。
+        scope: /!global\b/i.test(node.value) ? undefined : scopeOf(node),
       });
       return;
     }
@@ -178,6 +196,7 @@ export function readStylesheet(document: TextDocumentLike): StylesheetFacts {
         value: stripScssFlags((node as { value?: string }).value ?? node.params),
         ancestors: ancestorsOf(node),
         offset: node.source?.start?.offset ?? 0,
+        scope: scopeOf(node),
       });
       return;
     }

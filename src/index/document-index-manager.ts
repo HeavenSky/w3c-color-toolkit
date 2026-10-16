@@ -159,7 +159,7 @@ export class DocumentIndexManager implements vscode.Disposable {
   /**
    * 该文档的变量取值入口。
    *
-   * 回调闭住 `fromUri`: 预处理器变量是顺序求值的, 查表需要知道"从哪个文件的哪个位置问"。
+   * 回调闭住 `fromUri`: 预处理器变量按作用域与位置取值, 查表需要知道"从哪个文件的哪个位置问"。
    */
   private variableAccessFor(document: vscode.TextDocument): VariableAccess {
     const fromUri = document.uri.toString();

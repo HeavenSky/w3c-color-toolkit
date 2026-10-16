@@ -79,6 +79,7 @@ function definitionOf(
     rawValue: declaration.value,
     sourceUri,
     offset: declaration.offset,
+    scope: kind === 'css-custom-property' ? undefined : declaration.scope,
     selector,
     ancestorChain: ancestorChain(declaration.ancestors),
     conditional,

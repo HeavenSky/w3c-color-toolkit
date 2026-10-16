@@ -151,7 +151,7 @@ describe('预处理器变量', () => {
     expect(lookup).toEqual({ kind: 'unresolved', reason: 'no-definition' });
   });
 
-  it('顶层定义优先于嵌套在选择器里的定义', () => {
+  it('兄弟块里的定义在块外不可见', () => {
     const text = '$a: red;\n.y { $a: green; }\n.x { color: $a }';
     const symbols = symbolsOf(doc(text, 'scss', scssUri));
     const lookup = lookupVariable('$a', { fromUri: scssUri, atOffset: text.lastIndexOf('$a') }, symbols);
@@ -180,23 +180,80 @@ describe('预处理器变量', () => {
     expect(lookup.kind === 'ambiguous' && lookup.candidates).toHaveLength(2);
   });
 
-  it('Less 的 @ 变量同样走顺序求值', () => {
-    const text = '@brand: #ff8800;\n.x { color: @brand }';
-    const symbols = symbolsOf(doc(text, 'less', 'file:///w/a.less'));
-    const lookup = lookupVariable(
-      '@brand',
-      { fromUri: 'file:///w/a.less', atOffset: text.lastIndexOf('@brand') },
-      symbols,
-    );
-    expect(lookup).toMatchObject({ kind: 'resolved', rawValue: '#ff8800' });
+  it('块内的局部定义遮蔽外层定义', () => {
+    const text = '$a: red;\n.x { $a: blue; color: $a }';
+    const symbols = symbolsOf(doc(text, 'scss', scssUri));
+    const lookup = lookupVariable('$a', { fromUri: scssUri, atOffset: text.lastIndexOf('$a') }, symbols);
+    expect(lookup).toMatchObject({ kind: 'resolved', rawValue: 'blue' });
   });
 
+  it('块内引用之后的局部定义不影响 SCSS 取外层定义', () => {
+    const text = '$a: red;\n.x { color: $a; $a: blue; }';
+    const symbols = symbolsOf(doc(text, 'scss', scssUri));
+    const lookup = lookupVariable('$a', { fromUri: scssUri, atOffset: text.indexOf('$a;') }, symbols);
+    expect(lookup).toMatchObject({ kind: 'resolved', rawValue: 'red' });
+  });
+
+  it('块内的 !global 定义在块外可见', () => {
+    const text = '.theme { $a: red !global; }\n.x { color: $a }';
+    const symbols = symbolsOf(doc(text, 'scss', scssUri));
+    const lookup = lookupVariable('$a', { fromUri: scssUri, atOffset: text.lastIndexOf('$a') }, symbols);
+    expect(lookup).toMatchObject({ kind: 'resolved', rawValue: 'red' });
+  });
+
+  it('其他文件里嵌套在块内的定义不可见', () => {
+    const symbols = symbolsOf(
+      doc('.x { color: $brand }', 'scss', scssUri),
+      doc('.theme { $brand: red; }', 'scss', 'file:///w/_a.scss'),
+    );
+    expect(lookupVariable('$brand', { fromUri: scssUri, atOffset: 12 }, symbols)).toEqual({
+      kind: 'unresolved',
+      reason: 'no-definition',
+    });
+  });
   it('Stylus 不再有变量定义可查 (方案 D3)', () => {
     const symbols = symbolsOf(doc('$brand = #ff8800\n.a\n  color: $brand\n', 'stylus', 'file:///w/a.styl'));
     expect(lookupVariable('$brand', { fromUri: 'file:///w/a.styl', atOffset: 40 }, symbols)).toEqual({
       kind: 'unresolved',
       reason: 'no-definition',
     });
+  });
+});
+
+describe('Less 变量 (惰性求值)', () => {
+  const lessUri = 'file:///w/a.less';
+  const at = (text: string, needle: string): LookupSite => ({ fromUri: lessUri, atOffset: text.indexOf(needle) });
+  const lookupLess = (text: string, needle: string) =>
+    lookupVariable('@c', at(text, needle), symbolsOf(doc(text, 'less', lessUri)));
+
+  it('引用之前的唯一定义可解析', () => {
+    const text = '@c: #ff8800;\n.x { color: @c }';
+    expect(lookupLess(text, '@c }')).toMatchObject({ kind: 'resolved', rawValue: '#ff8800' });
+  });
+
+  it('同一作用域里最后一个定义生效, 即使写在引用之后', () => {
+    const text = '@c: red;\n.a { color: @c }\n@c: blue;';
+    expect(lookupLess(text, '@c }')).toMatchObject({ kind: 'resolved', rawValue: 'blue' });
+  });
+
+  it('先引用后定义可解析', () => {
+    const text = '.a { color: @c }\n@c: green;';
+    expect(lookupLess(text, '@c }')).toMatchObject({ kind: 'resolved', rawValue: 'green' });
+  });
+
+  it('块内的局部定义遮蔽顶层定义, 写在引用之后也一样', () => {
+    const text = '@c: red;\n.x { color: @c; @c: blue; }';
+    expect(lookupLess(text, '@c;')).toMatchObject({ kind: 'resolved', rawValue: 'blue' });
+  });
+
+  it('块外引用取顶层定义', () => {
+    const text = '@c: red;\n.x { @c: blue; }\n.y { color: @c }';
+    expect(lookupLess(text, '@c }')).toMatchObject({ kind: 'resolved', rawValue: 'red' });
+  });
+
+  it('兄弟块里的定义不泄漏', () => {
+    const text = '.a { @c: red; }\n.b { color: @c }';
+    expect(lookupLess(text, '@c }')).toEqual({ kind: 'unresolved', reason: 'no-definition' });
   });
 });
 

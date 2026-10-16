@@ -156,7 +156,7 @@ export interface VariableCandidateValue {
 /**
  * 变量取值回调。
  *
- * `atOffset` 供预处理器变量的顺序求值使用 (`$a` 取引用位置之前的最后一个定义);
+ * `atOffset` 供预处理器变量按作用域与位置取值使用;
  * 自定义属性与位置无关。
  */
 export type ResolveVariable = (name: string, atOffset: number) => VariableValue;

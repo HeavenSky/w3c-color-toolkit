@@ -22,6 +22,8 @@ export interface VariableDefinition {
   readonly sourceUri: string;
   /** 定义在文档中的 offset, 用于"位置之前的定义"判断。 */
   readonly offset: number;
+  /** 预处理器变量直接所在块的 offset 区间 `[start, end)`, 只在块内可见; 顶层定义没有。 */
+  readonly scope?: { readonly start: number; readonly end: number };
   /** CSS 自定义属性所在选择器; `:root`/`:host` 之外的定义视为局部。 */
   readonly selector?: string;
   /**
@@ -68,7 +70,7 @@ export interface VariableSymbols {
   readonly version: number;
 }
 
-/** 查表位置: 预处理器变量是顺序求值的, 因此需要知道从哪个文件的哪个位置发起查询。 */
+/** 查表位置: 预处理器变量按作用域与位置求值, 因此需要知道从哪个文件的哪个位置发起查询。 */
 export interface LookupSite {
   readonly fromUri: string;
   readonly atOffset: number;

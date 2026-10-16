@@ -9,8 +9,8 @@
  * 自定义属性与预处理器变量的"确定"含义不同:
  * - 自定义属性靠 cascade, 因此要求恰好一个无条件 root 级定义 (`isRoot`);
  *   多个 root 定义、只有非 root 定义、只有 `@media` 这类条件 at-rule 内的定义, 一律歧义。
- * - 预处理器变量是顺序求值的, 因此同文件中"引用位置之前的最后一个定义"就是确定答案,
- *   不构成歧义; 只有跨文件出现多个定义时才无从判断顺序。
+ * - 预处理器变量按块作用域求值: 同文件中在引用可见的最内层作用域里取定义就是确定答案,
+ *   不构成歧义; 只有跨文件出现多个顶层定义时才无从判断顺序。
  *
  * 这里**不做 `var()` 链展开**: 展开需要在 component value 树上做, 且颜色函数片段
  * (`rgb(var(--c) / .4)`) 与变量自身的值 (`--a: var(--b)`) 是同一个替换动作,
@@ -75,30 +75,44 @@ function lookupCustomProperty(definitions: readonly VariableDefinition[]): Varia
   return resolved(unconditional[0]);
 }
 
+/** 引用位置是否落在定义所在块内; 顶层定义在整个文件可见。 */
+function visibleAt(definition: VariableDefinition, atOffset: number): boolean {
+  const scope = definition.scope;
+  return scope === undefined || (scope.start <= atOffset && atOffset < scope.end);
+}
+
 /**
- * 预处理器变量: 顺序求值。
+ * 预处理器变量: 从引用所在的最内层作用域向外找, 在第一个有可用定义的作用域取最后一个。
  *
- * 同文件中取"引用位置之前的最后一个定义" —— 这是确定的, 不是猜测。顶层声明优先于
- * 嵌套在选择器里的声明 (后者本应只在该块内可见, 这里不做精确作用域分析, 但不让它
- * 盖掉顶层定义)。同文件没有可用定义时才看其他文件。
+ * 两种方言的"可用"不同: SCSS 顺序求值, 只认引用之前的定义; Less 惰性求值,
+ * 同一作用域内最后一个定义生效, 无论它写在引用之前还是之后。
+ * 包含同一位置的块彼此嵌套, 因此起点越大的作用域越靠内。
+ * 同文件没有可用定义时才看其他文件的顶层定义。
  */
 function lookupPreprocessor(
   definitions: readonly VariableDefinition[],
   site: LookupSite,
 ): VariableLookup {
-  const before = definitions.filter(
-    (definition) => definition.sourceUri === site.fromUri && definition.offset < site.atOffset,
+  const usable = definitions.filter(
+    (definition) =>
+      definition.sourceUri === site.fromUri &&
+      visibleAt(definition, site.atOffset) &&
+      (definition.kind === 'less' || definition.offset < site.atOffset),
   );
-  if (before.length > 0) {
-    const topLevel = before.filter((definition) => definition.isRoot === true);
-    const usable = topLevel.length > 0 ? topLevel : before;
-    return resolved(usable[usable.length - 1]);
+  if (usable.length > 0) {
+    const innermost = Math.max(...usable.map((definition) => definition.scope?.start ?? -1));
+    const inScope = usable
+      .filter((definition) => (definition.scope?.start ?? -1) === innermost)
+      .sort((a, b) => a.offset - b.offset);
+    return resolved(inScope[inScope.length - 1]);
   }
 
-  const elsewhere = definitions.filter((definition) => definition.sourceUri !== site.fromUri);
+  const elsewhere = definitions.filter(
+    (definition) => definition.sourceUri !== site.fromUri && definition.scope === undefined,
+  );
   if (elsewhere.length === 1) return resolved(elsewhere[0]);
   if (elsewhere.length > 1) return ambiguous(elsewhere);
-  // 只有本文件里位置之后的定义: 预处理器此时还没赋值。
+  // 只有本文件里位置之后的 SCSS 定义, 或只有引用不可见的块内定义。
   return { kind: 'unresolved', reason: 'no-definition' };
 }
 
