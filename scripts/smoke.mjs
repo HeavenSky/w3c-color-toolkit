@@ -14,6 +14,19 @@ import { pathToFileURL } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 
+/** 支持矩阵经 `vscode.l10n.t` 渲染文案; 冒烟不跑 VS Code, 用只做占位符替换的桩代替。 */
+const VSCODE_L10N_STUB = {
+  name: 'vscode-l10n-stub',
+  setup(builder) {
+    builder.onResolve({ filter: /^vscode$/ }, () => ({ path: 'vscode', namespace: 'vscode-stub' }));
+    builder.onLoad({ filter: /.*/, namespace: 'vscode-stub' }, () => ({
+      contents:
+        'export const l10n = { t: (template, ...args) => template.replace(/\\{(\\d+)\\}/g, (_, i) => String(args[Number(i)])) };',
+      loader: 'js',
+    }));
+  },
+};
+
 const dir = await mkdtemp(join(tmpdir(), 'w3c-color-toolkit-smoke-'));
 const outfile = join(dir, 'smoke.mjs');
 await build({
@@ -23,6 +36,7 @@ await build({
   format: 'esm',
   platform: 'node',
   logLevel: 'silent',
+  plugins: [VSCODE_L10N_STUB],
 });
 const api = await import(pathToFileURL(outfile).href);
 await rm(dir, { recursive: true, force: true });
@@ -272,7 +286,7 @@ check('隐身判定: 都不命中时启用', disableReason(disableInput, DISABLE
 
 // ── 7. 支持矩阵 ────────────────────────────────────────────────
 const rows = renderSupportMatrixRows();
-check('支持矩阵有内容', rows.includes('规范支持矩阵'), `${rows.split('\n').length} 行`);
+check('支持矩阵有内容', rows.includes('Specification Support Matrix') && !rows.includes('{0}'), `${rows.split('\n').length} 行`);
 
 console.log(`\n${failures === 0 ? '全部冒烟检查通过' : `${failures} 项冒烟检查失败`}`);
 process.exit(failures === 0 ? 0 : 1);
