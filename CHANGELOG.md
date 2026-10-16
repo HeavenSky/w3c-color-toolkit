@@ -2,6 +2,26 @@
 
 Notable changes to W3C Color Toolkit.
 
+## v0.0.9 2026-10-16 Scoped preprocessor variables
+
+### Changed
+
+- Docs: the README is now a short overview; full usage moved to
+  [the docs pages](https://github.com/HeavenSky/w3c-color-toolkit/blob/HEAD/docs/README.md), and the
+  Chinese pages live under `zh/`.
+
+### Fixed
+
+- **Less variables resolve the way Less compiles them.** The last definition in scope wins even when
+  it comes after the reference, and a variable used before its definition now shows its color
+  instead of nothing.
+- **SCSS and Less variables respect block scope.** A definition inside a block overrides outer ones
+  within that block and is no longer picked up from sibling blocks or from blocks in other files;
+  `!global` assignments still count as top-level. See
+  [Read the three outcomes of a lookup](https://github.com/HeavenSky/w3c-color-toolkit/blob/HEAD/docs/variables.md#read-the-three-outcomes-of-a-lookup).
+- **The specification support matrix follows the display language.** "Show Specification Support
+  Matrix" was always in Chinese; it is now in English, and in Chinese when VS Code runs in Chinese.
+
 ## v0.0.8 2026-10-12 Color picker keeps the original text
 
 ### Changed
