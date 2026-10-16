@@ -9,7 +9,7 @@
 export const EN = {
   'extension.displayName': 'W3C Color Toolkit',
   'extension.description':
-    'Color highlighting, hover information and format conversion with CSS Color 4/5/6 and HDR support.',
+    'Highlight, inspect, pick and convert CSS colors in any source file, from hex to oklch(), color-mix() and HDR.',
   'capabilities.untrustedWorkspaces':
     'In untrusted workspaces, only definitions from files you have open are used; other files on disk are not read.',
 
@@ -89,7 +89,7 @@ export const EN = {
 
 export const ZH_CN = {
   'extension.displayName': 'W3C Color Toolkit',
-  'extension.description': '颜色高亮、悬停信息与格式转换, 支持 CSS Color 4/5/6 与 HDR。',
+  'extension.description': '在任意源文件中高亮、查看、取色与转换 CSS 颜色, 覆盖 hex 到 oklch()、color-mix() 与 HDR。',
   'capabilities.untrustedWorkspaces': '未受信任的工作区只使用已打开文件里的定义, 不读取磁盘上的其他文件。',
 
   'config.enabled': '启用 W3C Color Toolkit。',

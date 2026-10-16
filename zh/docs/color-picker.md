@@ -1,0 +1,44 @@
+# 用取色器改色
+
+[English](../../docs/color-picker.md) · **简体中文**
+
+读完这页，你能用 VS Code 原生取色器修改颜色，并确保每个颜色只有一个色块；前提是 `editor.colorDecorators` 处于开启状态，这是 VS Code 的默认值。
+
+## 从色块打开取色器
+
+插件注册了颜色提供程序，VS Code 会在每个受支持的颜色前画出行内色块，并从这个色块打开取色器。`oklch()`、`lab()`、`color()`、`color-mix()`、相对颜色、HDR 色彩空间，以及注释和字符串里的颜色都包括在内。取色器在悬停时打开、点击时打开还是两者皆可，由 `editor.colorDecoratorsActivatedOn` 决定。
+
+## 保留原格式
+
+**只要没有改动颜色，原文就一字不变。** 取色器内部只有 8 位 sRGB 精度，所以插件把原值放在标题栏里；点击标题栏切换格式时，也是从原始颜色换算，而不是从取色器的 sRGB 近似值换算。因此在 `color(display-p3 0.2 0.8 0.4)` 上打开取色器，不会改动它。
+
+拖到新颜色后，新值优先按原格式写回，原格式不行时依次退到 hex、`rgb()`、`hsl()` 和 `oklch()`，并跳过无法表达当前 alpha 的格式。
+
+## 分清哪些色块是只读的
+
+不是普通颜色的值只给一个能看不能拖的色块，误拖一下也不会把表达式压成字面量：
+
+- 依赖上下文的值：`light-dark()`、系统颜色、`currentColor`、未解析的 `var()`；
+- 已解析的变量引用，例如 `var(--brand)` 或 `$brand`；
+- 只读语法：`color-mix()`、相对颜色、`contrast-color()`、`device-cmyk()`、`color-layers()`。
+
+确实要改写这些值时，用[转换颜色](./convert.md)。
+
+## 让每个颜色只有一个色块
+
+`advanced.colorPicker.mode` 决定插件的色块如何与其他颜色提供程序共存：
+
+| 模式 | 行为 |
+| --- | --- |
+| `dedupe`（默认） | 在 VS Code 内置语言服务也会报告颜色的语言里，每个文档版本先询问一次其他提供程序，只补上它们没覆盖的范围；其余语言全部报告。 |
+| `all` | 在所有语言里报告全部受支持的颜色，即使其他提供程序已经报告过。 |
+| `off` | 什么都不报告，VS Code 回到它自己的提供程序。 |
+
+`dedupe` 会探测 `css`、`less`、`scss`、`html`、`handlebars`、`json`、`jsonc`、`snippets`，以及其他插件挂到 HTML 或 JSON 语言服务上的所有语言。只有探测才靠得住：VS Code 会把所有提供程序的结果叠在一起画出来，不合并相同的范围，也不告诉你哪个颜色来自哪个提供程序。
+
+Tailwind CSS IntelliSense、Volar 这类第三方颜色插件无法从清单文件中识别出来。如果其中某个插件让色块重复，把它负责的语言加进 `advanced.colorPicker.dedupeLanguages`（默认 `[]`）。每加一项，每个文档版本就多一次提供程序往返；列出已经在探测的语言不会有任何效果，只会在输出面板里提示一次。
+
+## VS Code 自身的限制
+
+- 每个编辑器最多显示 `editor.colorDecoratorsLimit` 个色块（默认 500）；超过时插件在这个数量处截断，并记入日志。
+- 插件把 `editor.defaultColorDecorators` 设为 `never`，因为 VS Code 默认提供程序认得的 hex、`rgb()`、`hsl()` 都包含在本插件的报告范围内。设置界面会标明这个默认值已被插件覆盖；想恢复的话，改回 `auto` 或 `always` 即可。

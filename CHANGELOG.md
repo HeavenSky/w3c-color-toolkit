@@ -4,6 +4,11 @@ Notable changes to W3C Color Toolkit.
 
 ## v0.0.8 2026-10-12 Color picker keeps the original text
 
+### Changed
+
+- Docs: the README now shows a screenshot of each feature. The
+  images are loaded from GitHub when the page is viewed and are not packaged into the extension.
+
 ### Fixed
 
 - **Opening the native color picker no longer rewrites the color.** VS Code passes picker colors as
@@ -15,11 +20,6 @@ Notable changes to W3C Color Toolkit.
 - **Hover no longer shows `Specification: CSS Color 4` for a variable without a unique value.**
   `var(--x)`, `$x` and `@x` references with several candidate definitions have no CSS Color level;
   a variable inside a color function takes the level of its candidates when they all agree.
-
-### Changed
-
-- Docs: the README now shows a screenshot of each feature. The
-  images are loaded from GitHub when the page is viewed and are not packaged into the extension.
 
 ### Internal
 
@@ -51,14 +51,9 @@ Notable changes to W3C Color Toolkit.
 
 ### Added
 
-- `advanced.colorPicker.dedupeLanguages` (`string[]`, default `[]`) — extra language ids to probe
-  in `dedupe` mode. Built-in language services are detected automatically, but a third-party color
-  extension registers its provider at runtime with a selector that its manifest does not describe,
-  so there is nothing to detect; this list is the manual way in. Already probed and not to be
-  listed again: `css`, `less`, `scss`, `html`, `handlebars`, `json`, `jsonc`, `snippets`, plus
-  anything attached to the HTML or JSON service through a participant contribution point. Listing
-  a covered language changes nothing and is reported once in the output channel. Each entry costs
-  one extra provider round trip per document version, which is why the default is empty.
+- `advanced.colorPicker.dedupeLanguages` (`string[]`, default `[]`) lets `dedupe` mode also probe
+  the languages of a third-party color extension; see
+  [Get exactly one swatch per color](https://github.com/HeavenSky/w3c-color-toolkit/blob/HEAD/docs/color-picker.md#get-exactly-one-swatch-per-color).
 
   The built-in options go from 33 to 34.
 
@@ -88,6 +83,36 @@ overlapping with one of those still means turning off one of the two.
 
 ## v0.0.5 2026-08-12 Variables, nested swatches, dead configuration
 
+### Removed
+
+- **Breaking.** `advanced.variables.includePaths`, `advanced.variables.maxImportDepth` and
+  `advanced.variables.maxImportFiles` are gone, replaced by `advanced.variables.lookupGlobs`,
+  `advanced.variables.maxIndexedFiles` and `advanced.variables.languageIds`. The three old keys
+  only ever configured the `@import` walk, which never ran (see *Fixed*), so removing them takes
+  nothing away. Setting them now produces an `unknown-key` warning. Migration: list your token
+  files in `advanced.variables.lookupGlobs` and delete the three old keys.
+- **Breaking.** Stylus variables are no longer resolved. Colors in `.styl` files are unaffected —
+  hex, color names and color functions are still recognised — but `$brand = #ff8800` definitions
+  and `color: $brand` references are not. PostCSS has no official Stylus syntax package, and the
+  only third-party bridge depends on the Stylus compiler and `glob`, which use Node built-ins and
+  would break the browser bundle. The previous regex implementation also mis-reported the
+  definition side of `$brand = …` as a reference, because Stylus assigns with `=` rather than `:`.
+  Migration: move tokens that need a resolved swatch into a CSS, SCSS or Less file.
+- **Breaking.** Four built-in options that never did anything are gone:
+  `advanced.highlight.matchRgbWithoutFunction`, `advanced.highlight.rgbWithoutFunctionLanguages`,
+  `advanced.highlight.matchHslWithoutFunction` and `advanced.highlight.hslWithoutFunctionLanguages`.
+  They described a "bare `255, 136, 0` counts as a colour" mode that was never implemented — the
+  scanner has no such branch and `ScanOptions` has no matching field, so changing them had no effect
+  whatsoever. Setting them now produces an `unknown-key` warning in the output channel instead of
+  silently doing nothing. Migration: delete the four keys from `w3cColorToolkit.advanced`.
+- **Breaking.** Legacy settings migration is gone: the `w3cColorToolkit.migrateLegacySettings`
+  command, its Manage entry, and the whole mapping table from `color-highlight.*` / `colorInfo.*`
+  keys. The coexistence notice — the one that warns when the three original extensions are still
+  installed — is unaffected. Migration: set the equivalent `w3cColorToolkit.*` keys by hand, then
+  delete the old `color-highlight.*` / `colorInfo.*` keys.
+
+The built-in options drop from 37 to 33, and hidden commands from 31 to 30.
+
 ### Added
 
 - **Variable resolution actually works now.** `var(--brand)`, `$brand` and `@brand` resolve to real
@@ -96,39 +121,23 @@ overlapping with one of those still means turning off one of the two.
   discarded, and five adapter modules had zero importers. Definitions come from a workspace symbol
   index (see below), and the lookup during a scan is synchronous.
   `@color-profile --name { fallback: … }` is collected too, so `color(--name …)` can resolve.
-- **Colors inside a reference get their own swatch and picker.** `var(--brand, #ff8800)` shows two
-  swatches — the whole reference and the fallback — and `var(--a, var(--b, #674), #def)` shows four.
-  A swatch is drawn in front of its range, so different starting points line up side by side; the
-  de-duplication rule is therefore "one swatch per starting point" rather than per range.
-  Highlighting still marks only the outermost range, so underlines never double up.
+- **Colors inside a reference get their own swatch and picker**: `var(--brand, #ff8800)` shows two;
+  see [Work with nested and resolved references](https://github.com/HeavenSky/w3c-color-toolkit/blob/HEAD/docs/variables.md#work-with-nested-and-resolved-references).
 - Hover, `Convert Color` and the picker all act on the **innermost** color at the cursor, so working
   on a nested value edits that value and not the expression around it.
-- **Variable definitions are found by glob, not by following `@import`.** A workspace symbol index
-  is built from `advanced.variables.lookupGlobs` and kept current with a file watcher; `@import` /
-  `@use` / `@forward` still pull in files the globs missed. Stylesheets are frequently combined by a
-  JS bundler with no CSS level import at all, and following the import graph never saw those token
-  files. Editing an open file updates the index from the editor content, so definitions take effect
-  before you save.
-- **"Not unique" is now its own outcome.** A variable defined under
-  `@media (prefers-color-scheme: dark)` or only under selectors like `[data-theme="…"]` used to be
-  dropped exactly like an undefined one. The hover now lists every candidate with where it comes
-  from, while the swatch and the highlight stay hidden — the value genuinely depends on the element
-  or the environment, so it is not guessed. When the variable is a fragment of a color function,
-  each candidate is substituted back into the whole expression so its color can be previewed.
+- **Variable definitions are found by glob, not by following `@import`**, so token files combined by a
+  JS bundler are found too; see
+  [Let the extension find your token files](https://github.com/HeavenSky/w3c-color-toolkit/blob/HEAD/docs/variables.md#let-the-extension-find-your-token-files).
+- **"Not unique" is now its own outcome**: a variable defined per theme or per media query lists every
+  candidate in the hover instead of disappearing; see
+  [Read the three outcomes of a lookup](https://github.com/HeavenSky/w3c-color-toolkit/blob/HEAD/docs/variables.md#read-the-three-outcomes-of-a-lookup).
 - **Definitions are collected from a real CSS AST.** `postcss`, `postcss-scss` and `postcss-less`
   replace 13 hand-written regular expressions. Comments, nested rules, conditional at-rules and
   dialect differences are now handled structurally rather than pattern by pattern; a file with a
   syntax error only stops contributing its own definitions.
-- **A variable used as a fragment of a color function now resolves.** `rgb(var(--channels) / 0.4)`,
-  `rgba(var(--x), 0.4)`, `hsl(var(--h) 50% 50%)` and `color-mix(in srgb, var(--a), red)` used to show
-  nothing at all: the whole function failed to parse statically, and the scanner did not descend into
-  a color function, so the inner reference never got a swatch either. `var()` is now substituted back
-  into the text before parsing, which makes Tailwind-style channel tokens
-  (`--channels: 148 163 184` — a value that is not a color on its own) work. The whole expression and
-  the inner reference each get a swatch, and the result is read only like any other resolved
-  reference. Preprocessor variables used the same way (`rgba($brand, 0.4)`) still do not resolve as a
-  whole — substituting them yields SCSS/Less's `rgba(color, alpha)` overload rather than CSS syntax —
-  but the inner `$brand` now gets its own swatch.
+- **A variable used as a fragment of a color function now resolves**, such as Tailwind-style
+  `rgb(var(--channels) / 0.4)`; see
+  [Use variables inside color functions](https://github.com/HeavenSky/w3c-color-toolkit/blob/HEAD/docs/variables.md#use-variables-inside-color-functions).
 
 ### Changed
 
@@ -169,51 +178,7 @@ overlapping with one of those still means turning off one of the two.
   Comments are now stripped from the selector text. This affected every custom property whose `:root`
   block happened to be introduced by a comment, which is most real stylesheets.
 
-### Removed
-
-- **Breaking.** `advanced.variables.includePaths`, `advanced.variables.maxImportDepth` and
-  `advanced.variables.maxImportFiles` are gone, replaced by `advanced.variables.lookupGlobs`,
-  `advanced.variables.maxIndexedFiles` and `advanced.variables.languageIds`. The three old keys
-  only ever configured the `@import` walk, which never ran (see *Fixed*), so removing them takes
-  nothing away. Setting them now produces an `unknown-key` warning.
-- **Breaking.** Stylus variables are no longer resolved. Colors in `.styl` files are unaffected —
-  hex, color names and color functions are still recognised — but `$brand = #ff8800` definitions
-  and `color: $brand` references are not. PostCSS has no official Stylus syntax package, and the
-  only third-party bridge depends on the Stylus compiler and `glob`, which use Node built-ins and
-  would break the browser bundle. The previous regex implementation also mis-reported the
-  definition side of `$brand = …` as a reference, because Stylus assigns with `=` rather than `:`.
-- **Breaking.** Four built-in options that never did anything are gone:
-  `advanced.highlight.matchRgbWithoutFunction`, `advanced.highlight.rgbWithoutFunctionLanguages`,
-  `advanced.highlight.matchHslWithoutFunction` and `advanced.highlight.hslWithoutFunctionLanguages`.
-  They described a "bare `255, 136, 0` counts as a colour" mode that was never implemented — the
-  scanner has no such branch and `ScanOptions` has no matching field, so changing them had no effect
-  whatsoever. Setting them now produces an `unknown-key` warning in the output channel instead of
-  silently doing nothing.
-- **Breaking.** Legacy settings migration is gone: the `w3cColorToolkit.migrateLegacySettings`
-  command, its Manage entry, and the whole mapping table from `color-highlight.*` / `colorInfo.*`
-  keys. Configure this extension directly instead. The coexistence notice — the one that warns when
-  the three original extensions are still installed — is unaffected.
-
-The built-in options drop from 37 to 33, and hidden commands from 31 to 30.
-
 ## v0.0.4 2026-08-11 Disable mode
-
-### Added
-
-- A disable mode that makes the extension go fully invisible in files you do not want it in. Three
-  built-in options, any one of which is enough (they are OR-ed):
-  `advanced.disable.maxFileSizeMb` (number, default `1`, decimals allowed, `0` = no limit),
-  `advanced.disable.fileNames` (default `["*.min.*", "*.map"]`) and
-  `advanced.disable.languageIds` (default `["log", "plaintext"]`), both gitignore-style patterns.
-  A hidden file gets no highlighting, no overview-ruler marker, no inline swatch or native picker,
-  no hover, and the conversion commands plus *Report unsupported syntax* do nothing; it is never
-  scanned either, so the size limit really is a performance guard rather than work that is computed
-  and thrown away. The reason is logged once per file in the output channel.
-- Patterns follow gitignore semantics — later entries win and `!` re-enables — but are matched
-  against the file name or the language id alone, so a pattern containing `/` is ignored and
-  reported. `!` applies within its own list; it cannot rescue a file the other list excluded.
-  The language dimension exists because a name pattern cannot catch `Dockerfile`, `Makefile`, or a
-  file whose language you switched by hand.
 
 ### Removed
 
@@ -228,7 +193,15 @@ The built-in options drop from 37 to 33, and hidden commands from 31 to 30.
   The old key only skipped indexing — hover still fell back to scanning the current line, so an
   over-size document was not actually left alone. The new key hides the extension outright. The unit
   is now MB of UTF-16 code units rather than KB of bytes, so for non-ASCII text the effective limit
-  is looser than the size on disk.
+  is looser than the size on disk. Migration: set `advanced.disable.maxFileSizeMb` to the old value
+  divided by 1024 and delete the old key.
+
+### Added
+
+- A disable mode hides the extension completely, without scanning, in files over
+  `advanced.disable.maxFileSizeMb` (default `1`) or matching `advanced.disable.fileNames` /
+  `advanced.disable.languageIds`; see
+  [Keep the extension out of some files](https://github.com/HeavenSky/w3c-color-toolkit/blob/HEAD/docs/configuration.md#keep-the-extension-out-of-some-files).
 
 ### Changed
 
@@ -274,24 +247,11 @@ The built-in options drop from 37 to 33, and hidden commands from 31 to 30.
 
 ### Added
 
-- Inline swatches and the native colour picker: registering a `DocumentColorProvider` makes VS Code
-  draw inline swatches and offer its native picker on hover for every syntax this extension
-  supports — `oklch()`, `lab()`, `color()`, `color-mix()`, relative colours, HDR spaces, and
-  colours inside comments and strings — none of which the built-in providers cover. Ranges come
-  from the same field table the highlighter uses; the count is truncated at
-  `editor.colorDecoratorsLimit` (500 by default) and logged. Controlled by
-  `advanced.colorPicker.mode`: `dedupe` (default), `all`, `off`; the "Enable Features" command has
-  a matching toggle.
-  - In `css` / `less` / `scss`, `dedupe` probes the other colour providers once per document
-    version and fills in only the ranges they miss, so no colour ever gets two swatches. The probe
-    is unavoidable: VS Code overlays the results of every provider without deduplicating by range,
-    stops using its built-in default provider as soon as any extension returns an array (even an
-    empty one), and `vscode.executeDocumentColorProvider` does not report which provider produced
-    what.
-  - When the picker writes back it keeps the original format where possible and skips formats that
-    cannot express alpha. Context-dependent values and read-only syntax (`color-mix()`, relative
-    colours, `contrast-color()`, `device-cmyk()`, `color-layers()`) get a read-only swatch with no
-    candidate replacements, so a stray drag cannot flatten an expression into a literal.
+- Inline swatches and the native colour picker for every syntax this extension supports, including
+  `oklch()`, `color()` and colours inside comments and strings, controlled by
+  `advanced.colorPicker.mode` (`dedupe` by default, which in `css` / `less` / `scss` fills in only
+  the ranges other providers miss); see
+  [Edit colors with the picker](https://github.com/HeavenSky/w3c-color-toolkit/blob/HEAD/docs/color-picker.md).
 - `contributes.configurationDefaults` sets `editor.defaultColorDecorators` to `never`: the hex and
   `rgb()`/`hsl()` forms the built-in provider recognises are a strict subset of what this extension
   reports, so turning it off removes only the overlap and loses no coverage. Users can still set it

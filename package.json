@@ -5,6 +5,10 @@
   "version": "0.0.8",
   "license": "MIT",
   "publisher": "HeavenSky",
+  "author": {
+    "name": "calla",
+    "email": "aurora.calla@outlook.com"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/HeavenSky/w3c-color-toolkit"
@@ -34,7 +38,6 @@
     "package.nls.zh-cn.json",
     "LICENSE.txt",
     "NOTICE.md",
-    "README.zh-cn.md",
     "CHANGELOG.md"
   ],
   "engines": {

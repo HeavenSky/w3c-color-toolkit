@@ -77,6 +77,6 @@
   "config.highlight": "颜色高亮样式。`square-before` / `square-after` 画实心色块, `dot-before` / `dot-after` 画圆点; `off` 表示关闭高亮。",
   "config.info": "悬停时显示颜色信息。",
   "config.precision": "生成颜色值时保留的有效数字位数。",
-  "extension.description": "颜色高亮、悬停信息与格式转换, 支持 CSS Color 4/5/6 与 HDR。",
+  "extension.description": "在任意源文件中高亮、查看、取色与转换 CSS 颜色, 覆盖 hex 到 oklch()、color-mix() 与 HDR。",
   "extension.displayName": "W3C Color Toolkit"
 }

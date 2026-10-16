@@ -77,6 +77,6 @@
   "config.highlight": "Color highlight style. \"square-before\" / \"square-after\" draw a filled swatch, \"dot-before\" / \"dot-after\" a bullet. \"off\" disables highlighting.",
   "config.info": "Show color information on hover.",
   "config.precision": "Number of significant digits in generated color values.",
-  "extension.description": "Color highlighting, hover information and format conversion with CSS Color 4/5/6 and HDR support.",
+  "extension.description": "Highlight, inspect, pick and convert CSS colors in any source file, from hex to oklch(), color-mix() and HDR.",
   "extension.displayName": "W3C Color Toolkit"
 }
