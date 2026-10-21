@@ -1,5 +1,7 @@
 # Changelog
 
+**English** · [简体中文](./zh/CHANGELOG.md)
+
 Notable changes to W3C Color Toolkit.
 
 ## v0.0.9 2026-10-16 Scoped preprocessor variables

@@ -58,7 +58,7 @@ Color Highlight、Color Info 和 Change Color Format 三个插件分头做的事
 
 - [文档索引](./docs/README.md)：配置、支持的语法与故障排查。
 - 命令与设置的完整列表见插件市场页的 Feature Contributions 标签。
-- 每个版本的变化见英文版[变更记录](../CHANGELOG.md)。
+- 每个版本的变化见[更新日志](./CHANGELOG.md)。
 
 ## 许可证
 
