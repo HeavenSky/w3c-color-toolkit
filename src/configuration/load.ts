@@ -4,98 +4,98 @@
  * 这是 core 与 vscode API 的唯一配置接缝: core 只接受下面的纯数据结构,
  * 因此单元测试可以直接构造配置而不需要 vscode 环境。
  */
-import * as vscode from 'vscode';
+import * as vscode from "vscode";
 
-import type { MatchWords } from '../core/scanner.js';
-import type { GamutMapping, HdrToneMapping, HexCase, RgbHslSyntax } from '../core/types.js';
+import type { MatchWords } from "../core/scanner.js";
+import type { GamutMapping, HdrToneMapping, HexCase, RgbHslSyntax } from "../core/types.js";
 
-import { resolveAdvanced, type AdvancedResolution } from './advanced.js';
-import { ADVANCED_KEY, CONFIG_SECTION } from './schema.js';
+import { resolveAdvanced, type AdvancedResolution } from "./advanced.js";
+import { ADVANCED_KEY, CONFIG_SECTION } from "./schema.js";
 
 export type MarkerType =
-  | 'off'
-  | 'background'
-  | 'foreground'
-  | 'outline'
-  | 'underline'
-  | 'dot-before'
-  | 'dot-after'
-  | 'square-before'
-  | 'square-after';
+	| "off"
+	| "background"
+	| "foreground"
+	| "outline"
+	| "underline"
+	| "dot-before"
+	| "dot-after"
+	| "square-before"
+	| "square-after";
 
-export type LogLevel = 'off' | 'error' | 'warn' | 'info' | 'debug';
+export type LogLevel = "off" | "error" | "warn" | "info" | "debug";
 
 /**
  * 原生色块与取色器的提供范围。
  * `dedupe` 在内置提供器也会给颜色的语言里先探测其他提供器覆盖了哪些 range, 只补空缺。
  */
-export type ColorPickerMode = 'off' | 'dedupe' | 'all';
+export type ColorPickerMode = "off" | "dedupe" | "all";
 
 export interface RuntimeConfiguration {
-  readonly enabled: boolean;
-  readonly markerType: MarkerType;
-  readonly highlightEnabled: boolean;
-  readonly infoEnabled: boolean;
-  readonly convertSyntax: RgbHslSyntax;
-  readonly precision: number;
-  readonly cssColor6: boolean;
-  readonly cssColorHdr: boolean;
+	readonly enabled: boolean;
+	readonly markerType: MarkerType;
+	readonly highlightEnabled: boolean;
+	readonly infoEnabled: boolean;
+	readonly convertSyntax: RgbHslSyntax;
+	readonly precision: number;
+	readonly cssColor6: boolean;
+	readonly cssColorHdr: boolean;
 
-  // 内置层
-  /** 隐身阈值, 单位 MB, 按 UTF-16 码元计; `0` 表示不限制。 */
-  readonly maxFileSizeMb: number;
-  /** 命中即隐身的文件名模式 (gitignore 语法, 只匹配文件名)。 */
-  readonly disabledFileNames: readonly string[];
-  /** 命中即隐身的 language id 模式 (gitignore 语法)。 */
-  readonly disabledLanguageIds: readonly string[];
-  readonly markRuler: boolean;
-  readonly matchWords: MatchWords;
-  readonly hexAlphaOrder: 'rgba' | 'argb';
-  readonly maxMatchesPerDocument: number;
-  readonly hdrToneMapping: HdrToneMapping;
-  /** 原生行内色块与 Hover 取色器的提供范围。 */
-  readonly colorPickerMode: ColorPickerMode;
-  /**
-   * `dedupe` 模式下额外探测的语言, 用于第三方颜色扩展。
-   *
-   * 内置语言服务覆盖的语言 (css / less / scss, html / handlebars, json / jsonc / snippets,
-   * 以及参与者贡献点挂进来的语言) 已自动探测, 不必列出; 重复列出无害但会被忽略,
-   * 并在输出面板记一条提示。
-   */
-  readonly colorPickerDedupeLanguages: readonly string[];
-  /** 字段范围, 同时作用于 Hover 行与高亮语法; null 表示默认顺序。 */
-  readonly fields: readonly string[] | null;
-  readonly excludedFields: readonly string[];
-  readonly infoPreviewSize: 'small' | 'large';
-  readonly infoPreviewShape: 'square' | 'rectangle';
-  readonly infoShowDiagnostics: boolean;
-  readonly infoShowSpecLevel: boolean;
-  readonly convertEnabled: boolean;
-  readonly alphaLoss: 'reject' | 'confirm' | 'drop';
-  readonly missingComponentLoss: 'confirm' | 'compute';
-  readonly namedColorFallback: 'reject' | 'nearest';
-  readonly recentFirst: boolean;
-  readonly gamutMapping: GamutMapping;
-  readonly hexCase: HexCase;
-  readonly scanComments: boolean;
-  readonly scanStrings: boolean;
-  readonly contextualPreview: 'off' | 'light' | 'dark';
-  readonly variablesResolve: boolean;
-  readonly variablesLookupGlobs: readonly string[];
-  readonly maxIndexedFiles: number;
-  /** null 表示用内置默认语言表。 */
-  readonly variablesLanguageIds: readonly string[] | null;
-  readonly maxResolveDepth: number;
-  readonly hdrAssumedHeadroom: number;
-  readonly coexistenceNotify: boolean;
-  readonly logLevel: LogLevel;
+	// 内置层
+	/** 隐身阈值, 单位 MB, 按 UTF-16 码元计; `0` 表示不限制。 */
+	readonly maxFileSizeMb: number;
+	/** 命中即隐身的文件名模式 (gitignore 语法, 只匹配文件名)。 */
+	readonly disabledFileNames: readonly string[];
+	/** 命中即隐身的 language id 模式 (gitignore 语法)。 */
+	readonly disabledLanguageIds: readonly string[];
+	readonly markRuler: boolean;
+	readonly matchWords: MatchWords;
+	readonly hexAlphaOrder: "rgba" | "argb";
+	readonly maxMatchesPerDocument: number;
+	readonly hdrToneMapping: HdrToneMapping;
+	/** 原生行内色块与 Hover 取色器的提供范围。 */
+	readonly colorPickerMode: ColorPickerMode;
+	/**
+	 * `dedupe` 模式下额外探测的语言, 用于第三方颜色扩展。
+	 *
+	 * 内置语言服务覆盖的语言 (css / less / scss, html / handlebars, json / jsonc / snippets,
+	 * 以及参与者贡献点挂进来的语言) 已自动探测, 不必列出; 重复列出无害但会被忽略,
+	 * 并在输出面板记一条提示。
+	 */
+	readonly colorPickerDedupeLanguages: readonly string[];
+	/** 字段范围, 同时作用于 Hover 行与高亮语法; null 表示默认顺序。 */
+	readonly fields: readonly string[] | null;
+	readonly excludedFields: readonly string[];
+	readonly infoPreviewSize: "small" | "large";
+	readonly infoPreviewShape: "square" | "rectangle";
+	readonly infoShowDiagnostics: boolean;
+	readonly infoShowSpecLevel: boolean;
+	readonly convertEnabled: boolean;
+	readonly alphaLoss: "reject" | "confirm" | "drop";
+	readonly missingComponentLoss: "confirm" | "compute";
+	readonly namedColorFallback: "reject" | "nearest";
+	readonly recentFirst: boolean;
+	readonly gamutMapping: GamutMapping;
+	readonly hexCase: HexCase;
+	readonly scanComments: boolean;
+	readonly scanStrings: boolean;
+	readonly contextualPreview: "off" | "light" | "dark";
+	readonly variablesResolve: boolean;
+	readonly variablesLookupGlobs: readonly string[];
+	readonly maxIndexedFiles: number;
+	/** null 表示用内置默认语言表。 */
+	readonly variablesLanguageIds: readonly string[] | null;
+	readonly maxResolveDepth: number;
+	readonly hdrAssumedHeadroom: number;
+	readonly coexistenceNotify: boolean;
+	readonly logLevel: LogLevel;
 
-  /** `advanced` 的解析结果, 供"显示生效配置"与告警使用。 */
-  readonly advanced: AdvancedResolution;
+	/** `advanced` 的解析结果, 供"显示生效配置"与告警使用。 */
+	readonly advanced: AdvancedResolution;
 }
 
 /** `contextualPreview` 的原始取值; `auto` 在此层解析掉, core 只见到三种确定值。 */
-type ContextualPreviewSetting = 'off' | 'auto' | 'light' | 'dark';
+type ContextualPreviewSetting = "off" | "auto" | "light" | "dark";
 
 /**
  * `auto` 跟随编辑器当前主题。
@@ -104,110 +104,112 @@ type ContextualPreviewSetting = 'off' | 'auto' | 'light' | 'dark';
  * `light-dark()` 按它取分支比"没有预览"更有用。Hover 仍标注为假设值。
  * 主题切换由 `activate.ts` 的 `onDidChangeActiveColorTheme` 触发重扫。
  */
-function resolveContextualPreview(value: ContextualPreviewSetting): 'off' | 'light' | 'dark' {
-  if (value !== 'auto') return value;
-  const kind = vscode.window.activeColorTheme.kind;
-  return kind === vscode.ColorThemeKind.Light || kind === vscode.ColorThemeKind.HighContrastLight
-    ? 'light'
-    : 'dark';
+function resolveContextualPreview(value: ContextualPreviewSetting): "off" | "light" | "dark" {
+	if (value !== "auto") return value;
+	const kind = vscode.window.activeColorTheme.kind;
+	return kind === vscode.ColorThemeKind.Light || kind === vscode.ColorThemeKind.HighContrastLight
+		? "light"
+		: "dark";
 }
 
 function readAdvanced(scope: vscode.ConfigurationScope | undefined): AdvancedResolution {
-  const inspected = vscode.workspace
-    .getConfiguration(CONFIG_SECTION, scope)
-    .inspect<Record<string, unknown>>(ADVANCED_KEY);
-  return resolveAdvanced({
-    user: inspected?.globalValue,
-    workspace: inspected?.workspaceValue,
-    folder: inspected?.workspaceFolderValue,
-  });
+	const inspected = vscode.workspace
+		.getConfiguration(CONFIG_SECTION, scope)
+		.inspect<Record<string, unknown>>(ADVANCED_KEY);
+	return resolveAdvanced({
+		user: inspected?.globalValue,
+		workspace: inspected?.workspaceValue,
+		folder: inspected?.workspaceFolderValue,
+	});
 }
 
 /** 读取当前生效配置。`scope` 传入资源时可得到 folder 级配置。 */
 export function loadConfiguration(scope?: vscode.ConfigurationScope): RuntimeConfiguration {
-  const config = vscode.workspace.getConfiguration(CONFIG_SECTION, scope);
-  const advanced = readAdvanced(scope);
-  const get = <T>(key: string): T => advanced.values[key] as T;
+	const config = vscode.workspace.getConfiguration(CONFIG_SECTION, scope);
+	const advanced = readAdvanced(scope);
+	const get = <T>(key: string): T => advanced.values[key] as T;
 
-  const markerType = config.get<MarkerType>('highlight', 'underline');
-  const experimental = config.get<string[]>('experimental', ['cssColor6', 'cssColorHdr']);
+	const markerType = config.get<MarkerType>("highlight", "underline");
+	const experimental = config.get<string[]>("experimental", ["cssColor6", "cssColorHdr"]);
 
-  return {
-    enabled: config.get<boolean>('enabled', true),
-    markerType,
-    highlightEnabled: markerType !== 'off',
-    infoEnabled: config.get<boolean>('info', true),
-    convertSyntax: config.get<RgbHslSyntax>('convertSyntax', 'legacy'),
-    precision: config.get<number>('precision', 3),
-    cssColor6: experimental.includes('cssColor6'),
-    cssColorHdr: experimental.includes('cssColorHdr'),
+	return {
+		enabled: config.get<boolean>("enabled", true),
+		markerType,
+		highlightEnabled: markerType !== "off",
+		infoEnabled: config.get<boolean>("info", true),
+		convertSyntax: config.get<RgbHslSyntax>("convertSyntax", "legacy"),
+		precision: config.get<number>("precision", 3),
+		cssColor6: experimental.includes("cssColor6"),
+		cssColorHdr: experimental.includes("cssColorHdr"),
 
-    maxFileSizeMb: get<number>('disable.maxFileSizeMb'),
-    disabledFileNames: get<string[]>('disable.fileNames'),
-    disabledLanguageIds: get<string[]>('disable.languageIds'),
-    markRuler: get<boolean>('highlight.markRuler'),
-    matchWords: get<MatchWords>('highlight.matchWords'),
-    hexAlphaOrder: get<'rgba' | 'argb'>('highlight.hexAlphaOrder'),
-    maxMatchesPerDocument: get<number>('highlight.maxMatchesPerDocument'),
-    hdrToneMapping: get<HdrToneMapping>('highlight.hdrToneMapping'),
-    colorPickerMode: get<ColorPickerMode>('colorPicker.mode'),
-    colorPickerDedupeLanguages: get<string[]>('colorPicker.dedupeLanguages'),
-    fields: get<string[] | null>('fields.enabled'),
-    excludedFields: get<string[]>('fields.excluded'),
-    infoPreviewSize: get<'small' | 'large'>('info.previewSize'),
-    infoPreviewShape: get<'square' | 'rectangle'>('info.previewShape'),
-    infoShowDiagnostics: get<boolean>('info.showDiagnostics'),
-    infoShowSpecLevel: get<boolean>('info.showSpecLevel'),
-    convertEnabled: get<boolean>('convert.enabled'),
-    alphaLoss: get<'reject' | 'confirm' | 'drop'>('convert.alphaLoss'),
-    missingComponentLoss: get<'confirm' | 'compute'>('convert.missingComponentLoss'),
-    namedColorFallback: get<'reject' | 'nearest'>('convert.namedColorFallback'),
-    recentFirst: get<boolean>('convert.recentFirst'),
-    gamutMapping: get<GamutMapping>('output.gamutMapping'),
-    hexCase: get<HexCase>('output.hexCase'),
-    scanComments: get<boolean>('scan.comments'),
-    scanStrings: get<boolean>('scan.strings'),
-    contextualPreview: resolveContextualPreview(get<ContextualPreviewSetting>('contextualPreview')),
-    variablesResolve: get<boolean>('variables.resolve'),
-    variablesLookupGlobs: get<string[]>('variables.lookupGlobs'),
-    maxIndexedFiles: get<number>('variables.maxIndexedFiles'),
-    variablesLanguageIds: get<string[] | null>('variables.languageIds'),
-    maxResolveDepth: get<number>('variables.maxResolveDepth'),
-    hdrAssumedHeadroom: get<number>('experimental.hdrAssumedHeadroom'),
-    coexistenceNotify: get<boolean>('coexistence.notify'),
-    logLevel: get<LogLevel>('logLevel'),
+		maxFileSizeMb: get<number>("disable.maxFileSizeMb"),
+		disabledFileNames: get<string[]>("disable.fileNames"),
+		disabledLanguageIds: get<string[]>("disable.languageIds"),
+		markRuler: get<boolean>("highlight.markRuler"),
+		matchWords: get<MatchWords>("highlight.matchWords"),
+		hexAlphaOrder: get<"rgba" | "argb">("highlight.hexAlphaOrder"),
+		maxMatchesPerDocument: get<number>("highlight.maxMatchesPerDocument"),
+		hdrToneMapping: get<HdrToneMapping>("highlight.hdrToneMapping"),
+		colorPickerMode: get<ColorPickerMode>("colorPicker.mode"),
+		colorPickerDedupeLanguages: get<string[]>("colorPicker.dedupeLanguages"),
+		fields: get<string[] | null>("fields.enabled"),
+		excludedFields: get<string[]>("fields.excluded"),
+		infoPreviewSize: get<"small" | "large">("info.previewSize"),
+		infoPreviewShape: get<"square" | "rectangle">("info.previewShape"),
+		infoShowDiagnostics: get<boolean>("info.showDiagnostics"),
+		infoShowSpecLevel: get<boolean>("info.showSpecLevel"),
+		convertEnabled: get<boolean>("convert.enabled"),
+		alphaLoss: get<"reject" | "confirm" | "drop">("convert.alphaLoss"),
+		missingComponentLoss: get<"confirm" | "compute">("convert.missingComponentLoss"),
+		namedColorFallback: get<"reject" | "nearest">("convert.namedColorFallback"),
+		recentFirst: get<boolean>("convert.recentFirst"),
+		gamutMapping: get<GamutMapping>("output.gamutMapping"),
+		hexCase: get<HexCase>("output.hexCase"),
+		scanComments: get<boolean>("scan.comments"),
+		scanStrings: get<boolean>("scan.strings"),
+		contextualPreview: resolveContextualPreview(
+			get<ContextualPreviewSetting>("contextualPreview")
+		),
+		variablesResolve: get<boolean>("variables.resolve"),
+		variablesLookupGlobs: get<string[]>("variables.lookupGlobs"),
+		maxIndexedFiles: get<number>("variables.maxIndexedFiles"),
+		variablesLanguageIds: get<string[] | null>("variables.languageIds"),
+		maxResolveDepth: get<number>("variables.maxResolveDepth"),
+		hdrAssumedHeadroom: get<number>("experimental.hdrAssumedHeadroom"),
+		coexistenceNotify: get<boolean>("coexistence.notify"),
+		logLevel: get<LogLevel>("logLevel"),
 
-    advanced,
-  };
+		advanced,
+	};
 }
 
 /** 配置摘要: 用于判断索引是否需要失效。 */
 export function configurationDigest(config: RuntimeConfiguration): string {
-  return JSON.stringify([
-    config.enabled,
-    config.maxFileSizeMb,
-    config.disabledFileNames,
-    config.disabledLanguageIds,
-    config.markerType,
-    config.markRuler,
-    config.infoEnabled,
-    config.convertSyntax,
-    config.precision,
-    config.cssColor6,
-    config.cssColorHdr,
-    config.matchWords,
-    config.scanComments,
-    config.scanStrings,
-    config.gamutMapping,
-    config.hexCase,
-    config.contextualPreview,
-    config.hdrAssumedHeadroom,
-    config.variablesResolve,
-    // 变量解析的其余参数同样改变扫描结果: 搜索路径变了, 能解析到的定义就变了。
-    config.variablesLookupGlobs,
-    config.maxIndexedFiles,
-    config.variablesLanguageIds,
-    config.maxResolveDepth,
-    config.maxMatchesPerDocument,
-  ]);
+	return JSON.stringify([
+		config.enabled,
+		config.maxFileSizeMb,
+		config.disabledFileNames,
+		config.disabledLanguageIds,
+		config.markerType,
+		config.markRuler,
+		config.infoEnabled,
+		config.convertSyntax,
+		config.precision,
+		config.cssColor6,
+		config.cssColorHdr,
+		config.matchWords,
+		config.scanComments,
+		config.scanStrings,
+		config.gamutMapping,
+		config.hexCase,
+		config.contextualPreview,
+		config.hdrAssumedHeadroom,
+		config.variablesResolve,
+		// 变量解析的其余参数同样改变扫描结果: 搜索路径变了, 能解析到的定义就变了。
+		config.variablesLookupGlobs,
+		config.maxIndexedFiles,
+		config.variablesLanguageIds,
+		config.maxResolveDepth,
+		config.maxMatchesPerDocument,
+	]);
 }

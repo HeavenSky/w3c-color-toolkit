@@ -44,7 +44,10 @@ for (let i = start + 1; i < lines.length; i += 1) {
 	}
 }
 
-const body = lines.slice(start + 1, end).join("\n").trim();
+const body = lines
+	.slice(start + 1, end)
+	.join("\n")
+	.trim();
 if (body === "") {
 	console.error(`版本 ${version} 的小节正文为空`);
 	process.exit(1);

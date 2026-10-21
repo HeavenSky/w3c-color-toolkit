@@ -6,13 +6,13 @@ This page shows how CSS custom properties and SCSS or Less variables are turned 
 
 ## Know which references resolve
 
-| Reference | Where it resolves |
-| --- | --- |
-| `var(--brand)` | Every variable language, see below |
+| Reference                    | Where it resolves                                                        |
+| ---------------------------- | ------------------------------------------------------------------------ |
+| `var(--brand)`               | Every variable language, see below                                       |
 | `rgb(var(--channels) / 0.4)` | Same; the variable is substituted into the color function before parsing |
-| `$brand` | `scss`, `sass` |
-| `@brand` | `less` |
-| Stylus `brand` or `$brand` | Not resolved; colors in `.styl` files are still recognized |
+| `$brand`                     | `scss`, `sass`                                                           |
+| `@brand`                     | `less`                                                                   |
+| Stylus `brand` or `$brand`   | Not resolved; colors in `.styl` files are still recognized               |
 
 Variable references are recognized in the languages listed in `advanced.variables.languageIds`. The default `null` means `css`, `scss`, `sass`, `less`, `postcss` and `tailwindcss`; the last one is there because Tailwind CSS IntelliSense switches CSS files to that language.
 
@@ -41,8 +41,12 @@ Definitions are read from a real stylesheet syntax tree, so a commented-out defi
 `rgb(var(--channels) / 0.4)`, `rgba(var(--x), 0.4)`, `hsl(var(--h) 50% 50%)` and `color-mix(in srgb, var(--a), red)` substitute the variable back into the text before parsing. That makes Tailwind-style channel tokens work:
 
 ```css
-:root { --channels: 148 163 184; }
-.badge { background: rgb(var(--channels) / 0.4); }
+:root {
+	--channels: 148 163 184;
+}
+.badge {
+	background: rgb(var(--channels) / 0.4);
+}
 ```
 
 - A fallback applies when the variable is not found: `var(--missing, 1 2 3)`.
@@ -54,7 +58,7 @@ Definitions are read from a real stylesheet syntax tree, so a commented-out defi
 
 Every color inside a reference gets its own swatch: `var(--brand, #ff8800)` shows two, one for the whole reference and one for the fallback, and `var(--a, var(--b, #674), #def)` shows four. Highlighting marks only the outermost range, so underlines never double up.
 
-**A resolved reference is read only.** The picker shows its color without letting you drag it, and *Convert Color* refuses and names the variable, because rewriting `var(--brand)` into `#ff8800` would destroy the token.
+**A resolved reference is read only.** The picker shows its color without letting you drag it, and _Convert Color_ refuses and names the variable, because rewriting `var(--brand)` into `#ff8800` would destroy the token.
 
 ## Know what is not evaluated
 

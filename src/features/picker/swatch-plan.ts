@@ -8,11 +8,11 @@
  * - 算出"哪些语言里有内置提供器也会给颜色", 决定要不要探测;
  * - 决定一次探测结果能不能进缓存, 以及缓存怎么按文档隔离与淘汰。
  */
-import type { ColorMatch, ColorRange } from '../../core/types.js';
+import type { ColorMatch, ColorRange } from "../../core/types.js";
 
 /** range 的稳定键; 与其他提供器比对时按精确 range 匹配。 */
 export function rangeKey(range: ColorRange): string {
-  return `${range.start}:${range.end}`;
+	return `${range.start}:${range.end}`;
 }
 
 /**
@@ -23,9 +23,9 @@ export function rangeKey(range: ColorRange): string {
  * 因此语言集合不是常量, 必须在运行时把所有扩展的这个贡献点合并进来。
  */
 export interface BuiltInColorProvider {
-  readonly extensionId: string;
-  readonly baseLanguageIds: readonly string[];
-  readonly participantsKey?: string;
+	readonly extensionId: string;
+	readonly baseLanguageIds: readonly string[];
+	readonly participantsKey?: string;
 }
 
 /**
@@ -42,17 +42,17 @@ export interface BuiltInColorProvider {
  * 服务没有声明该能力, 所以不在此列。
  */
 export const BUILT_IN_COLOR_PROVIDERS: readonly BuiltInColorProvider[] = [
-  { extensionId: 'vscode.css-language-features', baseLanguageIds: ['css', 'less', 'scss'] },
-  {
-    extensionId: 'vscode.html-language-features',
-    baseLanguageIds: ['html'],
-    participantsKey: 'htmlLanguageParticipants',
-  },
-  {
-    extensionId: 'vscode.json-language-features',
-    baseLanguageIds: ['json', 'jsonc', 'snippets'],
-    participantsKey: 'jsonLanguageParticipants',
-  },
+	{ extensionId: "vscode.css-language-features", baseLanguageIds: ["css", "less", "scss"] },
+	{
+		extensionId: "vscode.html-language-features",
+		baseLanguageIds: ["html"],
+		participantsKey: "htmlLanguageParticipants",
+	},
+	{
+		extensionId: "vscode.json-language-features",
+		baseLanguageIds: ["json", "jsonc", "snippets"],
+		participantsKey: "jsonLanguageParticipants",
+	},
 ];
 
 /**
@@ -63,31 +63,32 @@ export const BUILT_IN_COLOR_PROVIDERS: readonly BuiltInColorProvider[] = [
  * "要不要探测"与"探测到的空结果能不能缓存", 两个扩展的就绪时机没有实质差别。
  */
 export function builtInColorLanguages(
-  packageJsons: Iterable<unknown>,
+	packageJsons: Iterable<unknown>
 ): ReadonlyMap<string, string> {
-  const byLanguage = new Map<string, string>();
-  for (const provider of BUILT_IN_COLOR_PROVIDERS) {
-    for (const languageId of provider.baseLanguageIds) {
-      byLanguage.set(languageId, provider.extensionId);
-    }
-  }
+	const byLanguage = new Map<string, string>();
+	for (const provider of BUILT_IN_COLOR_PROVIDERS) {
+		for (const languageId of provider.baseLanguageIds) {
+			byLanguage.set(languageId, provider.extensionId);
+		}
+	}
 
-  const withParticipants = BUILT_IN_COLOR_PROVIDERS.filter((provider) => provider.participantsKey);
-  for (const packageJson of packageJsons) {
-    const contributes = (packageJson as { contributes?: Record<string, unknown> } | undefined)
-      ?.contributes;
-    if (typeof contributes !== 'object' || contributes === null) continue;
-    for (const provider of withParticipants) {
-      const participants = contributes[provider.participantsKey as string];
-      if (!Array.isArray(participants)) continue;
-      for (const participant of participants) {
-        const languageId = (participant as { languageId?: unknown } | undefined)?.languageId;
-        if (typeof languageId !== 'string' || languageId === '') continue;
-        if (!byLanguage.has(languageId)) byLanguage.set(languageId, provider.extensionId);
-      }
-    }
-  }
-  return byLanguage;
+	const withParticipants = BUILT_IN_COLOR_PROVIDERS.filter(provider => provider.participantsKey);
+	for (const packageJson of packageJsons) {
+		const contributes = (packageJson as { contributes?: Record<string, unknown> } | undefined)
+			?.contributes;
+		if (typeof contributes !== "object" || contributes === null) continue;
+		for (const provider of withParticipants) {
+			const participants = contributes[provider.participantsKey as string];
+			if (!Array.isArray(participants)) continue;
+			for (const participant of participants) {
+				const languageId = (participant as { languageId?: unknown } | undefined)
+					?.languageId;
+				if (typeof languageId !== "string" || languageId === "") continue;
+				if (!byLanguage.has(languageId)) byLanguage.set(languageId, provider.extensionId);
+			}
+		}
+	}
+	return byLanguage;
 }
 
 /**
@@ -97,8 +98,8 @@ export function builtInColorLanguages(
  * 就绪状态, 用户手动列出的语言背后是哪个扩展无从得知, 只能一律当作"可能还没就绪"。
  */
 export type ProbeTarget =
-  | { readonly kind: 'built-in'; readonly extensionId: string }
-  | { readonly kind: 'configured' };
+	| { readonly kind: "built-in"; readonly extensionId: string }
+	| { readonly kind: "configured" };
 
 /**
  * 该语言要不要探测, 探测的是谁。
@@ -107,17 +108,17 @@ export type ProbeTarget =
  * `dedupeLanguages` 不会让它退化成 `configured`。
  */
 export function resolveProbeTarget(
-  languageId: string,
-  builtIn: ReadonlyMap<string, string>,
-  configuredLanguageIds: readonly string[],
+	languageId: string,
+	builtIn: ReadonlyMap<string, string>,
+	configuredLanguageIds: readonly string[]
 ): ProbeTarget | undefined {
-  const extensionId = builtIn.get(languageId);
-  if (extensionId !== undefined) return { kind: 'built-in', extensionId };
-  return configuredLanguageIds.includes(languageId) ? { kind: 'configured' } : undefined;
+	const extensionId = builtIn.get(languageId);
+	if (extensionId !== undefined) return { kind: "built-in", extensionId };
+	return configuredLanguageIds.includes(languageId) ? { kind: "configured" } : undefined;
 }
 
 /** 成对出现才算引号; 单引号在 JSON 里不合法, 但 JSONC 之外的方言与 schema 参与者可能允许。 */
-const QUOTES = new Set(['"', "'", '`']);
+const QUOTES = new Set(['"', "'", "`"]);
 
 /**
  * 其他提供器上报的一个 range 对应哪些覆盖键。
@@ -130,21 +131,26 @@ const QUOTES = new Set(['"', "'", '`']);
  * 本扩展根本不会上报带引号的 range。
  */
 export function coverageKeys(text: string, range: ColorRange): string[] {
-  const keys = [rangeKey(range)];
-  const first = text[range.start];
-  const last = text[range.end - 1];
-  if (range.end - range.start >= 2 && first !== undefined && first === last && QUOTES.has(first)) {
-    keys.push(rangeKey({ start: range.start + 1, end: range.end - 1 }));
-  }
-  return keys;
+	const keys = [rangeKey(range)];
+	const first = text[range.start];
+	const last = text[range.end - 1];
+	if (
+		range.end - range.start >= 2 &&
+		first !== undefined &&
+		first === last &&
+		QUOTES.has(first)
+	) {
+		keys.push(rangeKey({ start: range.start + 1, end: range.end - 1 }));
+	}
+	return keys;
 }
 
 /** 探测缓存最多保留多少个文档; 与索引管理器的隐藏文档上限同量级。 */
 export const PROBE_CACHE_LIMIT = 50;
 
 export interface ProbeEntry {
-  readonly version: number;
-  readonly covered: ReadonlySet<string>;
+	readonly version: number;
+	readonly covered: ReadonlySet<string>;
 }
 
 /**
@@ -160,18 +166,18 @@ export interface ProbeEntry {
  * 非空结果无条件可缓存。
  */
 export function shouldCacheProbe(coveredSize: number, otherProvidersReady: boolean): boolean {
-  if (coveredSize > 0) return true;
-  return otherProvidersReady;
+	if (coveredSize > 0) return true;
+	return otherProvidersReady;
 }
 
 /** 读缓存; 文档版本不匹配视为未命中, 因此版本一变自动失效。 */
 export function readProbeCache(
-  cache: ReadonlyMap<string, ProbeEntry>,
-  uri: string,
-  version: number,
+	cache: ReadonlyMap<string, ProbeEntry>,
+	uri: string,
+	version: number
 ): ReadonlySet<string> | undefined {
-  const entry = cache.get(uri);
-  return entry && entry.version === version ? entry.covered : undefined;
+	const entry = cache.get(uri);
+	return entry && entry.version === version ? entry.covered : undefined;
 }
 
 /**
@@ -180,72 +186,76 @@ export function readProbeCache(
  * 超出上限时按插入顺序淘汰最旧的条目: 提供器没有文档关闭事件可挂, 只能靠上限兜住增长。
  */
 export function writeProbeCache(
-  cache: Map<string, ProbeEntry>,
-  uri: string,
-  entry: ProbeEntry,
-  limit: number = PROBE_CACHE_LIMIT,
+	cache: Map<string, ProbeEntry>,
+	uri: string,
+	entry: ProbeEntry,
+	limit: number = PROBE_CACHE_LIMIT
 ): void {
-  // 先删后插, 使已存在的 uri 也移动到插入顺序末尾, 淘汰时才是真正的"最旧"。
-  cache.delete(uri);
-  cache.set(uri, entry);
-  while (cache.size > limit) {
-    const oldest = cache.keys().next();
-    if (oldest.done) break;
-    cache.delete(oldest.value);
-  }
+	// 先删后插, 使已存在的 uri 也移动到插入顺序末尾, 淘汰时才是真正的"最旧"。
+	cache.delete(uri);
+	cache.set(uri, entry);
+	while (cache.size > limit) {
+		const oldest = cache.keys().next();
+		if (oldest.done) break;
+		cache.delete(oldest.value);
+	}
 }
 
 export interface SwatchPlanOptions {
-  /** 字段表过滤: 该语法是否参与高亮与色块。 */
-  readonly allows: (syntax: string) => boolean;
-  /** 该 match 是否有可预览的颜色 (resolved 或已采用假设值)。 */
-  readonly hasPreview: (match: ColorMatch) => boolean;
-  /** 其他提供器已覆盖的 range 键; `dedupe` 模式外传空集合。 */
-  readonly covered?: ReadonlySet<string>;
-  /** 渲染端上限, 超出部分不上报。 */
-  readonly limit: number;
+	/** 字段表过滤: 该语法是否参与高亮与色块。 */
+	readonly allows: (syntax: string) => boolean;
+	/** 该 match 是否有可预览的颜色 (resolved 或已采用假设值)。 */
+	readonly hasPreview: (match: ColorMatch) => boolean;
+	/** 其他提供器已覆盖的 range 键; `dedupe` 模式外传空集合。 */
+	readonly covered?: ReadonlySet<string>;
+	/** 渲染端上限, 超出部分不上报。 */
+	readonly limit: number;
 }
 
 export interface SwatchPlan {
-  readonly matches: readonly ColorMatch[];
-  /** 因上限被丢弃的数量, 供日志说明"不是没识别, 是渲染端画不了"。 */
-  readonly dropped: number;
+	readonly matches: readonly ColorMatch[];
+	/** 因上限被丢弃的数量, 供日志说明"不是没识别, 是渲染端画不了"。 */
+	readonly dropped: number;
 }
 
-/** 外层在前, 其嵌套紧随; 嵌套本身已是扁平的全部后代。 */
+/**
+ * 外层在前, 其嵌套紧随; 嵌套本身已是扁平的全部后代。
+ *
+ * @yields 按上述顺序逐个产出 match
+ */
 function* flatten(matches: readonly ColorMatch[]): Generator<ColorMatch> {
-  for (const match of matches) {
-    yield match;
-    for (const nested of match.nested ?? []) yield nested;
-  }
+	for (const match of matches) {
+		yield match;
+		for (const nested of match.nested ?? []) yield nested;
+	}
 }
 
 export function planSwatches(
-  matches: readonly ColorMatch[],
-  options: SwatchPlanOptions,
+	matches: readonly ColorMatch[],
+	options: SwatchPlanOptions
 ): SwatchPlan {
-  const kept: ColorMatch[] = [];
-  const seen = new Set<number>();
-  let dropped = 0;
+	const kept: ColorMatch[] = [];
+	const seen = new Set<number>();
+	let dropped = 0;
 
-  for (const match of flatten(matches)) {
-    if (!options.allows(match.syntax)) continue;
-    if (!options.hasPreview(match)) continue;
+	for (const match of flatten(matches)) {
+		if (!options.allows(match.syntax)) continue;
+		if (!options.hasPreview(match)) continue;
 
-    // 去重按**起点**: 色块画在 range 起点之前, 同起点必然叠在一起, 起点不同则天然错开。
-    // 这让 `var(--x, #def)` 的外层与内层各得一个色块。
-    if (seen.has(match.range.start)) continue;
-    // 覆盖判定仍按精确 range: `covered` 来自其他提供器上报的区间, 换成起点会把
-    // "别人覆盖了同起点的另一段" 误判成 "本段已被覆盖"。
-    if (options.covered?.has(rangeKey(match.range))) continue;
-    seen.add(match.range.start);
+		// 去重按**起点**: 色块画在 range 起点之前, 同起点必然叠在一起, 起点不同则天然错开。
+		// 这让 `var(--x, #def)` 的外层与内层各得一个色块。
+		if (seen.has(match.range.start)) continue;
+		// 覆盖判定仍按精确 range: `covered` 来自其他提供器上报的区间, 换成起点会把
+		// "别人覆盖了同起点的另一段" 误判成 "本段已被覆盖"。
+		if (options.covered?.has(rangeKey(match.range))) continue;
+		seen.add(match.range.start);
 
-    if (kept.length >= options.limit) {
-      dropped += 1;
-      continue;
-    }
-    kept.push(match);
-  }
+		if (kept.length >= options.limit) {
+			dropped += 1;
+			continue;
+		}
+		kept.push(match);
+	}
 
-  return { matches: kept, dropped };
+	return { matches: kept, dropped };
 }

@@ -6,12 +6,12 @@
 
 ## 哪些引用能解析
 
-| 引用 | 在哪里解析 |
-| --- | --- |
-| `var(--brand)` | 所有变量语言，见下文 |
-| `rgb(var(--channels) / 0.4)` | 同上；变量先代回颜色函数再解析 |
-| `$brand` | `scss`、`sass` |
-| `@brand` | `less` |
+| 引用                          | 在哪里解析                           |
+| ----------------------------- | ------------------------------------ |
+| `var(--brand)`                | 所有变量语言，见下文                 |
+| `rgb(var(--channels) / 0.4)`  | 同上；变量先代回颜色函数再解析       |
+| `$brand`                      | `scss`、`sass`                       |
+| `@brand`                      | `less`                               |
 | Stylus 的 `brand` 或 `$brand` | 不解析；`.styl` 文件里的颜色照常识别 |
 
 变量引用只在 `advanced.variables.languageIds` 列出的语言里识别。默认值 `null` 表示 `css`、`scss`、`sass`、`less`、`postcss` 和 `tailwindcss`；列入最后一项，是因为 Tailwind CSS IntelliSense 会把 CSS 文件切换成这个语言。
@@ -41,8 +41,12 @@
 `rgb(var(--channels) / 0.4)`、`rgba(var(--x), 0.4)`、`hsl(var(--h) 50% 50%)` 和 `color-mix(in srgb, var(--a), red)` 都会先把变量代回文本再解析，Tailwind 风格的通道变量因此可以正常工作：
 
 ```css
-:root { --channels: 148 163 184; }
-.badge { background: rgb(var(--channels) / 0.4); }
+:root {
+	--channels: 148 163 184;
+}
+.badge {
+	background: rgb(var(--channels) / 0.4);
+}
 ```
 
 - 找不到变量时使用回退值，例如 `var(--missing, 1 2 3)`。

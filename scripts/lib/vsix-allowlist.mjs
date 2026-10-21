@@ -74,7 +74,11 @@ export default function deriveAllowlist({ pkg, rootEntries, l10nEntries, outEntr
 	for (const snippet of contributes.snippets ?? []) {
 		if (snippet.path) allowed.add(strip(snippet.path));
 	}
-	for (const theme of [...contributes.themes ?? [], ...contributes.iconThemes ?? [], ...contributes.productIconThemes ?? []]) {
+	for (const theme of [
+		...(contributes.themes ?? []),
+		...(contributes.iconThemes ?? []),
+		...(contributes.productIconThemes ?? []),
+	]) {
 		if (theme.path) allowed.add(strip(theme.path));
 	}
 

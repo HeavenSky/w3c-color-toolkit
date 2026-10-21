@@ -1,0 +1,18 @@
+{
+	"$schema": "https://unpkg.com/oxfmt/configuration_schema.json",
+	"arrowParens": "avoid",
+	"ignorePatterns": [
+		"*.min.*",
+		"test/fixtures/**",
+		"package.json",
+		"package.nls.json",
+		"package.nls.zh-cn.json",
+		"l10n/**"
+	],
+	"jsxSingleQuote": false,
+	"objectWrap": "collapse",
+	"singleQuote": false,
+	"tabWidth": 4,
+	"trailingComma": "es5",
+	"useTabs": true
+}

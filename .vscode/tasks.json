@@ -5,10 +5,7 @@
 			"type": "npm",
 			"script": "compile",
 			"problemMatcher": "$esbuild",
-			"group": {
-				"kind": "build",
-				"isDefault": true
-			}
+			"group": { "kind": "build", "isDefault": true }
 		},
 		{
 			"type": "npm",
@@ -16,19 +13,12 @@
 			"isBackground": true,
 			"problemMatcher": "$esbuild-watch"
 		},
-		{
-			"type": "npm",
-			"script": "typecheck",
-			"problemMatcher": "$tsc"
-		},
+		{ "type": "npm", "script": "typecheck", "problemMatcher": "$tsc" },
 		{
 			"type": "npm",
 			"script": "test",
 			"problemMatcher": [],
-			"group": {
-				"kind": "test",
-				"isDefault": true
-			}
+			"group": { "kind": "test", "isDefault": true }
 		}
 	]
 }

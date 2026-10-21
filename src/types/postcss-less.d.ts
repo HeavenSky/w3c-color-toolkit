@@ -7,9 +7,9 @@
  * `Root` (不像 `postcss.Syntax` 那样是可选方法且可能返回 `Document`)。
  * 只声明用到的成员, 避免引入一份过期类型对未使用的 API 做出错误承诺。
  */
-declare module 'postcss-less' {
-  import type { Parser, Root, Stringifier } from 'postcss';
+declare module "postcss-less" {
+	import type { Parser, Root, Stringifier } from "postcss";
 
-  export const parse: Parser<Root>;
-  export const stringify: Stringifier;
+	export const parse: Parser<Root>;
+	export const stringify: Stringifier;
 }

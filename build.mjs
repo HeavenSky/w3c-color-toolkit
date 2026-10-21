@@ -42,7 +42,7 @@ const options = {
 	sourcemap: production ? false : "linked",
 	legalComments: "none",
 	logLevel: "info",
-	...browser ? { define: { global: "globalThis" } } : {},
+	...(browser ? { define: { global: "globalThis" } } : {}),
 };
 
 if (watch) {

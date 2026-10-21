@@ -8,16 +8,12 @@
  * 与高亮 `render()` 都在同步路径上; `document.getText()` 又会把整份文本实体化 ——
  * 那恰好是这个闸门本该省下的开销。`offsetAt(末行行尾)` 两者都不需要。
  */
-import * as vscode from 'vscode';
+import * as vscode from "vscode";
 
-import {
-  disableReason,
-  type DisableReason,
-  type DisableRules,
-} from './disable-filter.js';
-import type { RuntimeConfiguration } from './load.js';
+import { disableReason, type DisableReason, type DisableRules } from "./disable-filter.js";
+import type { RuntimeConfiguration } from "./load.js";
 
-export type HiddenReason = 'disabled' | 'output-scheme' | DisableReason;
+export type HiddenReason = "disabled" | "output-scheme" | DisableReason;
 
 /**
  * 文档长度, 按 UTF-16 码元计。
@@ -27,23 +23,23 @@ export type HiddenReason = 'disabled' | 'output-scheme' | DisableReason;
  * Position 的钳制行为。
  */
 export function documentLength(document: vscode.TextDocument): number {
-  const lastLine = document.lineAt(document.lineCount - 1);
-  return document.offsetAt(lastLine.range.end);
+	const lastLine = document.lineAt(document.lineCount - 1);
+	return document.offsetAt(lastLine.range.end);
 }
 
 /** 取文件名。不用 `node:path`: 产物按 browser platform 打包, 不能引 node 内置模块。 */
 export function baseNameOf(uri: vscode.Uri): string {
-  const slash = uri.path.lastIndexOf('/');
-  return slash === -1 ? uri.path : uri.path.slice(slash + 1);
+	const slash = uri.path.lastIndexOf("/");
+	return slash === -1 ? uri.path : uri.path.slice(slash + 1);
 }
 
 /** 从运行时配置取出三条禁用规则; 供 `activate.ts` 上报无效模式时复用。 */
 export function disableRulesOf(config: RuntimeConfiguration): DisableRules {
-  return {
-    maxFileSizeMb: config.maxFileSizeMb,
-    fileNames: config.disabledFileNames,
-    languageIds: config.disabledLanguageIds,
-  };
+	return {
+		maxFileSizeMb: config.maxFileSizeMb,
+		fileNames: config.disabledFileNames,
+		languageIds: config.disabledLanguageIds,
+	};
 }
 
 /**
@@ -53,24 +49,24 @@ export function disableRulesOf(config: RuntimeConfiguration): DisableRules {
  * 而且本扩展自己就往里写日志。
  */
 export function hiddenReason(
-  document: vscode.TextDocument,
-  config: RuntimeConfiguration,
+	document: vscode.TextDocument,
+	config: RuntimeConfiguration
 ): HiddenReason | undefined {
-  if (!config.enabled) return 'disabled';
-  if (document.uri.scheme === 'output') return 'output-scheme';
-  return disableReason(
-    {
-      baseName: baseNameOf(document.uri),
-      languageId: document.languageId,
-      length: documentLength(document),
-    },
-    disableRulesOf(config),
-  );
+	if (!config.enabled) return "disabled";
+	if (document.uri.scheme === "output") return "output-scheme";
+	return disableReason(
+		{
+			baseName: baseNameOf(document.uri),
+			languageId: document.languageId,
+			length: documentLength(document),
+		},
+		disableRulesOf(config)
+	);
 }
 
 export function isDocumentHidden(
-  document: vscode.TextDocument,
-  config: RuntimeConfiguration,
+	document: vscode.TextDocument,
+	config: RuntimeConfiguration
 ): boolean {
-  return hiddenReason(document, config) !== undefined;
+	return hiddenReason(document, config) !== undefined;
 }

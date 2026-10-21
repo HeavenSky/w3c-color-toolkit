@@ -75,7 +75,7 @@ Notable changes to W3C Color Toolkit.
   the languages of a third-party color extension; see
   [Get exactly one swatch per color](https://github.com/HeavenSky/w3c-color-toolkit/blob/HEAD/docs/color-picker.md#get-exactly-one-swatch-per-color).
 
-  The built-in options go from 33 to 34.
+    The built-in options go from 33 to 34.
 
 ### Fixed
 
@@ -108,7 +108,7 @@ overlapping with one of those still means turning off one of the two.
 - **Breaking.** `advanced.variables.includePaths`, `advanced.variables.maxImportDepth` and
   `advanced.variables.maxImportFiles` are gone, replaced by `advanced.variables.lookupGlobs`,
   `advanced.variables.maxIndexedFiles` and `advanced.variables.languageIds`. The three old keys
-  only ever configured the `@import` walk, which never ran (see *Fixed*), so removing them takes
+  only ever configured the `@import` walk, which never ran (see _Fixed_), so removing them takes
   nothing away. Setting them now produces an `unknown-key` warning. Migration: list your token
   files in `advanced.variables.lookupGlobs` and delete the three old keys.
 - **Breaking.** Stylus variables are no longer resolved. Colors in `.styl` files are unaffected —
@@ -170,7 +170,7 @@ The built-in options drop from 37 to 33, and hidden commands from 31 to 30.
 - **A reference with no definition shows nothing at all** — no highlight, no swatch, no hover. This
   covers a missing definition, a value that is not a color, a reference cycle, `maxResolveDepth`, and
   files that are not readable in an untrusted workspace. A reference whose value merely is not
-  *unique* is a different case and keeps its hover, see above. SCSS maps, `@each`, mixins and calls
+  _unique_ is a different case and keeps its hover, see above. SCSS maps, `@each`, mixins and calls
   like `darken($x, 10%)` are not evaluated and therefore fall into the silent case.
 - **A resolved variable reference is read only**: the picker displays the color without allowing a
   drag, and `Convert Color` refuses and names the variable. Rewriting `var(--brand)` into a literal

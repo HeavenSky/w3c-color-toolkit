@@ -10,6 +10,8 @@
 npm ci
 npm run check
 npm run typecheck
+npm run lint:check  # oxlint；`npm run lint` 会同时自动修复
+npm run fmt:check  # oxfmt；`npm run fmt` 直接格式化
 npm test
 npm run package
 ```

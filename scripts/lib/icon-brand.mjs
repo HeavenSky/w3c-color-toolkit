@@ -4,8 +4,8 @@
  * 与 `icon-spec.mjs` 分开是为了让底色, 圆角这类只关乎观感的参数只有一处定义 ——
  * 调整品牌配色时只动本文件, 不必碰前景图形的坐标。
  *
- * 骨架分类: **B 类, 观感参数, 允许按品牌整份替换**, 因此不在 `.template-shared` 里,
- * 改动它不会被骨架漂移检查拦住。同目录的其余 `lib/*.mjs` 是 A 类, 改动会被拦。
+ * 骨架分类: **B 类, 观感参数, 允许按品牌整份替换**; 同目录的其余共享模块是 A 类,
+ * 同步骨架时整份覆盖。
  * (这行注释必须留在文件里: 派生仓库会删掉骨架的 README, 分类信息只能靠文件自述。)
  */
 export const SIZE = 256;
@@ -31,7 +31,12 @@ export function baseShapes() {
 			w: SIZE,
 			h: SIZE,
 			r: CORNER_RADIUS,
-			fill: { kind: "linear", from: BACKGROUND_FROM, to: BACKGROUND_TO, direction: "diagonal" },
+			fill: {
+				kind: "linear",
+				from: BACKGROUND_FROM,
+				to: BACKGROUND_TO,
+				direction: "diagonal",
+			},
 		},
 		{
 			// 描边居中在路径上, 因此这里向内缩 BORDER_WIDTH, 让描边完整落在画布内。

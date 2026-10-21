@@ -44,6 +44,8 @@ if (CHECK_ONLY) {
 	mkdirSync(join(ROOT, "media"), { recursive: true });
 	for (const target of targets) {
 		writeFileSync(target.path, target.content);
-		console.log(`wrote ${target.path.slice(ROOT.length)} — ${(target.content.length / 1024).toFixed(1)} KB`);
+		console.log(
+			`wrote ${target.path.slice(ROOT.length)} — ${(target.content.length / 1024).toFixed(1)} KB`
+		);
 	}
 }

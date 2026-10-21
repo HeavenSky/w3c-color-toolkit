@@ -6,189 +6,196 @@ name: Release
 # 本文件里不出现仓库名与任何插件专属的校验逻辑: 版本, 包名与产物路径全部从 package.json
 # 推导, 校验内容由 `npm run check` 决定. 因此改插件不需要改工作流.
 on:
-  push:
-    tags:
-      - 'v*'
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'package.json 中的版本号, 例如 0.0.1'
-        required: true
+    push:
+        tags:
+            - "v*"
+    workflow_dispatch:
+        inputs:
+            version:
+                description: "package.json 中的版本号, 例如 0.0.1"
+                required: true
 
 # 顶层给只读, 写权限只下沉到真正要创建 Release 的那个 job. 两个发布 job 只往外部市场推,
 # 不碰仓库内容, 拿到 contents: write 只会扩大 GITHUB_TOKEN 被第三方 action 滥用的面.
 permissions:
-  contents: read
+    contents: read
 
 jobs:
-  release:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-      vsix: ${{ steps.version.outputs.vsix }}
-      vsix_name: ${{ steps.version.outputs.vsix_name }}
-      has_vsce_pat: ${{ steps.secrets.outputs.has_vsce_pat }}
-      has_ovsx_pat: ${{ steps.secrets.outputs.has_ovsx_pat }}
-    steps:
-      - uses: actions/checkout@v7
+    release:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+        outputs:
+            version: ${{ steps.version.outputs.version }}
+            vsix: ${{ steps.version.outputs.vsix }}
+            vsix_name: ${{ steps.version.outputs.vsix_name }}
+            has_vsce_pat: ${{ steps.secrets.outputs.has_vsce_pat }}
+            has_ovsx_pat: ${{ steps.secrets.outputs.has_ovsx_pat }}
+        steps:
+            - uses: actions/checkout@v7
 
-      # node 版本取 .nvmrc, 与本地开发保持同一个来源.
-      # cache: npm 拿 package-lock.json 的 hash 当缓存键, 没有 lockfile 时这一步就直接失败.
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: .nvmrc
-          cache: npm
+            # node 版本取 .nvmrc, 与本地开发保持同一个来源.
+            # cache: npm 拿 package-lock.json 的 hash 当缓存键, 没有 lockfile 时这一步就直接失败.
+            - uses: actions/setup-node@v7
+              with:
+                  node-version-file: .nvmrc
+                  cache: npm
 
-      # 必须是 ci 而不是 install: 前者要求 lockfile 存在且与 package.json 一致, 否则报错退出,
-      # 不会像 install 那样按 semver range 重新解析. 打标签即发布到市场, 依赖版本一旦浮动,
-      # 发出去的 vsix 就不是本地验证过的那一份; lockfile 的 integrity 同时是抵御镜像投毒的
-      # 唯一凭据. 所以 package-lock.json 必须入库 —— .gitignore 末尾专门有一行把它取消忽略.
-      - name: Install dependencies
-        run: npm ci
+            # 必须是 ci 而不是 install: 前者要求 lockfile 存在且与 package.json 一致, 否则报错退出,
+            # 不会像 install 那样按 semver range 重新解析. 打标签即发布到市场, 依赖版本一旦浮动,
+            # 发出去的 vsix 就不是本地验证过的那一份; lockfile 的 integrity 同时是抵御镜像投毒的
+            # 唯一凭据. 所以 package-lock.json 必须入库 —— .gitignore 末尾专门有一行把它取消忽略.
+            - name: Install dependencies
+              run: npm ci
 
-      # 仓库在 tools/ 下有 Python 脚本时才装 uv: 插件专属门禁(scripts/check-extra.mjs)可能经 `uv run`
-      # 调用它们. 没装 uv 时那类门禁只能跳过, 等于发布前少了一道检查.
-      # setup-uv 不发布 v10 这类浮动大版本标签, 只能钉到完整版本号; 写成 @v10 会在 Set up job 阶段解析失败.
-      - name: Set up uv
-        if: hashFiles('tools/**/*.py') != ''
-        uses: astral-sh/setup-uv@v10.2.0
+            # 仓库在 tools/ 下有 Python 脚本时才装 uv: 插件专属门禁(scripts/check-extra.mjs)可能经 `uv run`
+            # 调用它们. 没装 uv 时那类门禁只能跳过, 等于发布前少了一道检查.
+            # setup-uv 不发布 v10 这类浮动大版本标签, 只能钉到完整版本号; 写成 @v10 会在 Set up job 阶段解析失败.
+            - name: Set up uv
+              if: hashFiles('tools/**/*.py') != ''
+              uses: astral-sh/setup-uv@v10.2.0
 
-      # 标签与 package.json 版本必须一致, 否则产物名与 Release 名会错位.
-      # 产物路径与名字都从 package.json 推导, 避免仓库名在工作流里再写一遍.
-      #
-      # ${{ }} 一律先落到 env 再在脚本里引用. 直接插值等于把表达式的值拼进 shell 源码,
-      # 值里含引号或 $( ) 时会被当成命令执行 —— workflow_dispatch 的 inputs 是外部可填的,
-      # 这是本文件里唯一一处真正的注入面.
-      - name: Resolve and verify version
-        id: version
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          INPUT_VERSION: ${{ github.event.inputs.version }}
-        run: |
-          pkg_version="$(node -p "require('./package.json').version")"
-          pkg_name="$(node -p "require('./package.json').name")"
-          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
-            input_version="$INPUT_VERSION"
-          else
-            input_version="${GITHUB_REF_NAME#v}"
-          fi
-          if [ "$pkg_version" != "$input_version" ]; then
-            echo "::error::版本不一致: package.json=$pkg_version, 触发版本=$input_version"
-            exit 1
-          fi
-          echo "version=$pkg_version" >> "$GITHUB_OUTPUT"
-          echo "vsix_name=$pkg_name-$pkg_version.vsix" >> "$GITHUB_OUTPUT"
-          echo "vsix=artifacts/$pkg_name-$pkg_version.vsix" >> "$GITHUB_OUTPUT"
+            # 标签与 package.json 版本必须一致, 否则产物名与 Release 名会错位.
+            # 产物路径与名字都从 package.json 推导, 避免仓库名在工作流里再写一遍.
+            #
+            # ${{ }} 一律先落到 env 再在脚本里引用. 直接插值等于把表达式的值拼进 shell 源码,
+            # 值里含引号或 $( ) 时会被当成命令执行 —— workflow_dispatch 的 inputs 是外部可填的,
+            # 这是本文件里唯一一处真正的注入面.
+            - name: Resolve and verify version
+              id: version
+              env:
+                  EVENT_NAME: ${{ github.event_name }}
+                  INPUT_VERSION: ${{ github.event.inputs.version }}
+              run: |
+                  pkg_version="$(node -p "require('./package.json').version")"
+                  pkg_name="$(node -p "require('./package.json').name")"
+                  if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+                    input_version="$INPUT_VERSION"
+                  else
+                    input_version="${GITHUB_REF_NAME#v}"
+                  fi
+                  if [ "$pkg_version" != "$input_version" ]; then
+                    echo "::error::版本不一致: package.json=$pkg_version, 触发版本=$input_version"
+                    exit 1
+                  fi
+                  echo "version=$pkg_version" >> "$GITHUB_OUTPUT"
+                  echo "vsix_name=$pkg_name-$pkg_version.vsix" >> "$GITHUB_OUTPUT"
+                  echo "vsix=artifacts/$pkg_name-$pkg_version.vsix" >> "$GITHUB_OUTPUT"
 
-      # 图标产物, 清单占位符, 本地化与各仓库专属规则; 漏了不会让构建失败, 只会静默出错.
-      - name: Check consistency
-        run: npm run check
+            # 图标产物, 清单占位符, 本地化与各仓库专属规则; 漏了不会让构建失败, 只会静默出错.
+            - name: Check consistency
+              run: npm run check
 
-      - name: Typecheck
-        run: npm run typecheck
+            - name: Typecheck
+              run: npm run typecheck
 
-      - name: Test
-        run: npm test
+            # oxlint 与 oxfmt 只检查不修复; 本地用 npm run lint 与 npm run fmt 修复.
+            - name: Lint
+              run: npm run lint:check
 
-      # package 脚本内部触发 vscode:prepublish 做生产构建, 并按允许清单断言 VSIX 内容.
-      - name: Package extension
-        run: npm run package
+            - name: Format check
+              run: npm run fmt:check
 
-      # 取 CHANGELOG 中与本版本对应的小节作为 Release 说明; 缺失时只告警, 不阻断发布.
-      - name: Extract release notes
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          if node scripts/changelog-section.mjs "$VERSION" > RELEASE_NOTES.md; then
-            cat RELEASE_NOTES.md
-          else
-            echo "::warning::CHANGELOG.md 中未找到 $VERSION 的小节, Release 说明为空"
-            : > RELEASE_NOTES.md
-          fi
+            - name: Test
+              run: npm test
 
-      # 与本文件其余 action 一样只钉大版本, 不钉 commit SHA.
-      # 钉 SHA 在安全上更严, 代价是它冻结在钉下去的那一刻: 骨架分发出去后没人会回来升它,
-      # 上游的修复与 runtime 迁移都进不来, 最终是一个悄悄烂掉的引用. 浮动大版本由上游在
-      # 每次发版时重新指向, 拿得到补丁, 破坏性变更又挡在下一个大版本后面.
-      # 真要钉 SHA 的仓库: 十处 uses 一起钉并接上 dependabot, 只钉一处既不安全也不一致.
-      # 注: GitHub Actions 的 uses 只认分支, tag 或 commit SHA, 没有 @latest 这种写法;
-      # 浮动大版本 tag 就是这里能用到的"最新".
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v3
-        with:
-          name: v${{ steps.version.outputs.version }}
-          tag_name: v${{ steps.version.outputs.version }}
-          body_path: RELEASE_NOTES.md
-          files: ${{ steps.version.outputs.vsix }}
+            # package 脚本内部触发 vscode:prepublish 做生产构建, 并按允许清单断言 VSIX 内容.
+            - name: Package extension
+              run: npm run package
 
-      - uses: actions/upload-artifact@v7
-        with:
-          name: ${{ steps.version.outputs.vsix_name }}
-          path: ${{ steps.version.outputs.vsix }}
+            # 取 CHANGELOG 中与本版本对应的小节作为 Release 说明; 缺失时只告警, 不阻断发布.
+            - name: Extract release notes
+              env:
+                  VERSION: ${{ steps.version.outputs.version }}
+              run: |
+                  if node scripts/changelog-section.mjs "$VERSION" > RELEASE_NOTES.md; then
+                    cat RELEASE_NOTES.md
+                  else
+                    echo "::warning::CHANGELOG.md 中未找到 $VERSION 的小节, Release 说明为空"
+                    : > RELEASE_NOTES.md
+                  fi
 
-      # secrets 上下文在 job 级 if 中不可用, 因此在这里转成 job output 供下游判断.
-      - name: Check marketplace credentials
-        id: secrets
-        env:
-          VSCE_PAT: ${{ secrets.VSCE_PAT }}
-          OVSX_PAT: ${{ secrets.OVSX_PAT }}
-        run: |
-          [ -n "$VSCE_PAT" ] && echo "has_vsce_pat=true" >> "$GITHUB_OUTPUT" || echo "has_vsce_pat=false" >> "$GITHUB_OUTPUT"
-          [ -n "$OVSX_PAT" ] && echo "has_ovsx_pat=true" >> "$GITHUB_OUTPUT" || echo "has_ovsx_pat=false" >> "$GITHUB_OUTPUT"
+            # 与本文件其余 action 一样只钉大版本, 不钉 commit SHA.
+            # 钉 SHA 在安全上更严, 代价是它冻结在钉下去的那一刻: 骨架分发出去后没人会回来升它,
+            # 上游的修复与 runtime 迁移都进不来, 最终是一个悄悄烂掉的引用. 浮动大版本由上游在
+            # 每次发版时重新指向, 拿得到补丁, 破坏性变更又挡在下一个大版本后面.
+            # 真要钉 SHA 的仓库: 十处 uses 一起钉并接上 dependabot, 只钉一处既不安全也不一致.
+            # 注: GitHub Actions 的 uses 只认分支, tag 或 commit SHA, 没有 @latest 这种写法;
+            # 浮动大版本 tag 就是这里能用到的"最新".
+            - name: Create GitHub Release
+              uses: softprops/action-gh-release@v3
+              with:
+                  name: v${{ steps.version.outputs.version }}
+                  tag_name: v${{ steps.version.outputs.version }}
+                  body_path: RELEASE_NOTES.md
+                  files: ${{ steps.version.outputs.vsix }}
 
-  # 仅在仓库配置了 VSCE_PAT 后运行; 未配置时跳过, 只发 GitHub Release.
-  # 用 --packagePath 发布 release job 已校验并附到 Release 的那个 vsix, 不重新构建,
-  # 保证市场上的产物与 Release 附件逐字节一致.
-  marketplace:
-    needs: release
-    if: needs.release.outputs.has_vsce_pat == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
+            - uses: actions/upload-artifact@v7
+              with:
+                  name: ${{ steps.version.outputs.vsix_name }}
+                  path: ${{ steps.version.outputs.vsix }}
 
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: .nvmrc
-          cache: npm
+            # secrets 上下文在 job 级 if 中不可用, 因此在这里转成 job output 供下游判断.
+            - name: Check marketplace credentials
+              id: secrets
+              env:
+                  VSCE_PAT: ${{ secrets.VSCE_PAT }}
+                  OVSX_PAT: ${{ secrets.OVSX_PAT }}
+              run: |
+                  [ -n "$VSCE_PAT" ] && echo "has_vsce_pat=true" >> "$GITHUB_OUTPUT" || echo "has_vsce_pat=false" >> "$GITHUB_OUTPUT"
+                  [ -n "$OVSX_PAT" ] && echo "has_ovsx_pat=true" >> "$GITHUB_OUTPUT" || echo "has_ovsx_pat=false" >> "$GITHUB_OUTPUT"
 
-      # 只为拿到 vsce 可执行文件; 打包已在 release job 完成.
-      - run: npm ci
+    # 仅在仓库配置了 VSCE_PAT 后运行; 未配置时跳过, 只发 GitHub Release.
+    # 用 --packagePath 发布 release job 已校验并附到 Release 的那个 vsix, 不重新构建,
+    # 保证市场上的产物与 Release 附件逐字节一致.
+    marketplace:
+        needs: release
+        if: needs.release.outputs.has_vsce_pat == 'true'
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v7
 
-      - uses: actions/download-artifact@v8
-        with:
-          name: ${{ needs.release.outputs.vsix_name }}
+            - uses: actions/setup-node@v7
+              with:
+                  node-version-file: .nvmrc
+                  cache: npm
 
-      - name: Publish to VS Code Marketplace
-        env:
-          VSCE_PAT: ${{ secrets.VSCE_PAT }}
-          VSIX_NAME: ${{ needs.release.outputs.vsix_name }}
-        run: npx --no-install vsce publish --packagePath "$VSIX_NAME"
+            # 只为拿到 vsce 可执行文件; 打包已在 release job 完成.
+            - run: npm ci
 
-  # Open VSX(VSCodium / Cursor / Windsurf 等非官方发行版的市场), 同样按 secret 存在与否开关.
-  open-vsx:
-    needs: release
-    if: needs.release.outputs.has_ovsx_pat == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
+            - uses: actions/download-artifact@v8
+              with:
+                  name: ${{ needs.release.outputs.vsix_name }}
 
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: .nvmrc
+            - name: Publish to VS Code Marketplace
+              env:
+                  VSCE_PAT: ${{ secrets.VSCE_PAT }}
+                  VSIX_NAME: ${{ needs.release.outputs.vsix_name }}
+              run: npx --no-install vsce publish --packagePath "$VSIX_NAME"
 
-      - uses: actions/download-artifact@v8
-        with:
-          name: ${{ needs.release.outputs.vsix_name }}
+    # Open VSX(VSCodium / Cursor / Windsurf 等非官方发行版的市场), 同样按 secret 存在与否开关.
+    open-vsx:
+        needs: release
+        if: needs.release.outputs.has_ovsx_pat == 'true'
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v7
 
-      # ovsx 刻意不进 devDependencies, 因此这个 job 也不装依赖: 它只被这一步用到, 而这一步
-      # 只在配了 OVSX_PAT 时才跑. 写进 devDependencies 会让所有开发者与所有 job 都为一个
-      # 多数派生仓库根本不发布的市场付安装成本. marketplace job 不同 —— vsce 是打包环节
-      # 的既有依赖, 本来就装.
-      # 代价是 `--yes` 会在发布时现拉一个版本; 介意的仓库把它改成 `ovsx@<大版本>` 约束一下.
-      - name: Publish to Open VSX
-        env:
-          OVSX_PAT: ${{ secrets.OVSX_PAT }}
-          VSIX_NAME: ${{ needs.release.outputs.vsix_name }}
-        run: npx --yes ovsx publish "$VSIX_NAME"
+            - uses: actions/setup-node@v7
+              with:
+                  node-version-file: .nvmrc
+
+            - uses: actions/download-artifact@v8
+              with:
+                  name: ${{ needs.release.outputs.vsix_name }}
+
+            # ovsx 刻意不进 devDependencies, 因此这个 job 也不装依赖: 它只被这一步用到, 而这一步
+            # 只在配了 OVSX_PAT 时才跑. 写进 devDependencies 会让所有开发者与所有 job 都为一个
+            # 多数派生仓库根本不发布的市场付安装成本. marketplace job 不同 —— vsce 是打包环节
+            # 的既有依赖, 本来就装.
+            # 代价是 `--yes` 会在发布时现拉一个版本; 介意的仓库把它改成 `ovsx@<大版本>` 约束一下.
+            - name: Publish to Open VSX
+              env:
+                  OVSX_PAT: ${{ secrets.OVSX_PAT }}
+                  VSIX_NAME: ${{ needs.release.outputs.vsix_name }}
+              run: npx --yes ovsx publish "$VSIX_NAME"

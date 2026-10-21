@@ -9,130 +9,130 @@
  */
 
 /** 解析状态。是否实验语法与之正交, 见 `ColorMatch.experimental`。 */
-export type ResolutionKind = 'resolved' | 'contextual' | 'invalid';
+export type ResolutionKind = "resolved" | "contextual" | "invalid";
 
 /** 语法所属规范层级。 */
-export type SpecLevel = 'color-3' | 'color-4' | 'color-5' | 'color-6' | 'color-hdr-1';
+export type SpecLevel = "color-3" | "color-4" | "color-5" | "color-6" | "color-hdr-1";
 
 export type ContextualReason =
-  | 'current-color'
-  | 'system-color'
-  | 'deprecated-system-color'
-  | 'color-scheme'
-  | 'css-variable'
-  | 'preprocessor-variable'
-  | 'custom-color-profile'
-  | 'hdr-headroom'
-  | 'unsupported-experimental-context';
+	| "current-color"
+	| "system-color"
+	| "deprecated-system-color"
+	| "color-scheme"
+	| "css-variable"
+	| "preprocessor-variable"
+	| "custom-color-profile"
+	| "hdr-headroom"
+	| "unsupported-experimental-context";
 
 export type DiagnosticCode =
-  | 'parse-failed'
-  | 'unknown-function'
-  | 'unknown-color-space'
-  | 'invalid-component-count'
-  | 'invalid-component-keyword'
-  | 'out-of-range-component'
-  | 'circular-variable'
-  | 'max-depth-exceeded'
-  | 'import-not-allowed'
-  | 'experimental-disabled'
-  | 'upstream-unsupported'
-  | 'gamut-mapped'
-  | 'hdr-tone-mapped'
-  | 'alpha-loss'
-  | 'missing-component-loss';
+	| "parse-failed"
+	| "unknown-function"
+	| "unknown-color-space"
+	| "invalid-component-count"
+	| "invalid-component-keyword"
+	| "out-of-range-component"
+	| "circular-variable"
+	| "max-depth-exceeded"
+	| "import-not-allowed"
+	| "experimental-disabled"
+	| "upstream-unsupported"
+	| "gamut-mapped"
+	| "hdr-tone-mapped"
+	| "alpha-loss"
+	| "missing-component-loss";
 
-export type DiagnosticSeverity = 'error' | 'warning' | 'info';
+export type DiagnosticSeverity = "error" | "warning" | "info";
 
 export interface ColorRange {
-  readonly start: number;
-  readonly end: number;
+	readonly start: number;
+	readonly end: number;
 }
 
 export interface ColorDiagnostic {
-  readonly code: DiagnosticCode;
-  readonly severity: DiagnosticSeverity;
-  /** `src/l10n/strings.ts` 中的 key, 不是已渲染的句子。 */
-  readonly messageKey: string;
-  readonly messageArgs?: readonly (string | number)[];
-  readonly range?: ColorRange;
+	readonly code: DiagnosticCode;
+	readonly severity: DiagnosticSeverity;
+	/** `src/l10n/strings.ts` 中的 key, 不是已渲染的句子。 */
+	readonly messageKey: string;
+	readonly messageArgs?: readonly (string | number)[];
+	readonly range?: ColorRange;
 }
 
 /** 已解析到绝对颜色。XYZ D50 是跨 feature 的规范交换色。 */
 export interface ResolvedColor {
-  readonly xyzD50: readonly [number, number, number];
-  readonly alpha: number;
-  /** 原始色彩空间的 CSS 标识, 例如 `oklch`、`display-p3`、`rec2100-pq`。 */
-  readonly originalSpace: string;
-  /** 原始分量, missing component 为 `null`。 */
-  readonly originalChannels: readonly (number | null)[];
-  /** 原始分量中为 missing component 的下标。 */
-  readonly missingComponents: readonly number[];
-  /** 例如无 ICC 的 `device-cmyk()` fallback。 */
-  readonly approximate: boolean;
-  /** 为了在 sRGB 预览而做过 HDR 色调映射。 */
-  readonly hdrToneMapped: boolean;
+	readonly xyzD50: readonly [number, number, number];
+	readonly alpha: number;
+	/** 原始色彩空间的 CSS 标识, 例如 `oklch`、`display-p3`、`rec2100-pq`。 */
+	readonly originalSpace: string;
+	/** 原始分量, missing component 为 `null`。 */
+	readonly originalChannels: readonly (number | null)[];
+	/** 原始分量中为 missing component 的下标。 */
+	readonly missingComponents: readonly number[];
+	/** 例如无 ICC 的 `device-cmyk()` fallback。 */
+	readonly approximate: boolean;
+	/** 为了在 sRGB 预览而做过 HDR 色调映射。 */
+	readonly hdrToneMapped: boolean;
 }
 
-export type AssumedContext = 'light' | 'dark' | 'hdr-headroom';
+export type AssumedContext = "light" | "dark" | "hdr-headroom";
 
 export interface ContextualBranch {
-  readonly label: string;
-  readonly raw: string;
-  readonly resolved?: ResolvedColor;
+	readonly label: string;
+	readonly raw: string;
+	readonly resolved?: ResolvedColor;
 }
 
 export interface ContextualColor {
-  readonly reason: ContextualReason;
-  /** 依赖的标识: 关键字、`var()` 名、profile 的 dashed-ident 等。 */
-  readonly dependsOn: string;
-  /** 可静态枚举的候选分支。 */
-  readonly branches: readonly ContextualBranch[];
-  /** deprecated 系统色的当前替代关键字。 */
-  readonly replacement?: string;
-  /** 只有用户显式选择了预览假设时才填充。 */
-  readonly assumed?: { readonly context: AssumedContext; readonly resolved: ResolvedColor };
+	readonly reason: ContextualReason;
+	/** 依赖的标识: 关键字、`var()` 名、profile 的 dashed-ident 等。 */
+	readonly dependsOn: string;
+	/** 可静态枚举的候选分支。 */
+	readonly branches: readonly ContextualBranch[];
+	/** deprecated 系统色的当前替代关键字。 */
+	readonly replacement?: string;
+	/** 只有用户显式选择了预览假设时才填充。 */
+	readonly assumed?: { readonly context: AssumedContext; readonly resolved: ResolvedColor };
 }
 
 export interface ColorMatch {
-  readonly raw: string;
-  readonly range: ColorRange;
-  /** 语法标识, 例如 `hex`、`rgb`、`color-mix`、`ictcp`、`system-color`。 */
-  readonly syntax: string;
-  /**
-   * 语法所属的 CSS Color 规范层级。
-   *
-   * 缺省表示该语法不归属任何 CSS Color 层级: 取值不唯一的整体变量引用 (`var(--x)`、`$x`、`@x`)
-   * 本身是自定义属性或预处理器语法, 而各候选的层级又不止一个答案, 写死任何一级都是误导。
-   */
-  readonly specLevel?: SpecLevel;
-  readonly experimental: boolean;
-  readonly sourceSpace?: string;
-  readonly resolution: ResolutionKind;
-  readonly resolved?: ResolvedColor;
-  readonly contextual?: ContextualColor;
-  readonly diagnostics: readonly ColorDiagnostic[];
-  /**
-   * 该颜色由变量解析而来, 值为被依赖的变量名 (含 `--` / `$` / `@` 前缀)。
-   *
-   * 存在即表示**只读**: 把 `var(--brand)` 改写成 `#ff8800` 会销毁设计令牌,
-   * 因此取色器只展示不可调, 转换命令拒绝。判据不能用 `resolution`——
-   * 解析成功后它已经是 `resolved`, 与普通颜色无从区分。
-   *
-   * 只存变量名不存种类: core 不能反向依赖 adapters (adapters 已依赖 core),
-   * 而消费方也只需要名字。
-   */
-  readonly resolvedVia?: { readonly variable: string };
-  /**
-   * 被本 match 包含而未进入主列表的嵌套颜色, 扁平存放全部后代, 各自带绝对 range。
-   *
-   * 只有行内色块消费它 —— 色块画在 range 起点之前, 起点不同就能错开排列, 因此
-   * `var(--abc, #def)` 可以外层与内层各给一个色块和一个取色器。高亮仍只画最外层,
-   * 否则内层那段会被画两遍。
-   *
-   * 扁平而非树形: 消费方只需遍历, 树形会把展开逻辑扩散到每个消费者。
-   */
-  readonly nested?: readonly ColorMatch[];
+	readonly raw: string;
+	readonly range: ColorRange;
+	/** 语法标识, 例如 `hex`、`rgb`、`color-mix`、`ictcp`、`system-color`。 */
+	readonly syntax: string;
+	/**
+	 * 语法所属的 CSS Color 规范层级。
+	 *
+	 * 缺省表示该语法不归属任何 CSS Color 层级: 取值不唯一的整体变量引用 (`var(--x)`、`$x`、`@x`)
+	 * 本身是自定义属性或预处理器语法, 而各候选的层级又不止一个答案, 写死任何一级都是误导。
+	 */
+	readonly specLevel?: SpecLevel;
+	readonly experimental: boolean;
+	readonly sourceSpace?: string;
+	readonly resolution: ResolutionKind;
+	readonly resolved?: ResolvedColor;
+	readonly contextual?: ContextualColor;
+	readonly diagnostics: readonly ColorDiagnostic[];
+	/**
+	 * 该颜色由变量解析而来, 值为被依赖的变量名 (含 `--` / `$` / `@` 前缀)。
+	 *
+	 * 存在即表示**只读**: 把 `var(--brand)` 改写成 `#ff8800` 会销毁设计令牌,
+	 * 因此取色器只展示不可调, 转换命令拒绝。判据不能用 `resolution`——
+	 * 解析成功后它已经是 `resolved`, 与普通颜色无从区分。
+	 *
+	 * 只存变量名不存种类: core 不能反向依赖 adapters (adapters 已依赖 core),
+	 * 而消费方也只需要名字。
+	 */
+	readonly resolvedVia?: { readonly variable: string };
+	/**
+	 * 被本 match 包含而未进入主列表的嵌套颜色, 扁平存放全部后代, 各自带绝对 range。
+	 *
+	 * 只有行内色块消费它 —— 色块画在 range 起点之前, 起点不同就能错开排列, 因此
+	 * `var(--abc, #def)` 可以外层与内层各给一个色块和一个取色器。高亮仍只画最外层,
+	 * 否则内层那段会被画两遍。
+	 *
+	 * 扁平而非树形: 消费方只需遍历, 树形会把展开逻辑扩散到每个消费者。
+	 */
+	readonly nested?: readonly ColorMatch[];
 }
 
 /**
@@ -143,14 +143,14 @@ export interface ColorMatch {
  * "有定义但取值取决于元素或环境"与"根本没有定义"必须区分, 前者要能把候选带出来。
  */
 export type VariableValue =
-  | { readonly kind: 'resolved'; readonly rawValue: string }
-  | { readonly kind: 'ambiguous'; readonly candidates: readonly VariableCandidateValue[] }
-  | { readonly kind: 'unresolved' };
+	| { readonly kind: "resolved"; readonly rawValue: string }
+	| { readonly kind: "ambiguous"; readonly candidates: readonly VariableCandidateValue[] }
+	| { readonly kind: "unresolved" };
 
 export interface VariableCandidateValue {
-  readonly rawValue: string;
-  /** 该候选来自哪里, 例如 `:root`、`[data-theme="warm"]`、`@media (…) › :root`。 */
-  readonly origin: string;
+	readonly rawValue: string;
+	/** 该候选来自哪里, 例如 `:root`、`[data-theme="warm"]`、`@media (…) › :root`。 */
+	readonly origin: string;
 }
 
 /**
@@ -162,46 +162,46 @@ export interface VariableCandidateValue {
 export type ResolveVariable = (name: string, atOffset: number) => VariableValue;
 
 /** 色域映射策略。`css` 为规范兼容映射, `clip` 为逐通道裁剪。 */
-export type GamutMapping = 'css' | 'clip' | 'none';
+export type GamutMapping = "css" | "clip" | "none";
 
-export type HexCase = 'lower' | 'upper';
+export type HexCase = "lower" | "upper";
 
-export type RgbHslSyntax = 'modern' | 'legacy';
+export type RgbHslSyntax = "modern" | "legacy";
 
-export type HdrToneMapping = 'none' | 'reinhard' | 'clip';
+export type HdrToneMapping = "none" | "reinhard" | "clip";
 
 export interface SerializerOptions {
-  readonly precision: number;
-  readonly hexCase: HexCase;
-  readonly syntax: RgbHslSyntax;
-  readonly gamutMapping: GamutMapping;
-  /** `none` 分量无法表达时是否按计算值输出。 */
-  readonly computeMissingComponents: boolean;
+	readonly precision: number;
+	readonly hexCase: HexCase;
+	readonly syntax: RgbHslSyntax;
+	readonly gamutMapping: GamutMapping;
+	/** `none` 分量无法表达时是否按计算值输出。 */
+	readonly computeMissingComponents: boolean;
 }
 
 /** 序列化结果与信息损失标记。 */
 export interface SerializedColor {
-  readonly text: string;
-  readonly gamutMapped: boolean;
-  readonly alphaLost: boolean;
-  readonly missingComponentsLost: boolean;
-  readonly hdrToneMapped: boolean;
+	readonly text: string;
+	readonly gamutMapped: boolean;
+	readonly alphaLost: boolean;
+	readonly missingComponentsLost: boolean;
+	readonly hdrToneMapped: boolean;
 }
 
 export function createDiagnostic(
-  code: DiagnosticCode,
-  severity: DiagnosticSeverity,
-  messageKey: string,
-  messageArgs?: readonly (string | number)[],
-  range?: ColorRange,
+	code: DiagnosticCode,
+	severity: DiagnosticSeverity,
+	messageKey: string,
+	messageArgs?: readonly (string | number)[],
+	range?: ColorRange
 ): ColorDiagnostic {
-  return { code, severity, messageKey, messageArgs, range };
+	return { code, severity, messageKey, messageArgs, range };
 }
 
 export function rangeLength(range: ColorRange): number {
-  return range.end - range.start;
+	return range.end - range.start;
 }
 
 export function rangesOverlap(a: ColorRange, b: ColorRange): boolean {
-  return a.start < b.end && b.start < a.end;
+	return a.start < b.end && b.start < a.end;
 }

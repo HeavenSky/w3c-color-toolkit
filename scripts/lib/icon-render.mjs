@@ -39,9 +39,9 @@ const hexToRgb = value => [
 	parseInt(value.slice(5, 7), 16),
 ];
 
-const toRgb = color => typeof color === "string" ? hexToRgb(color) : color;
+const toRgb = color => (typeof color === "string" ? hexToRgb(color) : color);
 
-const clamp01 = t => t < 0 ? 0 : t > 1 ? 1 : t;
+const clamp01 = t => (t < 0 ? 0 : t > 1 ? 1 : t);
 
 const mixRgb = (from, to, t) => {
 	const k = clamp01(t);
@@ -54,7 +54,11 @@ const mixRgb = (from, to, t) => {
 
 const rgbToHex = rgb =>
 	`#${rgb
-		.map(channel => Math.max(0, Math.min(255, Math.round(channel))).toString(16).padStart(2, "0"))
+		.map(channel =>
+			Math.max(0, Math.min(255, Math.round(channel)))
+				.toString(16)
+				.padStart(2, "0")
+		)
 		.join("")}`;
 
 // ── 几何 ────────────────────────────────────────────────────
@@ -84,7 +88,7 @@ const insideCapsule = (px, py, x1, y1, x2, y2, thickness) => {
 
 /** 12 点方向为 0 度, 顺时针递增; 与 SVG 的屏幕坐标系 (y 向下) 一致。 */
 const pointOnCircle = (cx, cy, radius, degrees) => {
-	const radians = degrees * Math.PI / 180;
+	const radians = (degrees * Math.PI) / 180;
 	return [cx + radius * Math.sin(radians), cy - radius * Math.cos(radians)];
 };
 
@@ -119,8 +123,20 @@ function boundingBox(shape) {
 function strokeBands(shape) {
 	const half = shape.strokeWidth / 2;
 	return {
-		outer: { x: shape.x - half, y: shape.y - half, w: shape.w + shape.strokeWidth, h: shape.h + shape.strokeWidth, r: shape.r + half },
-		inner: { x: shape.x + half, y: shape.y + half, w: shape.w - shape.strokeWidth, h: shape.h - shape.strokeWidth, r: shape.r - half },
+		outer: {
+			x: shape.x - half,
+			y: shape.y - half,
+			w: shape.w + shape.strokeWidth,
+			h: shape.h + shape.strokeWidth,
+			r: shape.r + half,
+		},
+		inner: {
+			x: shape.x + half,
+			y: shape.y + half,
+			w: shape.w - shape.strokeWidth,
+			h: shape.h - shape.strokeWidth,
+			r: shape.r - half,
+		},
 	};
 }
 
@@ -136,8 +152,8 @@ function compilePaint(paint, shape) {
 		const from = hexToRgb(paint.from);
 		const to = hexToRgb(paint.to);
 		const box = boundingBox(shape);
-		const tx = px => box.w === 0 ? 0 : (px - box.x) / box.w;
-		const ty = py => box.h === 0 ? 0 : (py - box.y) / box.h;
+		const tx = px => (box.w === 0 ? 0 : (px - box.x) / box.w);
+		const ty = py => (box.h === 0 ? 0 : (py - box.y) / box.h);
 		// 与 SVG 同一套投影: 渐变向量为单位向量时 t 即坐标, 对角线时为两者均值。
 		if (paint.direction === "vertical") return (_px, py) => mixRgb(from, to, ty(py));
 		if (paint.direction === "horizontal") return (px, _py) => mixRgb(from, to, tx(px));
@@ -148,7 +164,7 @@ function compilePaint(paint, shape) {
 		// 按半度缓存: 256px 画布上相邻像素的角差远大于此, 视觉无损而省掉大量取色计算。
 		const cache = new Map();
 		return (px, py) => {
-			const angle = Math.atan2(px - shape.cx, shape.cy - py) * 180 / Math.PI;
+			const angle = (Math.atan2(px - shape.cx, shape.cy - py) * 180) / Math.PI;
 			const hue = (angle + 360) % 360;
 			const key = Math.round(hue * 2) / 2;
 			let rgb = cache.get(key);
@@ -168,7 +184,8 @@ function compileShape(shape) {
 	switch (shape.kind) {
 		case "roundedRect":
 			return {
-				inside: (px, py) => insideRoundedRect(px, py, shape.x, shape.y, shape.w, shape.h, shape.r),
+				inside: (px, py) =>
+					insideRoundedRect(px, py, shape.x, shape.y, shape.w, shape.h, shape.r),
 				color: compilePaint(shape.fill, shape),
 			};
 		case "roundedRectStroke": {
@@ -216,8 +233,8 @@ function crc32(buffer) {
 	let crc = 0xffffffff;
 	for (const byte of buffer) {
 		let c = (crc ^ byte) & 0xff;
-		for (let k = 0; k < 8; k += 1) c = c & 1 ? 0xedb88320 ^ c >>> 1 : c >>> 1;
-		crc = c ^ crc >>> 8;
+		for (let k = 0; k < 8; k += 1) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+		crc = c ^ (crc >>> 8);
 	}
 	return (crc ^ 0xffffffff) >>> 0;
 }
@@ -271,7 +288,7 @@ export function renderPng(spec, { supersample = 4 } = {}) {
 			raw[offset] = covered ? Math.round(r / covered) : 0;
 			raw[offset + 1] = covered ? Math.round(g / covered) : 0;
 			raw[offset + 2] = covered ? Math.round(b / covered) : 0;
-			raw[offset + 3] = Math.round(covered / (supersample * supersample) * 255);
+			raw[offset + 3] = Math.round((covered / (supersample * supersample)) * 255);
 		}
 	}
 
@@ -324,7 +341,11 @@ function svgPaint(paint, _shape, defs) {
 	if (paint.kind === "linear") {
 		const id = `g${defs.length}`;
 		const [x2, y2] =
-			paint.direction === "vertical" ? [0, 1] : paint.direction === "horizontal" ? [1, 0] : [1, 1];
+			paint.direction === "vertical"
+				? [0, 1]
+				: paint.direction === "horizontal"
+					? [1, 0]
+					: [1, 1];
 		defs.push(
 			[
 				`    <linearGradient id="${id}" x1="0" y1="0" x2="${x2}" y2="${y2}">`,
@@ -357,7 +378,10 @@ export function renderSvg(spec) {
 				break;
 			case "polyline": {
 				const d = shape.points
-					.map((point, index) => `${index === 0 ? "M" : "L"}${round(point[0])} ${round(point[1])}`)
+					.map(
+						(point, index) =>
+							`${index === 0 ? "M" : "L"}${round(point[0])} ${round(point[1])}`
+					)
 					.join(" ");
 				body.push(
 					`  <path d="${d}" fill="none" stroke="${svgPaint(shape.stroke, shape, defs)}" stroke-width="${round(shape.strokeWidth)}" stroke-linecap="round" stroke-linejoin="round" />`

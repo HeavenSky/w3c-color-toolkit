@@ -17,19 +17,19 @@
  */
 
 export interface CompiledPattern {
-  readonly negated: boolean;
-  readonly regex: RegExp;
+	readonly negated: boolean;
+	readonly regex: RegExp;
 }
 
 export interface CompiledPatterns {
-  readonly patterns: readonly CompiledPattern[];
-  /** 被跳过的模式原文, 供调用方告警。 */
-  readonly invalid: readonly string[];
+	readonly patterns: readonly CompiledPattern[];
+	/** 被跳过的模式原文, 供调用方告警。 */
+	readonly invalid: readonly string[];
 }
 
 /** 转义正则元字符; `*` 与 `?` 由调用处单独处理, 不在这里转义。 */
 function escapeLiteral(char: string): string {
-  return /[\\^$.|+()[\]{}]/.test(char) ? `\\${char}` : char;
+	return /[\\^$.|+()[\]{}]/.test(char) ? `\\${char}` : char;
 }
 
 /**
@@ -39,104 +39,104 @@ function escapeLiteral(char: string): string {
  * 的字符类语义与正则一致; 未闭合的 `[` 退化成字面量。
  */
 function globToRegExpSource(glob: string): string {
-  let source = '';
-  let index = 0;
+	let source = "";
+	let index = 0;
 
-  while (index < glob.length) {
-    const char = glob[index];
+	while (index < glob.length) {
+		const char = glob[index];
 
-    if (char === '*') {
-      // `**` 与 `*` 在无分隔符的语境里等价。
-      while (glob[index] === '*') index += 1;
-      source += '.*';
-      continue;
-    }
+		if (char === "*") {
+			// `**` 与 `*` 在无分隔符的语境里等价。
+			while (glob[index] === "*") index += 1;
+			source += ".*";
+			continue;
+		}
 
-    if (char === '?') {
-      source += '.';
-      index += 1;
-      continue;
-    }
+		if (char === "?") {
+			source += ".";
+			index += 1;
+			continue;
+		}
 
-    if (char === '[') {
-      const end = findClassEnd(glob, index);
-      if (end === -1) {
-        source += '\\[';
-        index += 1;
-        continue;
-      }
-      source += normalizeClass(glob.slice(index, end + 1));
-      index = end + 1;
-      continue;
-    }
+		if (char === "[") {
+			const end = findClassEnd(glob, index);
+			if (end === -1) {
+				source += "\\[";
+				index += 1;
+				continue;
+			}
+			source += normalizeClass(glob.slice(index, end + 1));
+			index = end + 1;
+			continue;
+		}
 
-    if (char === '\\' && index + 1 < glob.length) {
-      source += escapeLiteral(glob[index + 1]);
-      index += 2;
-      continue;
-    }
+		if (char === "\\" && index + 1 < glob.length) {
+			source += escapeLiteral(glob[index + 1]);
+			index += 2;
+			continue;
+		}
 
-    source += escapeLiteral(char);
-    index += 1;
-  }
+		source += escapeLiteral(char);
+		index += 1;
+	}
 
-  return source;
+	return source;
 }
 
 /** 找到字符类的闭合 `]`; 紧跟在 `[` 或 `[!` / `[^` 之后的 `]` 是字面量。 */
 function findClassEnd(glob: string, start: number): number {
-  let index = start + 1;
-  if (glob[index] === '!' || glob[index] === '^') index += 1;
-  if (glob[index] === ']') index += 1;
+	let index = start + 1;
+	if (glob[index] === "!" || glob[index] === "^") index += 1;
+	if (glob[index] === "]") index += 1;
 
-  while (index < glob.length) {
-    if (glob[index] === '\\') {
-      index += 2;
-      continue;
-    }
-    if (glob[index] === ']') return index;
-    index += 1;
-  }
-  return -1;
+	while (index < glob.length) {
+		if (glob[index] === "\\") {
+			index += 2;
+			continue;
+		}
+		if (glob[index] === "]") return index;
+		index += 1;
+	}
+	return -1;
 }
 
 /** gitignore 用 `[!…]` 取反, 正则用 `[^…]`。 */
 function normalizeClass(text: string): string {
-  return text.startsWith('[!') ? `[^${text.slice(2)}` : text;
+	return text.startsWith("[!") ? `[^${text.slice(2)}` : text;
 }
 
 export function compilePatterns(raw: readonly string[]): CompiledPatterns {
-  const patterns: CompiledPattern[] = [];
-  const invalid: string[] = [];
+	const patterns: CompiledPattern[] = [];
+	const invalid: string[] = [];
 
-  for (const entry of raw) {
-    const trimmed = entry.trim();
-    if (trimmed.length === 0 || trimmed.startsWith('#')) continue;
+	for (const entry of raw) {
+		const trimmed = entry.trim();
+		if (trimmed.length === 0 || trimmed.startsWith("#")) continue;
 
-    let negated = false;
-    let body = trimmed;
-    if (body.startsWith('\\!')) body = body.slice(1);
-    else if (body.startsWith('!')) {
-      negated = true;
-      body = body.slice(1);
-    }
+		let negated = false;
+		let body = trimmed;
+		if (body.startsWith("\\!")) body = body.slice(1);
+		else if (body.startsWith("!")) {
+			negated = true;
+			body = body.slice(1);
+		}
 
-    if (body.length === 0 || body.includes('/')) {
-      invalid.push(entry);
-      continue;
-    }
+		if (body.length === 0 || body.includes("/")) {
+			invalid.push(entry);
+			continue;
+		}
 
-    patterns.push({ negated, regex: new RegExp(`^${globToRegExpSource(body)}$`, 'i') });
-  }
+		patterns.push({ negated, regex: new RegExp(`^${globToRegExpSource(body)}$`, "i") });
+	}
 
-  return { patterns, invalid };
+	return { patterns, invalid };
 }
 
 /** 最后一个命中的模式决定结果; 无命中视为不匹配。 */
 export function matchesPatterns(compiled: CompiledPatterns, name: string): boolean {
-  let matched: boolean | undefined;
-  for (const pattern of compiled.patterns) {
-    if (pattern.regex.test(name)) matched = !pattern.negated;
-  }
-  return matched ?? false;
+	let matched: boolean | undefined;
+	for (const pattern of compiled.patterns) {
+		if (pattern.regex.test(name)) matched = !pattern.negated;
+	}
+	return matched ?? false;
 }

@@ -5,22 +5,19 @@
  * 因此三种宿主的行为一致, 也不需要为 Web 单独出一份产物。
  * `build.mjs` 按 browser platform 打包: 一旦有人引入 node 内置模块, 构建会直接失败。
  */
-import type * as vscode from 'vscode';
+import type * as vscode from "vscode";
 
-import { activateShared, deactivateShared } from './activate.js';
-import { createStyleFileSource } from './adapters/workspace-file-reader.js';
+import { activateShared, deactivateShared } from "./activate.js";
+import { createStyleFileSource } from "./adapters/workspace-file-reader.js";
 
 /** 只用于日志: Web Extension Host 里没有 `process`。 */
-const hostKind: 'node' | 'web' =
-  typeof process !== 'undefined' && process.versions?.node ? 'node' : 'web';
+const hostKind: "node" | "web" =
+	typeof process !== "undefined" && process.versions?.node ? "node" : "web";
 
 export function activate(context: vscode.ExtensionContext): void {
-  activateShared(context, {
-    createStyleFileSource,
-    hostKind,
-  });
+	activateShared(context, { createStyleFileSource, hostKind });
 }
 
 export function deactivate(): void {
-  deactivateShared();
+	deactivateShared();
 }

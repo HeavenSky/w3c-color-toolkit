@@ -16,71 +16,71 @@
  * 本文件不判断"哪个定义有效", 那是 `variable-definitions.ts` 与解析器的职责。
  */
 import postcss, {
-  type AtRule,
-  type ChildNode,
-  type Container,
-  type Document,
-  type Root,
-  type Rule,
-} from 'postcss';
-import { parse as parseLess } from 'postcss-less';
-import { parse as parseScss } from 'postcss-scss';
+	type AtRule,
+	type ChildNode,
+	type Container,
+	type Document,
+	type Root,
+	type Rule,
+} from "postcss";
+import { parse as parseLess } from "postcss-less";
+import { parse as parseScss } from "postcss-scss";
 
-import type { TextDocumentLike } from './types.js';
+import type { TextDocumentLike } from "./types.js";
 
 /** 声明所在的一层容器。 */
 export type StyleAncestor =
-  | { readonly kind: 'rule'; readonly selector: string }
-  | { readonly kind: 'at-rule'; readonly name: string; readonly params: string };
+	| { readonly kind: "rule"; readonly selector: string }
+	| { readonly kind: "at-rule"; readonly name: string; readonly params: string };
 
 export interface StyleDeclaration {
-  /** 含前缀的名字: `--brand`、`$brand`、`@brand`, 或普通属性名如 `fallback`。 */
-  readonly prop: string;
-  /** 值; 已 trim, 注释由 PostCSS 剥离, SCSS 的 `!default` / `!global` 已去掉。 */
-  readonly value: string;
-  /** 由外到内的祖先链; 顶层声明为空数组。 */
-  readonly ancestors: readonly StyleAncestor[];
-  /** 声明起点的 UTF-16 offset。 */
-  readonly offset: number;
-  /** 直接所在块的 offset 区间 `[start, end)`; 顶层声明没有。 */
-  readonly scope?: StyleScope;
+	/** 含前缀的名字: `--brand`、`$brand`、`@brand`, 或普通属性名如 `fallback`。 */
+	readonly prop: string;
+	/** 值; 已 trim, 注释由 PostCSS 剥离, SCSS 的 `!default` / `!global` 已去掉。 */
+	readonly value: string;
+	/** 由外到内的祖先链; 顶层声明为空数组。 */
+	readonly ancestors: readonly StyleAncestor[];
+	/** 声明起点的 UTF-16 offset。 */
+	readonly offset: number;
+	/** 直接所在块的 offset 区间 `[start, end)`; 顶层声明没有。 */
+	readonly scope?: StyleScope;
 }
 
 export interface StyleScope {
-  readonly start: number;
-  readonly end: number;
+	readonly start: number;
+	readonly end: number;
 }
 
 export interface StylesheetFacts {
-  readonly declarations: readonly StyleDeclaration[];
-  /** `@import` / `@use` / `@forward` 的 specifier, 已去引号。 */
-  readonly imports: readonly string[];
-  /** 解析失败 (语法错误); 此时其余字段为空, 调用方按"该文件不贡献事实"处理。 */
-  readonly failed: boolean;
-  readonly errorMessage?: string;
+	readonly declarations: readonly StyleDeclaration[];
+	/** `@import` / `@use` / `@forward` 的 specifier, 已去引号。 */
+	readonly imports: readonly string[];
+	/** 解析失败 (语法错误); 此时其余字段为空, 调用方按"该文件不贡献事实"处理。 */
+	readonly failed: boolean;
+	readonly errorMessage?: string;
 }
 
 /** 祖先链的文本形式, 例如 `['@layer base', ':root']`。 */
 export function ancestorChain(ancestors: readonly StyleAncestor[]): string[] {
-  return ancestors.map((ancestor) =>
-    ancestor.kind === 'rule' ? ancestor.selector : `@${ancestor.name} ${ancestor.params}`.trim(),
-  );
+	return ancestors.map(ancestor =>
+		ancestor.kind === "rule" ? ancestor.selector : `@${ancestor.name} ${ancestor.params}`.trim()
+	);
 }
 
 /** 跟踪导入的 at-rule。 */
-const IMPORT_AT_RULES: ReadonlySet<string> = new Set(['import', 'use', 'forward']);
+const IMPORT_AT_RULES: ReadonlySet<string> = new Set(["import", "use", "forward"]);
 
 /** SCSS 赋值标志; 它们不属于值本身。 */
-const SCSS_FLAGS: readonly string[] = ['!default', '!global'];
+const SCSS_FLAGS: readonly string[] = ["!default", "!global"];
 
 function stripScssFlags(value: string): string {
-  let out = value.trim();
-  for (;;) {
-    const lower = out.toLowerCase();
-    const flag = SCSS_FLAGS.find((candidate) => lower.endsWith(candidate));
-    if (!flag) return out;
-    out = out.slice(0, out.length - flag.length).trim();
-  }
+	let out = value.trim();
+	for (;;) {
+		const lower = out.toLowerCase();
+		const flag = SCSS_FLAGS.find(candidate => lower.endsWith(candidate));
+		if (!flag) return out;
+		out = out.slice(0, out.length - flag.length).trim();
+	}
 }
 
 /**
@@ -89,23 +89,23 @@ function stripScssFlags(value: string): string {
  * 只取引号内的部分, 不用正则: params 已经由 PostCSS 切出来, 这里只是按引号分段。
  */
 function importSpecifiers(params: string): string[] {
-  const out: string[] = [];
-  let quote: string | undefined;
-  let current = '';
-  for (const char of params) {
-    if (quote === undefined) {
-      if (char === '"' || char === "'") quote = char;
-      continue;
-    }
-    if (char === quote) {
-      if (current.length > 0) out.push(current);
-      current = '';
-      quote = undefined;
-      continue;
-    }
-    current += char;
-  }
-  return out;
+	const out: string[] = [];
+	let quote: string | undefined;
+	let current = "";
+	for (const char of params) {
+		if (quote === undefined) {
+			if (char === '"' || char === "'") quote = char;
+			continue;
+		}
+		if (char === quote) {
+			if (current.length > 0) out.push(current);
+			current = "";
+			quote = undefined;
+			continue;
+		}
+		current += char;
+	}
+	return out;
 }
 
 /**
@@ -115,43 +115,43 @@ function importSpecifiers(params: string): string[] {
  * (它们的 `selector` / `name` 不在联合的公共成员里), 因此按 `type` 判定后显式断言。
  */
 function ancestorsOf(node: ChildNode): StyleAncestor[] {
-  const chain: StyleAncestor[] = [];
-  // `Container.parent` 还可能是 `Document` (postcss-html 这类多文档语法), 因此联合里带上它。
-  let parent: Container | Document | undefined = node.parent;
-  while (parent && parent.type !== 'root' && parent.type !== 'document') {
-    if (parent.type === 'rule') {
-      chain.unshift({ kind: 'rule', selector: (parent as Rule).selector });
-    } else if (parent.type === 'atrule') {
-      const atRule = parent as AtRule;
-      chain.unshift({ kind: 'at-rule', name: atRule.name, params: atRule.params });
-    }
-    parent = parent.parent;
-  }
-  return chain;
+	const chain: StyleAncestor[] = [];
+	// `Container.parent` 还可能是 `Document` (postcss-html 这类多文档语法), 因此联合里带上它。
+	let parent: Container | Document | undefined = node.parent;
+	while (parent && parent.type !== "root" && parent.type !== "document") {
+		if (parent.type === "rule") {
+			chain.unshift({ kind: "rule", selector: (parent as Rule).selector });
+		} else if (parent.type === "atrule") {
+			const atRule = parent as AtRule;
+			chain.unshift({ kind: "at-rule", name: atRule.name, params: atRule.params });
+		}
+		parent = parent.parent;
+	}
+	return chain;
 }
 
 function scopeOf(node: ChildNode): StyleScope | undefined {
-  const parent = node.parent;
-  if (!parent || parent.type === 'root' || parent.type === 'document') return undefined;
-  const start = parent.source?.start?.offset;
-  const end = parent.source?.end?.offset;
-  if (start === undefined || end === undefined) return undefined;
-  return { start, end };
+	const parent = node.parent;
+	if (!parent || parent.type === "root" || parent.type === "document") return undefined;
+	const start = parent.source?.start?.offset;
+	const end = parent.source?.end?.offset;
+	if (start === undefined || end === undefined) return undefined;
+	return { start, end };
 }
 
 /** 按语言选语法包; 未知语言按标准 CSS 处理。 */
 function syntaxFor(languageId: string): { parse: (css: string) => Root } {
-  switch (languageId) {
-    // `sass` 的缩进语法没有 PostCSS 官方语法包; 沿用 scss 语法, 缩进写法会解析失败并按
-    // 「解析失败即不贡献事实」降级 —— 与改造前"正则也认不出缩进语法"的能力持平。
-    case 'scss':
-    case 'sass':
-      return { parse: (css) => parseScss(css) };
-    case 'less':
-      return { parse: (css) => parseLess(css) };
-    default:
-      return { parse: (css) => postcss.parse(css, { from: undefined }) };
-  }
+	switch (languageId) {
+		// `sass` 的缩进语法没有 PostCSS 官方语法包; 沿用 scss 语法, 缩进写法会解析失败并按
+		// 「解析失败即不贡献事实」降级 —— 与改造前"正则也认不出缩进语法"的能力持平。
+		case "scss":
+		case "sass":
+			return { parse: css => parseScss(css) };
+		case "less":
+			return { parse: css => parseLess(css) };
+		default:
+			return { parse: css => postcss.parse(css, { from: undefined }) };
+	}
 }
 
 /**
@@ -160,49 +160,50 @@ function syntaxFor(languageId: string): { parse: (css: string) => Root } {
  * 解析失败不抛: 一个坏文件只让自己不贡献定义, 不能让整个索引失败 (方案 D8)。
  */
 export function readStylesheet(document: TextDocumentLike): StylesheetFacts {
-  let root: Root;
-  try {
-    root = syntaxFor(document.languageId).parse(document.getText());
-  } catch (error) {
-    return {
-      declarations: [],
-      imports: [],
-      failed: true,
-      errorMessage: error instanceof Error ? error.message : String(error),
-    };
-  }
+	let root: Root;
+	try {
+		root = syntaxFor(document.languageId).parse(document.getText());
+	} catch (error) {
+		return {
+			declarations: [],
+			imports: [],
+			failed: true,
+			errorMessage: error instanceof Error ? error.message : String(error),
+		};
+	}
 
-  const declarations: StyleDeclaration[] = [];
-  const imports: string[] = [];
+	const declarations: StyleDeclaration[] = [];
+	const imports: string[] = [];
 
-  root.walk((node) => {
-    if (node.type === 'decl') {
-      declarations.push({
-        prop: node.prop,
-        value: stripScssFlags(node.value),
-        ancestors: ancestorsOf(node),
-        offset: node.source?.start?.offset ?? 0,
-        // SCSS 的 `!global` 赋值写在块内也是顶层变量。
-        scope: /!global\b/i.test(node.value) ? undefined : scopeOf(node),
-      });
-      return;
-    }
-    if (node.type !== 'atrule') return;
+	root.walk(node => {
+		if (node.type === "decl") {
+			declarations.push({
+				prop: node.prop,
+				value: stripScssFlags(node.value),
+				ancestors: ancestorsOf(node),
+				offset: node.source?.start?.offset ?? 0,
+				// SCSS 的 `!global` 赋值写在块内也是顶层变量。
+				scope: /!global\b/i.test(node.value) ? undefined : scopeOf(node),
+			});
+			return;
+		}
+		if (node.type !== "atrule") return;
 
-    // Less 的 `@brand: #ff8800;` 是 at-rule 而不是声明, 这里翻译回声明形态。
-    if ((node as { variable?: boolean }).variable === true) {
-      declarations.push({
-        prop: `@${node.name}`,
-        value: stripScssFlags((node as { value?: string }).value ?? node.params),
-        ancestors: ancestorsOf(node),
-        offset: node.source?.start?.offset ?? 0,
-        scope: scopeOf(node),
-      });
-      return;
-    }
+		// Less 的 `@brand: #ff8800;` 是 at-rule 而不是声明, 这里翻译回声明形态。
+		if ((node as { variable?: boolean }).variable === true) {
+			declarations.push({
+				prop: `@${node.name}`,
+				value: stripScssFlags((node as { value?: string }).value ?? node.params),
+				ancestors: ancestorsOf(node),
+				offset: node.source?.start?.offset ?? 0,
+				scope: scopeOf(node),
+			});
+			return;
+		}
 
-    if (IMPORT_AT_RULES.has(node.name.toLowerCase())) imports.push(...importSpecifiers(node.params));
-  });
+		if (IMPORT_AT_RULES.has(node.name.toLowerCase()))
+			imports.push(...importSpecifiers(node.params));
+	});
 
-  return { declarations, imports, failed: false };
+	return { declarations, imports, failed: false };
 }

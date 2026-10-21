@@ -42,7 +42,8 @@ export function checkNlsParity(root) {
 
 	for (const key of diff(en, zh)) problems.push(`package.nls.zh-cn.json 缺少 key: ${key}`);
 	for (const key of diff(zh, en)) problems.push(`package.nls.json 缺少 key: ${key}`);
-	for (const key of diff(used, en)) problems.push(`清单用到但 package.nls 未定义的占位符: %${key}%`);
+	for (const key of diff(used, en))
+		problems.push(`清单用到但 package.nls 未定义的占位符: %${key}%`);
 	for (const key of diff(en, used)) problems.push(`package.nls 定义了但清单未使用的 key: ${key}`);
 
 	return problems;
@@ -84,8 +85,10 @@ export function checkInlineRuntimeStrings(root, l10nDir = "l10n") {
 	if (!existsSync(join(root, "src"))) return [];
 	for (const file of collectSourceFiles(join(root, "src"))) {
 		const source = readFileSync(file, "utf8");
-		for (const match of source.matchAll(/l10n\.t\(\s*'((?:[^'\\]|\\.)*)'/g)) inline.add(match[1]);
-		for (const match of source.matchAll(/l10n\.t\(\s*"((?:[^"\\]|\\.)*)"/g)) inline.add(match[1]);
+		for (const match of source.matchAll(/l10n\.t\(\s*'((?:[^'\\]|\\.)*)'/g))
+			inline.add(match[1]);
+		for (const match of source.matchAll(/l10n\.t\(\s*"((?:[^"\\]|\\.)*)"/g))
+			inline.add(match[1]);
 		// 反引号同样是合法写法, 格式化工具也常把引号统一成它。带 `${}` 的模板不收 —— 那种 key
 		// 运行时才拼得出来, 本就无法静态对到 bundle 条目, 收进来只会造出必然失败的假问题。
 		for (const match of source.matchAll(/l10n\.t\(\s*`((?:[^`\\]|\\.)*)`/g)) {
@@ -98,10 +101,12 @@ export function checkInlineRuntimeStrings(root, l10nDir = "l10n") {
 	const bundle = readJson(bundlePath);
 	const problems = [];
 	for (const key of [...inline].sort()) {
-		if (!(key in bundle)) problems.push(`${l10nDir}/bundle.l10n.zh-cn.json 缺少运行时文案: ${key}`);
+		if (!(key in bundle))
+			problems.push(`${l10nDir}/bundle.l10n.zh-cn.json 缺少运行时文案: ${key}`);
 	}
 	for (const key of Object.keys(bundle).sort()) {
-		if (!inline.has(key)) problems.push(`${l10nDir}/bundle.l10n.zh-cn.json 存在无人使用的条目: ${key}`);
+		if (!inline.has(key))
+			problems.push(`${l10nDir}/bundle.l10n.zh-cn.json 存在无人使用的条目: ${key}`);
 	}
 	return problems;
 }

@@ -2,7 +2,7 @@
 
 **English** · [简体中文](../zh/docs/troubleshooting.md)
 
-This page helps you fix a color that is missing, doubled, refused or stale; it assumes the extension is installed and enabled. Most fixes use an action of *W3C Color Toolkit: Manage*, named in each section below.
+This page helps you fix a color that is missing, doubled, refused or stale; it assumes the extension is installed and enabled. Most fixes use an action of _W3C Color Toolkit: Manage_, named in each section below.
 
 ## No inline swatch appears
 
@@ -22,7 +22,7 @@ Check these causes in order of likelihood:
 
 1. `w3cColorToolkit.highlight` is `off`.
 2. The file is hidden by `advanced.disable.fileNames` or `advanced.disable.languageIds`; the defaults hide `*.min.*`, `*.map`, log files and plain text.
-3. The field for that syntax is off in *Configure Color Fields*.
+3. The field for that syntax is off in _Configure Color Fields_.
 4. The value depends on context, such as `currentColor` or a variable with several definitions; see [Supported color syntax](./color-support.md#values-that-depend-on-context).
 5. The document is longer than `advanced.disable.maxFileSizeMb` (about 307 KiB by default).
 6. The document has more colors than `advanced.highlight.maxMatchesPerDocument` (600 by default).
@@ -32,7 +32,7 @@ The log names the reason a file is hidden; raise the matching limit or narrow th
 
 ## The picker does not let me change a value
 
-- Cause: the swatch is read only, because the value is context dependent, a resolved variable, or read-only syntax such as `color-mix()`. Fix: rewrite it on purpose with *Convert Color*.
+- Cause: the swatch is read only, because the value is context dependent, a resolved variable, or read-only syntax such as `color-mix()`. Fix: rewrite it on purpose with _Convert Color_.
 
 ## Conversion was refused
 
@@ -45,7 +45,7 @@ The message names the reason:
 
 ## A variable reference shows nothing
 
-A reference with no usable definition shows nothing by design. *Manage* → *Open the log* names the reason, then check:
+A reference with no usable definition shows nothing by design. _Manage_ → _Open the log_ names the reason, then check:
 
 1. `advanced.variables.resolve` is `true`, and the file's language is in `advanced.variables.languageIds`.
 2. The token file matches `advanced.variables.lookupGlobs` and is not in an always-skipped folder such as `node_modules` or `dist` (full list in [Resolve variables](./variables.md#let-the-extension-find-your-token-files)).
@@ -57,12 +57,12 @@ A token defined only under `[data-theme="…"]` or `.dark` is a different case: 
 
 ## A key in `advanced` has no effect
 
-- Cause: the key is unknown, has the wrong type, is out of range, or is one of the seven top-level settings. Fix: run *Manage* → *Show effective configuration*; it lists every key with its scope, plus the keys that were rejected. For more detail set `advanced.logLevel` to `debug` and open the log.
+- Cause: the key is unknown, has the wrong type, is out of range, or is one of the seven top-level settings. Fix: run _Manage_ → _Show effective configuration_; it lists every key with its scope, plus the keys that were rejected. For more detail set `advanced.logLevel` to `debug` and open the log.
 
 ## Results look stale
 
-- Fix: run *Manage* → *Rescan the current document*, or *Clear the index cache*.
-- If the extension does not recognize a syntax, *Manage* → *Log unsupported syntax* records it for a bug report on the [issue tracker](https://github.com/HeavenSky/w3c-color-toolkit/issues).
+- Fix: run _Manage_ → _Rescan the current document_, or _Clear the index cache_.
+- If the extension does not recognize a syntax, _Manage_ → _Log unsupported syntax_ records it for a bug report on the [issue tracker](https://github.com/HeavenSky/w3c-color-toolkit/issues).
 
 ## Known limitations
 

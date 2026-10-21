@@ -8,15 +8,15 @@ This page shows how to change the marker drawn on colors, which syntaxes get one
 
 `w3cColorToolkit.highlight` sets one marker style for the whole extension:
 
-| Value | What it draws |
-| --- | --- |
-| `underline` (default) | Underline in the color |
-| `background` | Filled background behind the text, with a readable foreground |
-| `foreground` | Colors the text itself |
-| `outline` | 2px outline around the value |
-| `dot-before` / `dot-after` | Bullet before or after the value |
-| `square-before` / `square-after` | Filled square before or after the value |
-| `off` | No highlighting |
+| Value                            | What it draws                                                 |
+| -------------------------------- | ------------------------------------------------------------- |
+| `underline` (default)            | Underline in the color                                        |
+| `background`                     | Filled background behind the text, with a readable foreground |
+| `foreground`                     | Colors the text itself                                        |
+| `outline`                        | 2px outline around the value                                  |
+| `dot-before` / `dot-after`       | Bullet before or after the value                              |
+| `square-before` / `square-after` | Filled square before or after the value                       |
+| `off`                            | No highlighting                                               |
 
 **`square-before` and `square-after` are drawn by the extension itself**, so they work in every language and position and do not depend on VS Code's color feature. Use them when you turn the inline swatch off but still want a visible chip.
 
@@ -24,29 +24,29 @@ This page shows how to change the marker drawn on colors, which syntaxes get one
 
 ## Choose which colors count
 
-Hover and highlighting share one field list, so turning a field off removes it from the hover, the highlighting, or both, depending on its group. Run *W3C Color Toolkit: Configure Color Fields* to tick fields in a Quick Pick, or edit `advanced.fields.enabled` and `advanced.fields.excluded` directly.
+Hover and highlighting share one field list, so turning a field off removes it from the hover, the highlighting, or both, depending on its group. Run _W3C Color Toolkit: Configure Color Fields_ to tick fields in a Quick Pick, or edit `advanced.fields.enabled` and `advanced.fields.excluded` directly.
 
-| Group | Applies to | Fields |
-| --- | --- | --- |
-| CSS formats | hover row and highlighting | `hex`, `rgb`, `hsl`, `hwb`, `lab`, `lch`, `oklab`, `oklch`, `color-srgb`, `color-srgb-linear`, `display-p3`, `color-display-p3-linear`, `a98-rgb`, `prophoto-rgb`, `rec2020`, `xyz-d50`, `xyz-d65`, `ictcp`†, `jzazbz`†, `jzczhz`†, `rec2100-pq`†, `rec2100-hlg`†, `rec2100-linear`†, `css-color-name` |
-| CSS syntax, read only | highlighting only | `transparent`, `color-mix`, `relative-color`, `contrast-color`, `color-layers`, `light-dark`, `device-cmyk`, `color-custom-profile`, `current-color`, `system-color`, `hdr-color`† |
-| Non-CSS representations | hover only | `hsv`, `cmyk` |
-| Extra information | hover only | `preview`, `source`, `spec-level`, `diagnostics`, `alpha`\*, `gamut`\*, `contrast-on-white`\*, `contrast-on-black`\* |
+| Group                   | Applies to                 | Fields                                                                                                                                                                                                                                                                                                 |
+| ----------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| CSS formats             | hover row and highlighting | `hex`, `rgb`, `hsl`, `hwb`, `lab`, `lch`, `oklab`, `oklch`, `color-srgb`, `color-srgb-linear`, `display-p3`, `color-display-p3-linear`, `a98-rgb`, `prophoto-rgb`, `rec2020`, `xyz-d50`, `xyz-d65`, `ictcp`†, `jzazbz`†, `jzczhz`†, `rec2100-pq`†, `rec2100-hlg`†, `rec2100-linear`†, `css-color-name` |
+| CSS syntax, read only   | highlighting only          | `transparent`, `color-mix`, `relative-color`, `contrast-color`, `color-layers`, `light-dark`, `device-cmyk`, `color-custom-profile`, `current-color`, `system-color`, `hdr-color`†                                                                                                                     |
+| Non-CSS representations | hover only                 | `hsv`, `cmyk`                                                                                                                                                                                                                                                                                          |
+| Extra information       | hover only                 | `preview`, `source`, `spec-level`, `diagnostics`, `alpha`\*, `gamut`\*, `contrast-on-white`\*, `contrast-on-black`\*                                                                                                                                                                                   |
 
-† Needs `cssColorHdr` in `w3cColorToolkit.experimental`. \* Off by default; add it to `fields.enabled` or tick it in *Configure Color Fields*.
+† Needs `cssColorHdr` in `w3cColorToolkit.experimental`. \* Off by default; add it to `fields.enabled` or tick it in _Configure Color Fields_.
 
 - `fields.enabled` set to `null` keeps the default list; exclusions in `fields.excluded` always win.
 - Syntax the field list does not know is always highlighted, so a newly supported syntax never loses its marker silently.
-- *Configure Color Fields* writes fields back in the default order; edit `fields.enabled` by hand for a custom hover order.
+- _Configure Color Fields_ writes fields back in the default order; edit `fields.enabled` by hand for a custom hover order.
 
 A few more options decide what the scanner looks at:
 
-| Option | Effect |
-| --- | --- |
-| `advanced.highlight.matchWords` | Where bare color names such as `red` count: `off`, `css-like` (`css`, `scss`, `sass`, `less`, `stylus`, `postcss`), or `all` languages |
-| `advanced.scan.comments`, `advanced.scan.strings` | Whether colors inside comments and string literals count |
-| `advanced.highlight.hexAlphaOrder` | Read 8-digit hex as `#RRGGBBAA` (`rgba`) or `#AARRGGBB` (`argb`) |
-| `advanced.highlight.maxMatchesPerDocument` | Stop highlighting after this many colors; nested colors count separately, so `var(--a, #fff)` uses two |
+| Option                                            | Effect                                                                                                                                 |
+| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `advanced.highlight.matchWords`                   | Where bare color names such as `red` count: `off`, `css-like` (`css`, `scss`, `sass`, `less`, `stylus`, `postcss`), or `all` languages |
+| `advanced.scan.comments`, `advanced.scan.strings` | Whether colors inside comments and string literals count                                                                               |
+| `advanced.highlight.hexAlphaOrder`                | Read 8-digit hex as `#RRGGBBAA` (`rgba`) or `#AARRGGBB` (`argb`)                                                                       |
+| `advanced.highlight.maxMatchesPerDocument`        | Stop highlighting after this many colors; nested colors count separately, so `var(--a, #fff)` uses two                                 |
 
 ## Change what the hover shows
 

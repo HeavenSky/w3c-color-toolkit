@@ -38,7 +38,7 @@ function runChild(label, args, options) {
 		return execFileSync(args[0], args.slice(1), options);
 	} catch (error) {
 		const detail = [error.stderr, error.stdout]
-			.map(chunk => chunk ? chunk.toString().trim() : "")
+			.map(chunk => (chunk ? chunk.toString().trim() : ""))
 			.filter(chunk => chunk && !error.message.includes(chunk))
 			.join("\n");
 		console.error(`\n${label} 失败: ${error.message}${detail ? `\n${detail}` : ""}`);
@@ -64,7 +64,9 @@ if (!/^https:\/\/github\.com\/[^/]+\/[^/]+$/.test(repoUrl)) {
 // 打包策略走 `files` 白名单。这两条本来也会失败 —— 前者被 vsce 拒绝, 后者会让整个工作目录
 // 进包并撞上下面的内容断言 —— 但那时的报错离原因很远, 所以在这里先拦一道并说清该怎么做。
 if (existsSync(join(ROOT, ".vscodeignore"))) {
-	console.error(".vscodeignore 与 package.json 的 files 不能并存, vsce 只支持其一; 本骨架用 files, 删掉 .vscodeignore");
+	console.error(
+		".vscodeignore 与 package.json 的 files 不能并存, vsce 只支持其一; 本骨架用 files, 删掉 .vscodeignore"
+	);
 	process.exit(1);
 }
 if (!Array.isArray(pkg.files) || pkg.files.length === 0) {
@@ -105,7 +107,9 @@ runChild(
 // 这类构建期产物此时才落盘; 提前推导会在全新 clone 的首次打包里把它们判成 unexpected entry。
 // l10n 要递归读: 捆绑第三方语言服务器时, 它自带的语言包按来源放在各自的子目录里。
 // 纯主题扩展没有 `main`, 也就没有入口目录可读。
-const outDir = pkg.main ? join(ROOT, pkg.main.replace(/^\.\//, "").split("/").slice(0, -1).join("/")) : undefined;
+const outDir = pkg.main
+	? join(ROOT, pkg.main.replace(/^\.\//, "").split("/").slice(0, -1).join("/"))
+	: undefined;
 const allowed = deriveAllowlist({
 	pkg,
 	rootEntries: readdirSync(ROOT),

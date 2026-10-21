@@ -9,59 +9,64 @@
  *
  * 该特性在 CSS Color 5 中被标为 at-risk, 因此与 Color 4 主路径解耦。
  */
-import { buildResolved } from './colorjs-bridge.js';
-import { readAlpha, readChannel, splitFunctionArguments, type ComponentValue } from './csstools-bridge.js';
-import type { ResolvedColor } from './types.js';
+import { buildResolved } from "./colorjs-bridge.js";
+import {
+	readAlpha,
+	readChannel,
+	splitFunctionArguments,
+	type ComponentValue,
+} from "./csstools-bridge.js";
+import type { ResolvedColor } from "./types.js";
 
 export interface DeviceCmykResult {
-  readonly resolved: ResolvedColor;
+	readonly resolved: ResolvedColor;
 }
 
 function clamp01(value: number): number {
-  if (Number.isNaN(value)) return value;
-  return Math.min(1, Math.max(0, value));
+	if (Number.isNaN(value)) return value;
+	return Math.min(1, Math.max(0, value));
 }
 
 /** 解析 `device-cmyk(c m y k [/ alpha])`; 无法解析时返回 undefined。 */
 export function parseDeviceCmyk(node: ComponentValue): DeviceCmykResult | undefined {
-  const args = splitFunctionArguments(node);
-  if (args.groups.length !== 4) return undefined;
+	const args = splitFunctionArguments(node);
+	if (args.groups.length !== 4) return undefined;
 
-  const channels = args.groups.map((group) => readChannel(group, 1));
-  if (channels.some((value) => value === undefined)) return undefined;
-  const alpha = readAlpha(args.alpha);
-  if (alpha === undefined) return undefined;
+	const channels = args.groups.map(group => readChannel(group, 1));
+	if (channels.some(value => value === undefined)) return undefined;
+	const alpha = readAlpha(args.alpha);
+	if (alpha === undefined) return undefined;
 
-  const [c, m, y, k] = channels.map((value) => clamp01(value as number));
-  // missing component 按 0 参与计算, 与规范的 missing component 处理一致。
-  const cc = Number.isNaN(c) ? 0 : c;
-  const mm = Number.isNaN(m) ? 0 : m;
-  const yy = Number.isNaN(y) ? 0 : y;
-  const kk = Number.isNaN(k) ? 0 : k;
+	const [c, m, y, k] = channels.map(value => clamp01(value as number));
+	// missing component 按 0 参与计算, 与规范的 missing component 处理一致。
+	const cc = Number.isNaN(c) ? 0 : c;
+	const mm = Number.isNaN(m) ? 0 : m;
+	const yy = Number.isNaN(y) ? 0 : y;
+	const kk = Number.isNaN(k) ? 0 : k;
 
-  const red = 1 - Math.min(1, cc + kk);
-  const green = 1 - Math.min(1, mm + kk);
-  const blue = 1 - Math.min(1, yy + kk);
+	const red = 1 - Math.min(1, cc + kk);
+	const green = 1 - Math.min(1, mm + kk);
+	const blue = 1 - Math.min(1, yy + kk);
 
-  const resolved = buildResolved({
-    cssSpace: 'srgb',
-    channels: [red, green, blue],
-    alpha: Number.isNaN(alpha) ? 0 : alpha,
-    approximate: true,
-  });
+	const resolved = buildResolved({
+		cssSpace: "srgb",
+		channels: [red, green, blue],
+		alpha: Number.isNaN(alpha) ? 0 : alpha,
+		approximate: true,
+	});
 
-  return { resolved };
+	return { resolved };
 }
 
 /** 供 Hover 显示原始 CMYK 分量。 */
 export function readDeviceCmykChannels(
-  node: ComponentValue,
+	node: ComponentValue
 ): { readonly channels: readonly number[]; readonly alpha: number } | undefined {
-  const args = splitFunctionArguments(node);
-  if (args.groups.length !== 4) return undefined;
-  const channels = args.groups.map((group) => readChannel(group, 1));
-  if (channels.some((value) => value === undefined)) return undefined;
-  const alpha = readAlpha(args.alpha);
-  if (alpha === undefined) return undefined;
-  return { channels: channels as number[], alpha };
+	const args = splitFunctionArguments(node);
+	if (args.groups.length !== 4) return undefined;
+	const channels = args.groups.map(group => readChannel(group, 1));
+	if (channels.some(value => value === undefined)) return undefined;
+	const alpha = readAlpha(args.alpha);
+	if (alpha === undefined) return undefined;
+	return { channels: channels as number[], alpha };
 }

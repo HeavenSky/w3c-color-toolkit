@@ -18,7 +18,7 @@ Three steps take you from installing to converting your first color; you need VS
 
 1. Install from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=HeavenSky.w3c-color-toolkit).
 2. Open any file with colors in it and hover one: you get a preview, the original text and the value in every enabled format.
-3. Put the cursor in a color and run *W3C Color Toolkit: Convert Color* from the Command Palette to rewrite it in another format.
+3. Put the cursor in a color and run _W3C Color Toolkit: Convert Color_ from the Command Palette to rewrite it in another format.
 
 ## See every color, not just hex and rgb()
 
@@ -38,7 +38,7 @@ Click the swatch in front of any supported color, including `oklch()`, `lab()` a
 
 ## Convert colors without silently losing alpha or gamut
 
-*Convert Color* rewrites the value in place and *Copy Color As* puts it on the clipboard, in any target from `#RRGGBB` to `color(rec2100-pq)`. Before writing, it warns about gamut mapping and refuses to drop alpha or `none` components unless you allow it. See [Convert and copy colors](./docs/convert.md) for the selection rules and key bindings.
+_Convert Color_ rewrites the value in place and _Copy Color As_ puts it on the clipboard, in any target from `#RRGGBB` to `color(rec2100-pq)`. Before writing, it warns about gamut mapping and refuses to drop alpha or `none` components unless you allow it. See [Convert and copy colors](./docs/convert.md) for the selection rules and key bindings.
 
 ![Convert Color picker previewing each target value and flagging gamut mapping](./media/screenshots/convert.png)
 

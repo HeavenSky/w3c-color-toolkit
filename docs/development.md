@@ -10,6 +10,8 @@ This page gets you from a fresh clone to a packaged `.vsix`; it needs the Node v
 npm ci
 npm run check
 npm run typecheck
+npm run lint:check  # oxlint; `npm run lint` also applies fixes
+npm run fmt:check  # oxfmt; `npm run fmt` formats in place
 npm test
 npm run package
 ```

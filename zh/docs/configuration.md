@@ -18,11 +18,11 @@
 
 ```jsonc
 {
-  "w3cColorToolkit.advanced": {
-    "output.hexCase": "upper",
-    "highlight.maxMatchesPerDocument": 3000,
-    "variables.lookupGlobs": ["src/styles/**/*.css"]
-  }
+	"w3cColorToolkit.advanced": {
+		"output.hexCase": "upper",
+		"highlight.maxMatchesPerDocument": 3000,
+		"variables.lookupGlobs": ["src/styles/**/*.css"],
+	},
 }
 ```
 
@@ -36,42 +36,42 @@
 
 ## 查找选项
 
-| 键 | 取值（首项为默认） | 作用 |
-| --- | --- | --- |
-| `disable.maxFileSizeMb` | `0.3`，0 到 1024 | 文档超过此大小时不处理，见[下文](#让插件不处理某些文件) |
-| `disable.fileNames` | `["*.min.*", "*.map"]` | 命中即不处理的文件名模式 |
-| `disable.languageIds` | `["log", "plaintext"]` | 命中即不处理的语言 ID 模式 |
-| `highlight.markRuler` | `true`、`false` | 概览标尺上的打点 |
-| `highlight.matchWords` | `css-like`、`off`、`all` | 裸颜色名在哪里算颜色，见[高亮与悬停](./highlight-and-hover.md#选择哪些颜色参与) |
-| `highlight.hexAlphaOrder` | `rgba`、`argb` | 8 位 hex 的解读方式 |
-| `highlight.maxMatchesPerDocument` | `600`，1 到 1000000 | 每个文档最多高亮的颜色数 |
-| `highlight.hdrToneMapping` | `reinhard`、`clip`、`none` | HDR 预览的色调映射 |
-| `colorPicker.mode` | `dedupe`、`all`、`off` | 色块如何与其他提供程序共存，见[用取色器改色](./color-picker.md#让每个颜色只有一个色块) |
-| `colorPicker.dedupeLanguages` | `[]` | `dedupe` 模式下额外探测的语言 |
-| `fields.enabled` | `null` 或字段 ID 列表 | 悬停与高亮使用的字段，顺序即悬停顺序；`null` 表示默认列表 |
-| `fields.excluded` | `[]` | 要关闭的字段，排除项优先 |
-| `info.previewSize` | `small`、`large` | 悬停预览的尺寸 |
-| `info.previewShape` | `rectangle`、`square` | 悬停预览的形状 |
-| `info.showDiagnostics` | `true`、`false` | 悬停中的解析提示 |
-| `info.showSpecLevel` | `true`、`false` | 悬停中的规范层级 |
-| `convert.enabled` | `true`、`false` | 转换命令 |
-| `convert.alphaLoss` | `reject`、`confirm`、`drop` | 目标格式无法表达 alpha 时的处理，见[转换与复制颜色](./convert.md#决定信息会丢失时怎么办) |
-| `convert.missingComponentLoss` | `confirm`、`compute` | 无法保留 `none` 分量时的处理 |
-| `convert.namedColorFallback` | `reject`、`nearest` | 没有完全匹配的颜色名时的处理 |
-| `convert.recentFirst` | `true`、`false` | 最近用过的目标排在选择器最前 |
-| `output.gamutMapping` | `css`、`clip`、`none` | 输出 sRGB 时的色域映射 |
-| `output.hexCase` | `lower`、`upper` | 生成 hex 的大小写 |
-| `scan.comments` | `true`、`false` | 注释里的颜色 |
-| `scan.strings` | `true`、`false` | 字符串字面量里的颜色 |
-| `variables.resolve` | `true`、`false` | 变量解析，见[解析变量](./variables.md) |
-| `variables.lookupGlobs` | `["**/*.{css,scss,sass,less}"]` | 查找定义的文件范围 |
-| `variables.maxIndexedFiles` | `2000`，0 到 100000 | 索引的样式表数量上限 |
-| `variables.languageIds` | `null` 或语言 ID 列表 | 识别变量引用的语言 |
-| `variables.maxResolveDepth` | `20`，1 到 100 | 引用嵌套的深度上限 |
-| `contextualPreview` | `auto`、`light`、`dark`、`off` | `light-dark()` 假定的分支，见[支持的颜色语法](./color-support.md#依赖上下文的值) |
-| `experimental.hdrAssumedHeadroom` | `0`，0 到 10 | 为 `hdr-color()` 假定的 HDR 余量；`0` 表示不预览 |
-| `coexistence.notify` | `true`、`false` | 同时装了 Color Highlight（`naumovs.color-highlight`）、Color Info（`bierner.color-info`）或 Change Color Format（`bbugh.change-color-format`）时，每个工作区提醒一次 |
-| `logLevel` | `warn`、`off`、`error`、`info`、`debug` | 输出面板的日志详细程度 |
+| 键                                | 取值（首项为默认）                      | 作用                                                                                                                                                                 |
+| --------------------------------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `disable.maxFileSizeMb`           | `0.3`，0 到 1024                        | 文档超过此大小时不处理，见[下文](#让插件不处理某些文件)                                                                                                              |
+| `disable.fileNames`               | `["*.min.*", "*.map"]`                  | 命中即不处理的文件名模式                                                                                                                                             |
+| `disable.languageIds`             | `["log", "plaintext"]`                  | 命中即不处理的语言 ID 模式                                                                                                                                           |
+| `highlight.markRuler`             | `true`、`false`                         | 概览标尺上的打点                                                                                                                                                     |
+| `highlight.matchWords`            | `css-like`、`off`、`all`                | 裸颜色名在哪里算颜色，见[高亮与悬停](./highlight-and-hover.md#选择哪些颜色参与)                                                                                      |
+| `highlight.hexAlphaOrder`         | `rgba`、`argb`                          | 8 位 hex 的解读方式                                                                                                                                                  |
+| `highlight.maxMatchesPerDocument` | `600`，1 到 1000000                     | 每个文档最多高亮的颜色数                                                                                                                                             |
+| `highlight.hdrToneMapping`        | `reinhard`、`clip`、`none`              | HDR 预览的色调映射                                                                                                                                                   |
+| `colorPicker.mode`                | `dedupe`、`all`、`off`                  | 色块如何与其他提供程序共存，见[用取色器改色](./color-picker.md#让每个颜色只有一个色块)                                                                               |
+| `colorPicker.dedupeLanguages`     | `[]`                                    | `dedupe` 模式下额外探测的语言                                                                                                                                        |
+| `fields.enabled`                  | `null` 或字段 ID 列表                   | 悬停与高亮使用的字段，顺序即悬停顺序；`null` 表示默认列表                                                                                                            |
+| `fields.excluded`                 | `[]`                                    | 要关闭的字段，排除项优先                                                                                                                                             |
+| `info.previewSize`                | `small`、`large`                        | 悬停预览的尺寸                                                                                                                                                       |
+| `info.previewShape`               | `rectangle`、`square`                   | 悬停预览的形状                                                                                                                                                       |
+| `info.showDiagnostics`            | `true`、`false`                         | 悬停中的解析提示                                                                                                                                                     |
+| `info.showSpecLevel`              | `true`、`false`                         | 悬停中的规范层级                                                                                                                                                     |
+| `convert.enabled`                 | `true`、`false`                         | 转换命令                                                                                                                                                             |
+| `convert.alphaLoss`               | `reject`、`confirm`、`drop`             | 目标格式无法表达 alpha 时的处理，见[转换与复制颜色](./convert.md#决定信息会丢失时怎么办)                                                                             |
+| `convert.missingComponentLoss`    | `confirm`、`compute`                    | 无法保留 `none` 分量时的处理                                                                                                                                         |
+| `convert.namedColorFallback`      | `reject`、`nearest`                     | 没有完全匹配的颜色名时的处理                                                                                                                                         |
+| `convert.recentFirst`             | `true`、`false`                         | 最近用过的目标排在选择器最前                                                                                                                                         |
+| `output.gamutMapping`             | `css`、`clip`、`none`                   | 输出 sRGB 时的色域映射                                                                                                                                               |
+| `output.hexCase`                  | `lower`、`upper`                        | 生成 hex 的大小写                                                                                                                                                    |
+| `scan.comments`                   | `true`、`false`                         | 注释里的颜色                                                                                                                                                         |
+| `scan.strings`                    | `true`、`false`                         | 字符串字面量里的颜色                                                                                                                                                 |
+| `variables.resolve`               | `true`、`false`                         | 变量解析，见[解析变量](./variables.md)                                                                                                                               |
+| `variables.lookupGlobs`           | `["**/*.{css,scss,sass,less}"]`         | 查找定义的文件范围                                                                                                                                                   |
+| `variables.maxIndexedFiles`       | `2000`，0 到 100000                     | 索引的样式表数量上限                                                                                                                                                 |
+| `variables.languageIds`           | `null` 或语言 ID 列表                   | 识别变量引用的语言                                                                                                                                                   |
+| `variables.maxResolveDepth`       | `20`，1 到 100                          | 引用嵌套的深度上限                                                                                                                                                   |
+| `contextualPreview`               | `auto`、`light`、`dark`、`off`          | `light-dark()` 假定的分支，见[支持的颜色语法](./color-support.md#依赖上下文的值)                                                                                     |
+| `experimental.hdrAssumedHeadroom` | `0`，0 到 10                            | 为 `hdr-color()` 假定的 HDR 余量；`0` 表示不预览                                                                                                                     |
+| `coexistence.notify`              | `true`、`false`                         | 同时装了 Color Highlight（`naumovs.color-highlight`）、Color Info（`bierner.color-info`）或 Change Color Format（`bbugh.change-color-format`）时，每个工作区提醒一次 |
+| `logLevel`                        | `warn`、`off`、`error`、`info`、`debug` | 输出面板的日志详细程度                                                                                                                                               |
 
 ## 让插件不处理某些文件
 

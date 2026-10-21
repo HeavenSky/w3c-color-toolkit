@@ -6,13 +6,13 @@
 
 ## 查看规范层级
 
-| 层级 | 支持情况 |
-| --- | --- |
-| CSS Color 3 | 支持，包括旧式逗号语法 |
-| CSS Color 4（ED 2026-07-28） | 支持：全部 148 个颜色名、四种长度的 hex、`none`、静态 `calc()`、四种角度单位以及 10 个预定义的 `color()` 空间 |
-| CSS Color 5（ED 2026-07-31） | 可静态求值的部分：`color-mix()`（含多颜色形式）、相对颜色语法、`alpha()`、`contrast-color()`、按朴素公式回退的 `device-cmyk()`，以及 `@color-profile` 的 `fallback` 描述符 |
-| CSS Color 6（ED 2026-01-11） | 实验功能，默认开启：`color-layers()`、扩展后的 `contrast-color()`、`wcag2` 与 `wcag2()`、`tbd-fg` 与 `tbd-bg` |
-| CSS Color HDR 1（ED 2026-07-28） | 实验功能，默认开启：`ictcp()`、`jzazbz()`、`jzczhz()`、`color(rec2100-pq)`、`color(rec2100-hlg)`、`color(rec2100-linear)` 以及 `hdr-color()` |
+| 层级                             | 支持情况                                                                                                                                                                   |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CSS Color 3                      | 支持，包括旧式逗号语法                                                                                                                                                     |
+| CSS Color 4（ED 2026-07-28）     | 支持：全部 148 个颜色名、四种长度的 hex、`none`、静态 `calc()`、四种角度单位以及 10 个预定义的 `color()` 空间                                                              |
+| CSS Color 5（ED 2026-07-31）     | 可静态求值的部分：`color-mix()`（含多颜色形式）、相对颜色语法、`alpha()`、`contrast-color()`、按朴素公式回退的 `device-cmyk()`，以及 `@color-profile` 的 `fallback` 描述符 |
+| CSS Color 6（ED 2026-01-11）     | 实验功能，默认开启：`color-layers()`、扩展后的 `contrast-color()`、`wcag2` 与 `wcag2()`、`tbd-fg` 与 `tbd-bg`                                                              |
+| CSS Color HDR 1（ED 2026-07-28） | 实验功能，默认开启：`ictcp()`、`jzazbz()`、`jzczhz()`、`color(rec2100-pq)`、`color(rec2100-hlg)`、`color(rec2100-linear)` 以及 `hdr-color()`                               |
 
 两份草案都通过 `w3cColorToolkit.experimental` 开关；规范还在演进，取值和语法都可能变化。
 

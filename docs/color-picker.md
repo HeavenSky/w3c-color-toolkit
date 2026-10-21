@@ -28,11 +28,11 @@ To rewrite one of these on purpose, use [Convert Color](./convert.md).
 
 `advanced.colorPicker.mode` decides how the extension shares the swatch with other color providers:
 
-| Mode | Behavior |
-| --- | --- |
+| Mode               | Behavior                                                                                                                                                                                                                  |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `dedupe` (default) | In languages where a built-in VS Code language service also reports colors, ask the other providers first, once per document version, and report only the ranges they left uncovered. Everywhere else, report everything. |
-| `all` | Report every supported color in every language, even where another provider already did. |
-| `off` | Report nothing; VS Code falls back to its own providers. |
+| `all`              | Report every supported color in every language, even where another provider already did.                                                                                                                                  |
+| `off`              | Report nothing; VS Code falls back to its own providers.                                                                                                                                                                  |
 
 `dedupe` probes `css`, `less`, `scss`, `html`, `handlebars`, `json`, `jsonc`, `snippets`, and every language another extension attaches to the HTML or JSON language service. Probing is the only reliable way: VS Code draws the results of all providers without merging equal ranges, and it does not say which provider produced which color.
 
