@@ -1,0 +1,59 @@
+name: CI
+
+# 推送 main, 提 PR 或手动触发时跑与 release.yml 相同的校验与打包, 只上传 vsix 作为 artifact,
+# 不创建 GitHub Release, 也不发布到任何市场. 发布仍只走 release.yml(打 v* 标签).
+on:
+    push:
+        branches:
+            - main
+    pull_request:
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+# 同一分支或 PR 的新推送取消尚未跑完的旧运行.
+concurrency:
+    group: ci-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    check:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v7
+
+            - uses: actions/setup-node@v7
+              with:
+                  node-version-file: .nvmrc
+                  cache: npm
+
+            - name: Install dependencies
+              run: npm ci
+
+            - name: Set up uv
+              if: hashFiles('tools/**/*.py') != ''
+              uses: astral-sh/setup-uv@v10.2.0
+
+            - name: Check consistency
+              run: npm run check
+
+            - name: Typecheck
+              run: npm run typecheck
+
+            - name: Lint
+              run: npm run lint:check
+
+            - name: Format check
+              run: npm run fmt:check
+
+            - name: Test
+              run: npm test
+
+            - name: Package extension
+              run: npm run package
+
+            - uses: actions/upload-artifact@v7
+              with:
+                  name: vsix
+                  path: artifacts/*.vsix
