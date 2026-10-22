@@ -1,9 +1,7 @@
 name: CI
 
-# 推送 main, 提 PR 或手动触发时跑与 release.yml 相同的校验与打包, 只上传 vsix 作为 artifact,
-# 不创建 GitHub Release, 也不发布到任何市场. 发布仍只走 release.yml(打 v* 标签).
-# 推送的提交已带 v* 标签时跳过校验: 发版时 main 与标签一起推会同时触发本文件与 release.yml,
-# 后者本就跑同样的校验, 这里不再重复跑一遍.
+# 推送 main, 提 PR 或手动触发时跑全部校验与打包, 只上传 vsix 作为 artifact, 不创建 GitHub Release, 也不发布到任何市场.
+# release.yml 不重复校验, 而是等同一提交在 main 上的本工作流(push 触发)通过才发布; 改文件名要同步改它的 Wait for CI.
 on:
     push:
         branches:
@@ -20,31 +18,9 @@ concurrency:
     cancel-in-progress: true
 
 jobs:
-    # 只对 push 判断; PR 与手动触发总是跑. checkout 留下的凭据让 ls-remote 在私有仓库也能用.
-    # ls-remote 对附注标签额外输出 ^{} 解引用行, 其哈希就是提交本身, 因此两种标签都能匹配.
-    gate:
-        runs-on: ubuntu-latest
-        outputs:
-            tagged: ${{ steps.tag.outputs.tagged }}
-        steps:
-            - uses: actions/checkout@v7
-              if: github.event_name == 'push'
-
-            - name: Check release tag on this commit
-              id: tag
-              if: github.event_name == 'push'
-              run: |
-                  if git ls-remote --tags origin 'refs/tags/v*' | grep -q "^$GITHUB_SHA"; then
-                    echo "::notice::$GITHUB_SHA 已带 v* 标签, 校验交给 Release 工作流"
-                    echo "tagged=true" >> "$GITHUB_OUTPUT"
-                  else
-                    echo "tagged=false" >> "$GITHUB_OUTPUT"
-                  fi
-
     check:
-        needs: gate
-        if: needs.gate.outputs.tagged != 'true'
         runs-on: ubuntu-latest
+        timeout-minutes: 30
         steps:
             - uses: actions/checkout@v7
 
@@ -56,16 +32,21 @@ jobs:
             - name: Install dependencies
               run: npm ci
 
+            # 仓库在 tools/ 下有 Python 脚本时才装 uv: 插件专属门禁(scripts/check-extra.mjs)可能经 `uv run`
+            # 调用它们. 没装 uv 时那类门禁只能跳过, 等于发布前少了一道检查.
+            # setup-uv 不发布 v10 这类浮动大版本标签, 只能钉到完整版本号; 写成 @v10 会在 Set up job 阶段解析失败.
             - name: Set up uv
               if: hashFiles('tools/**/*.py') != ''
               uses: astral-sh/setup-uv@v10.2.0
 
+            # 图标产物, 清单占位符, 本地化与各仓库专属规则; 漏了不会让构建失败, 只会静默出错.
             - name: Check consistency
               run: npm run check
 
             - name: Typecheck
               run: npm run typecheck
 
+            # oxlint 与 oxfmt 只检查不修复; 本地用 npm run lint 与 npm run fmt 修复.
             - name: Lint
               run: npm run lint:check
 
@@ -75,6 +56,7 @@ jobs:
             - name: Test
               run: npm test
 
+            # package 脚本内部触发 vscode:prepublish 做生产构建, 并按允许清单断言 VSIX 内容.
             - name: Package extension
               run: npm run package
 
